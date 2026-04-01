@@ -60,6 +60,10 @@
             transform: translateY(-4px);
             box-shadow: 0 20px 25px -12px rgba(0, 0, 0, 0.1);
         }
+        
+        .modal {
+            transition: all 0.3s ease;
+        }
     </style>
 </head>
 <body class="text-gray-800 h-screen flex overflow-hidden selection:bg-primary selection:text-white">
@@ -67,7 +71,9 @@
     <!-- Sidebar -->
     <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm z-20">
         <div class="h-20 flex items-center px-8 border-b border-gray-100">
-            <img src="/icon.png" alt="Enactus Logo" class="w-10 h-10 mr-3 object-contain">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-gray-800 font-bold text-xl mr-3 shadow-md">
+                <i class="fa-solid fa-link"></i>
+            </div>
             <div>
                 <h1 class="font-bold text-lg tracking-tight">URL Shortener</h1>
                 <p class="text-xs text-gray-400 font-medium">Enactus FTU Hanoi</p>
@@ -111,7 +117,7 @@
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-2 text-sm text-gray-500">
                     <i class="fa-solid fa-globe text-primary"></i>
-                    <span id="current-domain">yourdomain.com</span>
+                    <span id="current-domain">s.enactusftuhanoi.id.vn</span>
                 </div>
                 <div class="h-8 w-[1px] bg-gray-300"></div>
                 <span class="text-sm font-medium text-gray-500" id="current-date">...</span>
@@ -144,7 +150,7 @@
                     </div>
                     <div class="stat-card bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
                         <div class="absolute right-0 top-0 w-24 h-24 bg-green-50 rounded-bl-full -mr-4 -mt-4"></div>
-                        <i class="fa-solid fa-clock text-3xl text-green-500 mb-3"></i>
+                        <i class="fa-solid fa-calendar-day text-3xl text-green-500 mb-3"></i>
                         <p class="text-gray-500 text-sm font-medium mb-1">Hôm nay</p>
                         <h3 class="text-3xl font-extrabold text-gray-800" id="stat-today-clicks">0</h3>
                     </div>
@@ -158,7 +164,7 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="font-bold text-gray-800 mb-6">Lượt click theo ngày</h3>
+                        <h3 class="font-bold text-gray-800 mb-6">Lượt click 7 ngày qua</h3>
                         <div class="h-80"><canvas id="clicksChart"></canvas></div>
                     </div>
                     
@@ -209,7 +215,7 @@
                                     Tùy chỉnh alias
                                 </label>
                                 <div class="flex items-center gap-3">
-                                    <span class="text-gray-500 bg-gray-100 px-3 py-3 rounded-lg text-sm" id="domain-preview">yourdomain.com/</span>
+                                    <span class="text-gray-500 bg-gray-100 px-3 py-3 rounded-lg text-sm" id="domain-preview">s.enactusftuhanoi.id.vn/</span>
                                     <input type="text" id="customCode" maxlength="20"
                                         class="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
                                         placeholder="my-custom-link">
@@ -291,11 +297,25 @@
         </div>
     </main>
 
+    <!-- Edit Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 modal">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Sửa link</h3>
+            <input type="hidden" id="editCode">
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-gray-700 mb-2">URL gốc</label>
+                <input type="url" id="editUrl" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none">
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeEditModal()" class="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition">Hủy</button>
+                <button onclick="saveEditLink()" class="px-4 py-2 rounded-lg bg-primary text-gray-800 font-bold hover:bg-primary-hover transition">Lưu</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // ==================== CONFIGURATION ====================
-        // THAY ĐỔI CÁC GIÁ TRỊ NÀY THEO DOMAIN CỦA BẠN
-        const WORKER_URL = 'https://s.enactus-ftu-hanoi.workers.dev'; // Thay bằng URL Worker của bạn
-        const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn'; // Thay bằng domain của bạn
+        const WORKER_URL = 'https://s.enactus-ftu-hanoi.workers.dev';
+        const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
         
         document.getElementById('current-domain').innerText = YOUR_DOMAIN;
         document.getElementById('domain-preview').innerText = `${YOUR_DOMAIN}/`;
@@ -303,15 +323,10 @@
         let linksData = [];
         let chartInstance = null;
         
-        // Hiển thị ngày hiện tại
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('vi-VN', {
-            weekday: 'long', 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric'
+            weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
         });
         
-        // ==================== UTILITY FUNCTIONS ====================
         function showLoading(show) {
             document.getElementById('loading-overlay').classList.toggle('hidden', !show);
         }
@@ -333,16 +348,9 @@
             const input = document.getElementById('shortUrlResult');
             input.select();
             document.execCommand('copy');
-            Swal.fire({
-                icon: 'success',
-                title: 'Đã sao chép!',
-                text: 'Link đã được copy vào clipboard',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            Swal.fire({ icon: 'success', title: 'Đã sao chép!', timer: 1500, showConfirmButton: false });
         }
         
-        // ==================== API CALLS ====================
         async function shortenUrl(url, customCode = '') {
             showLoading(true);
             try {
@@ -357,13 +365,7 @@
                 if (response.ok) {
                     document.getElementById('shortUrlResult').value = data.shortUrl;
                     document.getElementById('result-area').classList.remove('hidden');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Tạo link thành công!',
-                        text: 'Link rút gọn đã sẵn sàng',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
+                    Swal.fire({ icon: 'success', title: 'Tạo link thành công!', timer: 2000, showConfirmButton: false });
                     fetchLinks();
                     fetchStats();
                 } else {
@@ -391,10 +393,21 @@
                 }
                 
                 renderTopLinks(stats.topLinks || []);
-                renderChart(stats.dailyClicks || []);
+                renderChart(stats.dailyClicks || generateLast7Days());
             } catch (error) {
                 console.error('Error fetching stats:', error);
+                renderChart(generateLast7Days());
             }
+        }
+        
+        function generateLast7Days() {
+            const days = [];
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                days.push({ date: date.toISOString().split('T')[0], clicks: 0 });
+            }
+            return days;
         }
         
         async function fetchLinks() {
@@ -440,7 +453,56 @@
             }
         }
         
-        // ==================== RENDER FUNCTIONS ====================
+        function openEditModal(code, currentUrl) {
+            document.getElementById('editCode').value = code;
+            document.getElementById('editUrl').value = currentUrl;
+            document.getElementById('editModal').classList.remove('hidden');
+            document.getElementById('editModal').style.display = 'flex';
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+        
+        async function saveEditLink() {
+            const code = document.getElementById('editCode').value;
+            const newUrl = document.getElementById('editUrl').value;
+            
+            if (!newUrl) {
+                Swal.fire('Lỗi', 'Vui lòng nhập URL', 'error');
+                return;
+            }
+            
+            try {
+                new URL(newUrl);
+            } catch {
+                Swal.fire('Lỗi', 'URL không hợp lệ', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            try {
+                const response = await fetch(`${WORKER_URL}/update/${code}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ original_url: newUrl })
+                });
+                
+                if (response.ok) {
+                    Swal.fire('Thành công', 'Đã cập nhật link', 'success');
+                    closeEditModal();
+                    fetchLinks();
+                    fetchStats();
+                } else {
+                    Swal.fire('Lỗi', 'Không thể cập nhật link', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Lỗi', error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
         function renderTopLinks(topLinks) {
             const container = document.getElementById('top-links-list');
             if (!topLinks || topLinks.length === 0) {
@@ -449,7 +511,7 @@
             }
             
             container.innerHTML = topLinks.map((link, index) => `
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-primary-light transition cursor-pointer" onclick="window.open('${WORKER_URL}/${link.code}', '_blank')">
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-primary-light transition cursor-pointer" onclick="window.open('https://${YOUR_DOMAIN}/${link.code}', '_blank')">
                     <div class="flex items-center gap-3">
                         <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
                         <div>
@@ -466,7 +528,10 @@
             const ctx = document.getElementById('clicksChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
             
-            const labels = dailyClicks.map(d => d.date);
+            const labels = dailyClicks.map(d => {
+                const date = new Date(d.date);
+                return `${date.getDate()}/${date.getMonth() + 1}`;
+            });
             const data = dailyClicks.map(d => d.clicks);
             
             chartInstance = new Chart(ctx, {
@@ -506,7 +571,7 @@
             const term = document.getElementById('link-search')?.value.toLowerCase() || '';
             const filtered = linksData.filter(link => 
                 link.code.toLowerCase().includes(term) || 
-                link.original_url.toLowerCase().includes(term)
+                (link.original_url && link.original_url.toLowerCase().includes(term))
             );
             
             document.getElementById('links-empty').classList.toggle('hidden', filtered.length > 0);
@@ -517,12 +582,12 @@
                         <span class="bg-primary-light text-primary px-2 py-1 rounded text-xs font-mono font-bold">${link.code}</span>
                     </td>
                     <td class="px-6 py-4">
-                        <a href="${WORKER_URL}/${link.code}" target="_blank" class="text-primary hover:underline text-sm font-mono">
+                        <a href="https://${YOUR_DOMAIN}/${link.code}" target="_blank" class="text-primary hover:underline text-sm font-mono">
                             ${YOUR_DOMAIN}/${link.code}
                         </a>
                     </td>
                     <td class="px-6 py-4 max-w-xs truncate text-gray-600" title="${link.original_url}">
-                        ${link.original_url.substring(0, 50)}${link.original_url.length > 50 ? '...' : ''}
+                        ${link.original_url ? (link.original_url.substring(0, 50) + (link.original_url.length > 50 ? '...' : '')) : ''}
                     </td>
                     <td class="px-6 py-4 text-center">
                         <span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full text-xs font-bold">
@@ -530,10 +595,15 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 text-xs text-gray-500">
-                        ${new Date(link.created_at).toLocaleDateString('vi-VN')}
+                        ${link.created_at ? new Date(link.created_at).toLocaleDateString('vi-VN') : '-'}
                     </td>
                     <td class="px-6 py-4 text-center">
                         <div class="flex items-center justify-center gap-2">
+                            <button onclick="openEditModal('${link.code}', '${link.original_url}')" 
+                                class="w-8 h-8 rounded hover:bg-blue-50 text-blue-500 flex items-center justify-center transition"
+                                title="Sửa">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
                             <button onclick="copyToClipboardCustom('${YOUR_DOMAIN}/${link.code}')" 
                                 class="w-8 h-8 rounded hover:bg-primary-light text-primary flex items-center justify-center transition"
                                 title="Sao chép">
@@ -551,12 +621,7 @@
         }
         
         function copyToClipboardCustom(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = `https://${text}`;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
+            navigator.clipboard.writeText(`https://${text}`);
             Swal.fire({ icon: 'success', title: 'Đã sao chép!', timer: 1000, showConfirmButton: false });
         }
         
@@ -568,7 +633,7 @@
                 'Short URL': `https://${YOUR_DOMAIN}/${l.code}`,
                 'Original URL': l.original_url,
                 'Clicks': l.clicks || 0,
-                'Created At': new Date(l.created_at).toLocaleString('vi-VN')
+                'Created At': l.created_at ? new Date(l.created_at).toLocaleString('vi-VN') : '-'
             })));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Links');
@@ -579,7 +644,6 @@
             switchTab('dashboard');
         }
         
-        // ==================== EVENT HANDLERS ====================
         document.getElementById('shortenForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const url = document.getElementById('originalUrl').value;
@@ -590,7 +654,6 @@
                 return;
             }
             
-            // Validate custom code
             if (customCode && !/^[a-zA-Z0-9-]+$/.test(customCode)) {
                 Swal.fire('Lỗi', 'Code chỉ được chứa chữ cái, số và dấu gạch ngang', 'error');
                 return;
@@ -600,10 +663,15 @@
             document.getElementById('shortenForm').reset();
         });
         
-        // Khởi tạo
         document.addEventListener('DOMContentLoaded', () => {
             fetchStats();
             fetchLinks();
+        });
+        
+        document.getElementById('editModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('editModal')) {
+                closeEditModal();
+            }
         });
     </script>
 </body>
