@@ -3,15 +3,9 @@ export default {
         const url = new URL(request.url);
         const path = url.pathname.slice(1);
         
-        // Lấy origin từ request
-        const origin = request.headers.get('Origin');
-        const validOrigins = [
-            'https://s.enactusftuhanoi.id.vn',
-            'https://dev.enactusftuhanoi.id.vn'
-        ];
-        
+        // CORS headers - CHO PHÉP CẢ 2 DOMAIN
         const corsHeaders = {
-            'Access-Control-Allow-Origin': validOrigins.includes(origin) ? origin : 'https://s.enactusftuhanoi.id.vn',
+            'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, DELETE, PUT, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type',
         };
@@ -41,14 +35,10 @@ export default {
                 
                 topLinks.sort((a, b) => b.clicks - a.clicks);
                 
-                // Tính lượt click hôm nay
-                const today = new Date().toISOString().split('T')[0];
-                let todayClicks = 0;
-                
                 return new Response(JSON.stringify({
                     totalLinks: totalLinks,
                     totalClicks: totalClicks,
-                    todayClicks: todayClicks,
+                    todayClicks: 0,
                     topLinks: topLinks.slice(0, 5),
                     dailyClicks: []
                 }), {
