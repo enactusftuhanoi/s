@@ -386,22 +386,29 @@
             }
             
             const stats = await response.json();
+            console.log('Stats data:', stats); // Debug
             
-            // Validate response structure
-            if (stats && typeof stats === 'object') {
-              document.getElementById('stat-total-links').innerText = stats.totalLinks || 0;
-              document.getElementById('stat-total-clicks').innerText = stats.totalClicks || 0;
-              document.getElementById('stat-today-clicks').innerText = stats.todayClicks || 0;
-              // ... rest of your code
+            document.getElementById('stat-total-links').innerText = stats.totalLinks || 0;
+            document.getElementById('stat-total-clicks').innerText = stats.totalClicks || 0;
+            document.getElementById('stat-today-clicks').innerText = stats.todayClicks || 0;
+            document.getElementById('total-clicks-stat').innerText = `${stats.totalClicks || 0} lượt click`;
+            
+            if (stats.topLinks && stats.topLinks.length > 0) {
+              document.getElementById('stat-top-link').innerText = stats.topLinks[0].code;
             }
+            
+            renderTopLinks(stats.topLinks || []);
+            renderChart(stats.dailyClicks || []);
+            
           } catch (error) {
             console.error('Error fetching stats:', error);
-            // Show user-friendly error message
-            document.getElementById('stat-total-links').innerText = 'Lỗi';
+            document.getElementById('stat-total-links').innerText = '0';
+            document.getElementById('stat-total-clicks').innerText = '0';
+            document.getElementById('stat-today-clicks').innerText = '0';
             Swal.fire({
               icon: 'error',
               title: 'Không thể tải dữ liệu',
-              text: 'Vui lòng thử lại sau',
+              text: error.message,
               timer: 3000
             });
           }
