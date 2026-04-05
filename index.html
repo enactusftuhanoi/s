@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -292,328 +293,399 @@
     </main>
 
     <script>
-        // ==================== CONFIGURATION ====================
-        // THAY ĐỔI CÁC GIÁ TRỊ NÀY THEO DOMAIN CỦA BẠN
-        const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
-        const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn'; // Thay bằng domain của bạn
+    // ==================== CONFIGURATION ====================
+    const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
+    
+    let linksData = [];
+    let chartInstance = null;
+    
+    // Hiển thị ngày hiện tại
+    document.getElementById('current-date').innerText = new Date().toLocaleDateString('vi-VN', {
+        weekday: 'long', 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric'
+    });
+    
+    document.getElementById('current-domain').innerText = YOUR_DOMAIN;
+    document.getElementById('domain-preview').innerText = `${YOUR_DOMAIN}/`;
+    
+    // ==================== LOAD DATA FROM LOCALSTORAGE ====================
+    function loadData() {
+        const saved = localStorage.getItem('url_shortener_data');
+        if (saved) {
+            linksData = JSON.parse(saved);
+        } else {
+            // Mock data for demo
+            linksData = [
+                {
+                    code: 'demo1',
+                    original_url: 'https://example.com/very-long-url-demo-1',
+                    clicks: 45,
+                    created_at: new Date().toISOString()
+                },
+                {
+                    code: 'demo2',
+                    original_url: 'https://example.com/very-long-url-demo-2',
+                    clicks: 30,
+                    created_at: new Date().toISOString()
+                }
+            ];
+            saveData();
+        }
+    }
+    
+    function saveData() {
+        localStorage.setItem('url_shortener_data', JSON.stringify(linksData));
+    }
+    
+    // ==================== UTILITY FUNCTIONS ====================
+    function showLoading(show) {
+        document.getElementById('loading-overlay').classList.toggle('hidden', !show);
+    }
+    
+    function switchTab(tab) {
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.getElementById(`nav-${tab}`).classList.add('active');
+        document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+        document.getElementById(`view-${tab}`).classList.remove('hidden');
         
-        document.getElementById('current-domain').innerText = YOUR_DOMAIN;
-        document.getElementById('domain-preview').innerText = `${YOUR_DOMAIN}/`;
+        const titles = { dashboard: 'Tổng quan', shortener: 'Rút gọn link', links: 'Quản lý link' };
+        document.getElementById('page-title').innerText = titles[tab];
         
-        let linksData = [];
-        let chartInstance = null;
-        
-        // Hiển thị ngày hiện tại
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString('vi-VN', {
-            weekday: 'long', 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric'
+        if (tab === 'dashboard') renderDashboard();
+        if (tab === 'links') renderLinks();
+    }
+    
+    function copyToClipboard() {
+        const input = document.getElementById('shortUrlResult');
+        input.select();
+        document.execCommand('copy');
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã sao chép!',
+            text: 'Link đã được copy vào clipboard',
+            timer: 1500,
+            showConfirmButton: false
         });
+    }
+    
+    function copyToClipboardCustom(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = `https://${text}`;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        Swal.fire({ icon: 'success', title: 'Đã sao chép!', timer: 1000, showConfirmButton: false });
+    }
+    
+    // ==================== SHORTEN URL ====================
+    async function shortenUrl(url, customCode = '') {
+        showLoading(true);
         
-        // ==================== UTILITY FUNCTIONS ====================
-        function showLoading(show) {
-            document.getElementById('loading-overlay').classList.toggle('hidden', !show);
-        }
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        function switchTab(tab) {
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`nav-${tab}`).classList.add('active');
-            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
+        try {
+            // Validate URL
+            if (!url || !url.startsWith('http')) {
+                throw new Error('URL không hợp lệ');
+            }
             
-            const titles = { dashboard: 'Tổng quan', shortener: 'Rút gọn link', links: 'Quản lý link' };
-            document.getElementById('page-title').innerText = titles[tab];
+            // Generate code
+            let code = customCode;
+            if (!code) {
+                code = Math.random().toString(36).substring(2, 8);
+            }
             
-            if (tab === 'dashboard') fetchStats();
-            if (tab === 'links') fetchLinks();
-        }
-        
-        function copyToClipboard() {
-            const input = document.getElementById('shortUrlResult');
-            input.select();
-            document.execCommand('copy');
+            // Check if code exists
+            const existing = linksData.find(link => link.code === code);
+            if (existing) {
+                throw new Error('Code đã tồn tại. Vui lòng chọn code khác');
+            }
+            
+            // Create new link
+            const newLink = {
+                code: code,
+                original_url: url,
+                clicks: 0,
+                created_at: new Date().toISOString()
+            };
+            
+            linksData.unshift(newLink);
+            saveData();
+            
+            // Show result
+            document.getElementById('shortUrlResult').value = `https://${YOUR_DOMAIN}/${code}`;
+            document.getElementById('result-area').classList.remove('hidden');
+            
             Swal.fire({
                 icon: 'success',
-                title: 'Đã sao chép!',
-                text: 'Link đã được copy vào clipboard',
-                timer: 1500,
+                title: 'Tạo link thành công!',
+                text: 'Link rút gọn đã sẵn sàng',
+                timer: 2000,
                 showConfirmButton: false
             });
+            
+            renderDashboard();
+            renderLinks();
+            
+        } catch (error) {
+            Swal.fire('Lỗi', error.message, 'error');
+        } finally {
+            showLoading(false);
         }
+    }
+    
+    // ==================== DELETE LINK ====================
+    async function deleteLink(code) {
+        const result = await Swal.fire({
+            title: 'Xóa link?',
+            text: `Bạn có chắc muốn xóa link /${code}?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        });
         
-        // ==================== API CALLS ====================
-        async function shortenUrl(url, customCode = '') {
+        if (result.isConfirmed) {
             showLoading(true);
-            try {
-                const response = await fetch(`${WORKER_URL}/shorten`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, customCode })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    document.getElementById('shortUrlResult').value = data.shortUrl;
-                    document.getElementById('result-area').classList.remove('hidden');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Tạo link thành công!',
-                        text: 'Link rút gọn đã sẵn sàng',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    fetchLinks();
-                    fetchStats();
-                } else {
-                    Swal.fire('Lỗi', data.error || 'Không thể tạo link', 'error');
-                }
-            } catch (error) {
-                Swal.fire('Lỗi', 'Không thể kết nối đến server', 'error');
-            } finally {
-                showLoading(false);
+            
+            // Simulate delay
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            const index = linksData.findIndex(link => link.code === code);
+            if (index !== -1) {
+                linksData.splice(index, 1);
+                saveData();
             }
+            
+            Swal.fire('Đã xóa!', '', 'success');
+            renderDashboard();
+            renderLinks();
+            
+            showLoading(false);
+        }
+    }
+    
+    // ==================== RENDER DASHBOARD ====================
+    function renderDashboard() {
+        // Calculate stats
+        const totalLinks = linksData.length;
+        const totalClicks = linksData.reduce((sum, link) => sum + (link.clicks || 0), 0);
+        
+        // Today's clicks (clicks from today)
+        const today = new Date().toISOString().slice(0, 10);
+        const todayClicks = linksData.reduce((sum, link) => {
+            // Since we don't have daily click tracking, just show 0
+            return sum;
+        }, 0);
+        
+        // Top links
+        const topLinks = [...linksData]
+            .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
+            .slice(0, 5);
+        
+        // Update UI
+        document.getElementById('stat-total-links').innerText = totalLinks;
+        document.getElementById('stat-total-clicks').innerText = totalClicks;
+        document.getElementById('stat-today-clicks').innerText = '0';
+        document.getElementById('total-clicks-stat').innerText = `${totalClicks} lượt click`;
+        
+        if (topLinks.length > 0) {
+            document.getElementById('stat-top-link').innerText = topLinks[0].code;
         }
         
-        async function fetchStats() {
-          try {
-            const response = await fetch(`${WORKER_URL}/stats`);
-            
-            if (!response.ok) {
-              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const stats = await response.json();
-            
-            // Validate response structure
-            if (stats && typeof stats === 'object') {
-              document.getElementById('stat-total-links').innerText = stats.totalLinks || 0;
-              document.getElementById('stat-total-clicks').innerText = stats.totalClicks || 0;
-              document.getElementById('stat-today-clicks').innerText = stats.todayClicks || 0;
-              // ... rest of your code
-            }
-          } catch (error) {
-            console.error('Error fetching stats:', error);
-            // Show user-friendly error message
-            document.getElementById('stat-total-links').innerText = 'Lỗi';
-            Swal.fire({
-              icon: 'error',
-              title: 'Không thể tải dữ liệu',
-              text: 'Vui lòng thử lại sau',
-              timer: 3000
-            });
-          }
+        renderTopLinks(topLinks);
+        renderChart();
+    }
+    
+    function renderTopLinks(topLinks) {
+        const container = document.getElementById('top-links-list');
+        if (!topLinks || topLinks.length === 0) {
+            container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Chưa có dữ liệu</p>';
+            return;
         }
         
-        async function fetchLinks() {
-            showLoading(true);
-            try {
-                const response = await fetch(`${WORKER_URL}/links`);
-                linksData = await response.json();
-                renderLinks();
-            } catch (error) {
-                console.error('Error fetching links:', error);
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        async function deleteLink(code) {
-            const result = await Swal.fire({
-                title: 'Xóa link?',
-                text: `Bạn có chắc muốn xóa link /${code}?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Xóa',
-                cancelButtonText: 'Hủy'
-            });
-            
-            if (result.isConfirmed) {
-                showLoading(true);
-                try {
-                    const response = await fetch(`${WORKER_URL}/delete/${code}`, { method: 'DELETE' });
-                    if (response.ok) {
-                        Swal.fire('Đã xóa!', '', 'success');
-                        fetchLinks();
-                        fetchStats();
-                    } else {
-                        Swal.fire('Lỗi', 'Không thể xóa link', 'error');
-                    }
-                } catch (error) {
-                    Swal.fire('Lỗi', error.message, 'error');
-                } finally {
-                    showLoading(false);
-                }
-            }
-        }
-        
-        // ==================== RENDER FUNCTIONS ====================
-        function renderTopLinks(topLinks) {
-            const container = document.getElementById('top-links-list');
-            if (!topLinks || topLinks.length === 0) {
-                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Chưa có dữ liệu</p>';
-                return;
-            }
-            
-            container.innerHTML = topLinks.map((link, index) => `
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-primary-light transition cursor-pointer" onclick="window.open('${WORKER_URL}/${link.code}', '_blank')">
-                    <div class="flex items-center gap-3">
-                        <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
-                        <div>
-                            <p class="text-sm font-bold text-gray-800">/${link.code}</p>
-                            <p class="text-xs text-gray-500">${link.clicks} lượt click</p>
-                        </div>
+        container.innerHTML = topLinks.map((link, index) => `
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-primary-light transition cursor-pointer" onclick="window.open('https://${YOUR_DOMAIN}/${link.code}', '_blank')">
+                <div class="flex items-center gap-3">
+                    <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">/${link.code}</p>
+                        <p class="text-xs text-gray-500">${link.clicks || 0} lượt click</p>
                     </div>
-                    <i class="fa-solid fa-arrow-right text-gray-400"></i>
                 </div>
-            `).join('');
+                <i class="fa-solid fa-arrow-right text-gray-400"></i>
+            </div>
+        `).join('');
+    }
+    
+    function renderChart() {
+        const ctx = document.getElementById('clicksChart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+        
+        // Generate last 7 days
+        const labels = [];
+        const data = [];
+        
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            labels.push(date.toISOString().slice(0, 10));
+            data.push(0); // No daily click tracking in localStorage
         }
         
-        function renderChart(dailyClicks) {
-            const ctx = document.getElementById('clicksChart').getContext('2d');
-            if (chartInstance) chartInstance.destroy();
-            
-            const labels = dailyClicks.map(d => d.date);
-            const data = dailyClicks.map(d => d.clicks);
-            
-            chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Lượt click',
-                        data: data,
-                        borderColor: '#FFC107',
-                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointBackgroundColor: '#FFC107',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }]
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Lượt click',
+                    data: data,
+                    borderColor: '#FFC107',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#FFC107',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { backgroundColor: '#1F2937', titleColor: '#FFC107' }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { backgroundColor: '#1F2937', titleColor: '#FFC107' }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: '#E5E7EB' } },
-                        x: { grid: { display: false } }
-                    }
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#E5E7EB' } },
+                    x: { grid: { display: false } }
                 }
-            });
-        }
+            }
+        });
+    }
+    
+    // ==================== RENDER LINKS TABLE ====================
+    function renderLinks() {
+        const term = document.getElementById('link-search')?.value.toLowerCase() || '';
+        const filtered = linksData.filter(link => 
+            link.code.toLowerCase().includes(term) || 
+            link.original_url.toLowerCase().includes(term)
+        );
         
-        function renderLinks() {
-            const term = document.getElementById('link-search')?.value.toLowerCase() || '';
-            const filtered = linksData.filter(link => 
-                link.code.toLowerCase().includes(term) || 
-                link.original_url.toLowerCase().includes(term)
-            );
-            
-            document.getElementById('links-empty').classList.toggle('hidden', filtered.length > 0);
-            
-            document.getElementById('links-table-body').innerHTML = filtered.map(link => `
-                <tr class="hover:bg-gray-50 transition border-b border-gray-50">
-                    <td class="px-6 py-4">
-                        <span class="bg-primary-light text-primary px-2 py-1 rounded text-xs font-mono font-bold">${link.code}</span>
-                    </td>
-                    <td class="px-6 py-4">
-                        <a href="${WORKER_URL}/${link.code}" target="_blank" class="text-primary hover:underline text-sm font-mono">
-                            ${YOUR_DOMAIN}/${link.code}
-                        </a>
-                    </td>
-                    <td class="px-6 py-4 max-w-xs truncate text-gray-600" title="${link.original_url}">
-                        ${link.original_url.substring(0, 50)}${link.original_url.length > 50 ? '...' : ''}
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        <span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full text-xs font-bold">
-                            <i class="fa-solid fa-chart-simple"></i> ${link.clicks || 0}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 text-xs text-gray-500">
-                        ${new Date(link.created_at).toLocaleDateString('vi-VN')}
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button onclick="copyToClipboardCustom('${YOUR_DOMAIN}/${link.code}')" 
-                                class="w-8 h-8 rounded hover:bg-primary-light text-primary flex items-center justify-center transition"
-                                title="Sao chép">
-                                <i class="fa-regular fa-copy"></i>
-                            </button>
-                            <button onclick="deleteLink('${link.code}')" 
-                                class="w-8 h-8 rounded hover:bg-red-50 text-red-500 flex items-center justify-center transition"
-                                title="Xóa">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
+        document.getElementById('links-empty').classList.toggle('hidden', filtered.length > 0);
         
-        function copyToClipboardCustom(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = `https://${text}`;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            Swal.fire({ icon: 'success', title: 'Đã sao chép!', timer: 1000, showConfirmButton: false });
-        }
-        
-        function filterLinks() { renderLinks(); }
-        
-        function exportExcel() {
-            const ws = XLSX.utils.json_to_sheet(linksData.map(l => ({
-                'Short Code': l.code,
-                'Short URL': `https://${YOUR_DOMAIN}/${l.code}`,
-                'Original URL': l.original_url,
-                'Clicks': l.clicks || 0,
-                'Created At': new Date(l.created_at).toLocaleString('vi-VN')
-            })));
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Links');
-            XLSX.writeFile(wb, `url_shortener_${new Date().toISOString().split('T')[0]}.xlsx`);
-        }
-        
-        function showStats() {
-            switchTab('dashboard');
-        }
-        
-        // ==================== EVENT HANDLERS ====================
-        document.getElementById('shortenForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const url = document.getElementById('originalUrl').value;
-            const customCode = document.getElementById('customCode').value;
-            
-            if (!url) {
-                Swal.fire('Lỗi', 'Vui lòng nhập URL', 'error');
+        document.getElementById('links-table-body').innerHTML = filtered.map(link => `
+            <tr class="hover:bg-gray-50 transition border-b border-gray-50">
+                <td class="px-6 py-4">
+                    <span class="bg-primary-light text-primary px-2 py-1 rounded text-xs font-mono font-bold">${link.code}</span>
+                </td>
+                <td class="px-6 py-4">
+                    <a href="https://${YOUR_DOMAIN}/${link.code}" target="_blank" class="text-primary hover:underline text-sm font-mono">
+                        ${YOUR_DOMAIN}/${link.code}
+                    </a>
+                </td>
+                <td class="px-6 py-4 max-w-xs truncate text-gray-600" title="${link.original_url}">
+                    ${link.original_url.substring(0, 50)}${link.original_url.length > 50 ? '...' : ''}
+                </td>
+                <td class="px-6 py-4 text-center">
+                    <span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full text-xs font-bold">
+                        <i class="fa-solid fa-chart-simple"></i> ${link.clicks || 0}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-xs text-gray-500">
+                    ${new Date(link.created_at).toLocaleDateString('vi-VN')}
+                </td>
+                <td class="px-6 py-4 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="copyToClipboardCustom('${YOUR_DOMAIN}/${link.code}')" 
+                            class="w-8 h-8 rounded hover:bg-primary-light text-primary flex items-center justify-center transition"
+                            title="Sao chép">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                        <button onclick="deleteLink('${link.code}')" 
+                            class="w-8 h-8 rounded hover:bg-red-50 text-red-500 flex items-center justify-center transition"
+                            title="Xóa">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </table>
+        `).join('');
+    }
+    
+    function filterLinks() { renderLinks(); }
+    
+    function exportExcel() {
+        const ws = XLSX.utils.json_to_sheet(linksData.map(l => ({
+            'Short Code': l.code,
+            'Short URL': `https://${YOUR_DOMAIN}/${l.code}`,
+            'Original URL': l.original_url,
+            'Clicks': l.clicks || 0,
+            'Created At': new Date(l.created_at).toLocaleString('vi-VN')
+        })));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Links');
+        XLSX.writeFile(wb, `url_shortener_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+    
+    function showStats() {
+        switchTab('dashboard');
+    }
+    
+    // ==================== HANDLE REDIRECT ====================
+    function handleRedirect() {
+        const path = window.location.pathname.slice(1);
+        if (path) {
+            const link = linksData.find(l => l.code === path);
+            if (link) {
+                // Increment click count
+                link.clicks = (link.clicks || 0) + 1;
+                saveData();
+                // Redirect to original URL
+                window.location.href = link.original_url;
                 return;
             }
-            
-            // Validate custom code
-            if (customCode && !/^[a-zA-Z0-9-]+$/.test(customCode)) {
-                Swal.fire('Lỗi', 'Code chỉ được chứa chữ cái, số và dấu gạch ngang', 'error');
-                return;
-            }
-            
-            await shortenUrl(url, customCode);
-            document.getElementById('shortenForm').reset();
-        });
+        }
+    }
+    
+    // ==================== EVENT HANDLERS ====================
+    document.getElementById('shortenForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const url = document.getElementById('originalUrl').value;
+        const customCode = document.getElementById('customCode').value;
         
-        // Khởi tạo
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchStats();
-            fetchLinks();
-        });
-    </script>
+        if (!url) {
+            Swal.fire('Lỗi', 'Vui lòng nhập URL', 'error');
+            return;
+        }
+        
+        if (customCode && !/^[a-zA-Z0-9-]+$/.test(customCode)) {
+            Swal.fire('Lỗi', 'Code chỉ được chứa chữ cái, số và dấu gạch ngang', 'error');
+            return;
+        }
+        
+        await shortenUrl(url, customCode);
+        document.getElementById('shortenForm').reset();
+    });
+    
+    // ==================== INIT ====================
+    loadData();
+    renderDashboard();
+    
+    // Check for redirect
+    handleRedirect();
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        renderDashboard();
+        renderLinks();
+    });
+</script>
 </body>
 </html>
