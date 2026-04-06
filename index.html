@@ -47,23 +47,49 @@
         .animate-fade-in { animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .copy-btn {
-            transition: all 0.2s ease;
-        }
-        .copy-btn:hover {
-            transform: translateY(-2px);
-        }
+        .copy-btn { transition: all 0.2s ease; }
+        .copy-btn:hover { transform: translateY(-2px); }
         
-        .stat-card {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -12px rgba(0, 0, 0, 0.1); }
+        
+        .log-entry { transition: all 0.2s ease; }
+        .log-entry:hover { background-color: #FEF3C7; transform: translateX(4px); }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
         }
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 25px -12px rgba(0, 0, 0, 0.1);
-        }
+        .modal.active { display: flex; }
     </style>
 </head>
 <body class="text-gray-800 h-screen flex overflow-hidden selection:bg-primary selection:text-white">
+
+    <!-- Modal đặt tên -->
+    <div id="nameModal" class="modal">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-user-plus text-2xl text-primary"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800">Chào mừng bạn!</h3>
+                <p class="text-gray-500 text-sm mt-2">Vui lòng đặt tên để hiển thị trong logs</p>
+            </div>
+            <input type="text" id="userName" placeholder="Nhập tên của bạn" class="w-full px-4 py-3 border border-gray-200 rounded-lg mb-4 focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+            <button onclick="setUserName()" class="w-full bg-primary text-gray-800 font-bold py-3 rounded-lg hover:bg-primary-hover transition">
+                Xác nhận
+            </button>
+        </div>
+    </div>
 
     <!-- Sidebar -->
     <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm z-20">
@@ -89,15 +115,19 @@
                 <i class="fa-solid fa-table-list w-6 text-gray-400 group-hover:text-primary transition-colors"></i>
                 <span>Quản lý link</span>
             </a>
+            <a href="#" onclick="switchTab('logs')" id="nav-logs" class="nav-item flex items-center px-6 py-3.5 text-sm font-medium transition-all hover:bg-gray-50 group">
+                <i class="fa-solid fa-history w-6 text-gray-400 group-hover:text-primary transition-colors"></i>
+                <span>Logs & Theo dõi</span>
+            </a>
         </nav>
 
         <div class="p-4 border-t border-gray-100">
-            <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer transition-colors" onclick="showStats()">
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
                 <div class="w-10 h-10 rounded-full bg-primary text-gray-800 flex items-center justify-center font-bold">
                     <i class="fa-solid fa-chart-simple"></i>
                 </div>
                 <div class="flex-1">
-                    <p class="text-sm font-bold text-gray-800">Thống kê</p>
+                    <p class="text-sm font-bold text-gray-800">Tổng lượt click</p>
                     <p class="text-xs text-gray-500" id="total-clicks-stat">0 lượt click</p>
                 </div>
                 <i class="fa-solid fa-chart-pie text-gray-400"></i>
@@ -157,12 +187,20 @@
                     </div>
                 </div>
 
-                <!-- UTM Statistics Section -->
+                <!-- Thanh thống kê theo giờ -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+                    <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-primary"></i>
+                        Lưu lượng truy cập trong ngày (theo giờ)
+                    </h3>
+                    <div class="h-64"><canvas id="hourlyChart"></canvas></div>
+                </div>
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                         <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
                             <i class="fa-solid fa-chart-pie text-primary"></i>
-                            Top nguồn truy cập (UTM Source)
+                            Top nguồn truy cập (UTM)
                         </h3>
                         <div id="top-sources-list" class="space-y-3">
                             <p class="text-xs text-gray-400 italic text-center py-4">Đang tải...</p>
@@ -170,30 +208,16 @@
                     </div>
                     
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-chart-simple text-primary"></i>
-                            Top chiến dịch (UTM Campaign)
-                        </h3>
-                        <div id="top-campaigns-list" class="space-y-3">
+                        <h3 class="font-bold text-gray-800 mb-4">Top 5 link phổ biến</h3>
+                        <div class="space-y-3" id="top-links-list">
                             <p class="text-xs text-gray-400 italic text-center py-4">Đang tải...</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="font-bold text-gray-800 mb-6">Lượt click theo ngày</h3>
-                        <div class="h-80"><canvas id="clicksChart"></canvas></div>
-                    </div>
-                    
-                    <div class="flex flex-col gap-6">
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                            <h3 class="font-bold text-gray-800 mb-4">Top 5 link phổ biến</h3>
-                            <div class="space-y-3" id="top-links-list">
-                                <p class="text-xs text-gray-400 italic text-center py-4">Đang tải...</p>
-                            </div>
-                        </div>
-                    </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-gray-800 mb-6">Lượt click theo ngày (7 ngày)</h3>
+                    <div class="h-80"><canvas id="clicksChart"></canvas></div>
                 </div>
             </div>
 
@@ -212,17 +236,13 @@
                         <form id="shortenForm" class="space-y-6">
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">URL cần rút gọn *</label>
-                                <div class="flex gap-3">
-                                    <input type="url" id="originalUrl" required 
-                                        class="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
-                                        placeholder="https://example.com/long_url">
-                                </div>
+                                <input type="url" id="originalUrl" required 
+                                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+                                    placeholder="https://example.com/long_url">
                             </div>
                             
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">
-                                    Tùy chỉnh alias
-                                </label>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Tùy chỉnh alias (không bắt buộc)</label>
                                 <div class="flex items-center gap-3">
                                     <span class="text-gray-500 bg-gray-100 px-3 py-3 rounded-lg text-sm" id="domain-preview">yourdomain.com/</span>
                                     <input type="text" id="customCode" maxlength="20"
@@ -303,6 +323,60 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Logs View -->
+            <div id="view-logs" class="view-section hidden animate-fade-in">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+                    <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-simple text-primary"></i>
+                        Thống kê hôm nay
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="today-stats">
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <p class="text-2xl font-bold text-primary" id="stat-today-clicks-log">0</p>
+                            <p class="text-xs text-gray-500">Lượt click</p>
+                        </div>
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <p class="text-2xl font-bold text-green-600" id="stat-today-links">0</p>
+                            <p class="text-xs text-gray-500">Link mới</p>
+                        </div>
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <p class="text-2xl font-bold text-blue-600" id="stat-today-users">0</p>
+                            <p class="text-xs text-gray-500">Người dùng</p>
+                        </div>
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <p class="text-2xl font-bold text-purple-600" id="stat-today-actions">0</p>
+                            <p class="text-xs text-gray-500">Tổng hành động</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-history text-primary"></i>
+                            Lịch sử hoạt động
+                        </h3>
+                        <button onclick="refreshLogs()" class="px-3 py-1.5 bg-gray-100 rounded-lg text-sm hover:bg-gray-200 transition">
+                            <i class="fa-solid fa-rotate-right"></i> Làm mới
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr class="text-xs uppercase text-gray-500 font-semibold">
+                                    <th class="px-4 py-3">Thời gian</th>
+                                    <th class="px-4 py-3">IP</th>
+                                    <th class="px-4 py-3">Người dùng</th>
+                                    <th class="px-4 py-3">Hành động</th>
+                                    <th class="px-4 py-3">Chi tiết</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-table-body" class="text-sm divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -310,12 +384,15 @@
         // ==================== CONFIGURATION ====================
         const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
         const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
+        const LOGS_PASSWORD = 'logpass123'; // Cùng với password trong Worker
         
         document.getElementById('current-domain').innerText = YOUR_DOMAIN;
         document.getElementById('domain-preview').innerText = `${YOUR_DOMAIN}/`;
         
         let linksData = [];
         let chartInstance = null;
+        let hourlyChartInstance = null;
+        let isNameSet = false;
         
         // Hiển thị ngày hiện tại
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('vi-VN', {
@@ -325,35 +402,106 @@
             year: 'numeric'
         });
         
+        // ==================== AUTHENTICATION ====================
+        function getAuthHeader() {
+            const username = prompt('Tên đăng nhập:');
+            const password = prompt('Mật khẩu:');
+            return 'Basic ' + btoa(username + ':' + password);
+        }
+        
+        async function fetchWithAuth(url, options = {}) {
+            const auth = getAuthHeader();
+            const response = await fetch(url, {
+                ...options,
+                headers: { ...options.headers, 'Authorization': auth }
+            });
+            if (response.status === 401) {
+                alert('Sai tên đăng nhập hoặc mật khẩu!');
+                return null;
+            }
+            return response;
+        }
+        
+        // ==================== LOGS AUTH ====================
+        function getLogsAuthHeader() {
+            const username = prompt('Tên (sẽ được lưu lại để theo dõi):');
+            const password = prompt('Mật khẩu xem logs:');
+            return { auth: 'Basic ' + btoa(username + ':' + password), username };
+        }
+        
+        async function fetchLogsWithAuth(url, options = {}) {
+            const { auth, username } = getLogsAuthHeader();
+            const response = await fetch(url, {
+                ...options,
+                headers: { ...options.headers, 'Authorization': auth }
+            });
+            if (response.status === 401) {
+                alert('Sai mật khẩu logs!');
+                return null;
+            }
+            return { response, username };
+        }
+        
+        // ==================== SET USER NAME ====================
+        async function setUserName() {
+            const name = document.getElementById('userName').value.trim();
+            if (!name) {
+                Swal.fire('Lỗi', 'Vui lòng nhập tên', 'error');
+                return;
+            }
+            
+            const password = prompt('Nhập mật khẩu logs để xác nhận:');
+            if (!password) return;
+            
+            try {
+                const response = await fetch(`${WORKER_URL}/set-name`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Basic ' + btoa(name + ':' + password)
+                    },
+                    body: JSON.stringify({ name: name })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('nameModal').classList.remove('active');
+                    isNameSet = true;
+                    Swal.fire('Thành công', 'Đã lưu tên của bạn!', 'success');
+                    if (currentTab === 'logs') fetchLogs();
+                } else {
+                    Swal.fire('Lỗi', 'Sai mật khẩu logs!', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Lỗi', error.message, 'error');
+            }
+        }
+        
         // ==================== UTILITY FUNCTIONS ====================
         function showLoading(show) {
             document.getElementById('loading-overlay').classList.toggle('hidden', !show);
         }
         
+        let currentTab = 'dashboard';
         function switchTab(tab) {
+            currentTab = tab;
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.getElementById(`nav-${tab}`).classList.add('active');
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(`view-${tab}`).classList.remove('hidden');
             
-            const titles = { dashboard: 'Tổng quan', shortener: 'Rút gọn link', links: 'Quản lý link' };
+            const titles = { dashboard: 'Tổng quan', shortener: 'Rút gọn link', links: 'Quản lý link', logs: 'Logs & Theo dõi' };
             document.getElementById('page-title').innerText = titles[tab];
             
-            if (tab === 'dashboard') fetchStats();
+            if (tab === 'dashboard') { fetchStats(); fetchHourlyStats(); }
             if (tab === 'links') fetchLinks();
+            if (tab === 'logs') fetchLogs();
         }
         
         function copyToClipboard() {
             const input = document.getElementById('shortUrlResult');
             input.select();
             document.execCommand('copy');
-            Swal.fire({
-                icon: 'success',
-                title: 'Đã sao chép!',
-                text: 'Link đã được copy vào clipboard',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            Swal.fire({ icon: 'success', title: 'Đã sao chép!', timer: 1500, showConfirmButton: false });
         }
         
         // ==================== API CALLS ====================
@@ -371,13 +519,7 @@
                 if (response.ok) {
                     document.getElementById('shortUrlResult').value = data.shortUrl;
                     document.getElementById('result-area').classList.remove('hidden');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Tạo link thành công!',
-                        text: 'Link rút gọn đã sẵn sàng',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
+                    Swal.fire({ icon: 'success', title: 'Tạo link thành công!', timer: 2000, showConfirmButton: false });
                     fetchLinks();
                     fetchStats();
                 } else {
@@ -393,13 +535,9 @@
         async function fetchStats() {
             try {
                 const response = await fetch(`${WORKER_URL}/stats`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 const data = await response.json();
-                console.log('Stats data:', data);
                 
                 document.getElementById('stat-total-links').innerText = data.totalLinks || 0;
                 document.getElementById('stat-total-clicks').innerText = data.totalClicks || 0;
@@ -413,68 +551,68 @@
                 renderTopLinks(data.topLinks || []);
                 renderChart(data.dailyClicks || []);
                 
-                // Render UTM stats nếu có
                 if (data.utmStats) {
                     renderUTMStats(data.utmStats);
                 }
-                
             } catch (error) {
                 console.error('Error fetching stats:', error);
-                document.getElementById('stat-total-links').innerText = '0';
-                document.getElementById('stat-total-clicks').innerText = '0';
-                document.getElementById('stat-today-clicks').innerText = '0';
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Không thể tải dữ liệu',
-                    text: error.message,
-                    timer: 3000
-                });
             }
         }
         
-        function renderUTMStats(utmStats) {
-            // Render Top Sources
-            const sourcesContainer = document.getElementById('top-sources-list');
-            if (utmStats.sources && Object.keys(utmStats.sources).length > 0) {
-                const sortedSources = Object.entries(utmStats.sources)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 5);
-                
-                sourcesContainer.innerHTML = sortedSources.map(([source, clicks], index) => `
-                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div class="flex items-center gap-3">
-                            <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
-                            <div>
-                                <p class="text-sm font-bold text-gray-800">${source}</p>
-                            </div>
-                        </div>
-                        <p class="text-sm font-semibold text-gray-600">${clicks} clicks</p>
-                    </div>
-                `).join('');
-            } else {
-                sourcesContainer.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Chưa có dữ liệu UTM</p>';
+        async function fetchHourlyStats() {
+            try {
+                const response = await fetch(`${WORKER_URL}/hourly-stats`);
+                const data = await response.json();
+                renderHourlyChart(data);
+            } catch (error) {
+                console.error('Error fetching hourly stats:', error);
             }
+        }
+        
+        function renderHourlyChart(hourlyData) {
+            const ctx = document.getElementById('hourlyChart').getContext('2d');
+            if (hourlyChartInstance) hourlyChartInstance.destroy();
             
-            // Render Top Campaigns
-            const campaignsContainer = document.getElementById('top-campaigns-list');
-            if (utmStats.campaigns && Object.keys(utmStats.campaigns).length > 0) {
-                const sortedCampaigns = Object.entries(utmStats.campaigns)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 5);
-                
-                campaignsContainer.innerHTML = sortedCampaigns.map(([campaign, clicks], index) => `
+            const labels = hourlyData.map(d => `${d.hour}:00`);
+            const clicks = hourlyData.map(d => d.clicks);
+            
+            hourlyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Lượt click',
+                        data: clicks,
+                        backgroundColor: '#FFC107',
+                        borderRadius: 8,
+                        borderColor: '#FFB300',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, grid: { color: '#E5E7EB' } } }
+                }
+            });
+        }
+        
+        function renderUTMStats(utmStats) {
+            const container = document.getElementById('top-sources-list');
+            if (utmStats && Object.keys(utmStats).length > 0) {
+                const sorted = Object.entries(utmStats).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                container.innerHTML = sorted.map(([utm, clicks], index) => `
                     <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div class="flex items-center gap-3">
                             <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
-                            <div>
-                                <p class="text-sm font-bold text-gray-800">${campaign}</p>
-                            </div>
+                            <span class="text-sm font-mono">${utm === 'direct' ? '🔗 Truy cập trực tiếp' : '📱 ' + utm}</span>
                         </div>
-                        <p class="text-sm font-semibold text-gray-600">${clicks} clicks</p>
+                        <span class="text-sm font-bold">${clicks} clicks</span>
                     </div>
                 `).join('');
             } else {
-                campaignsContainer.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Chưa có dữ liệu UTM</p>';
+                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Chưa có dữ liệu UTM</p>';
             }
         }
         
@@ -489,6 +627,64 @@
             } finally {
                 showLoading(false);
             }
+        }
+        
+        async function fetchLogs() {
+            showLoading(true);
+            try {
+                const { response, username } = await fetchLogsWithAuth(`${WORKER_URL}/logs`);
+                if (!response) return;
+                
+                const data = await response.json();
+                renderLogs(data.logs || [], data.users || {}, data.dailyStats || {});
+            } catch (error) {
+                console.error('Error fetching logs:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function renderLogs(logs, users, dailyStats) {
+            // Render thống kê
+            document.getElementById('stat-today-clicks-log').innerText = dailyStats.click_link || 0;
+            document.getElementById('stat-today-links').innerText = dailyStats.create_link || 0;
+            document.getElementById('stat-today-users').innerText = Object.keys(users).length;
+            document.getElementById('stat-today-actions').innerText = Object.values(dailyStats).reduce((a,b) => a+b, 0);
+            
+            // Render logs
+            const container = document.getElementById('logs-table-body');
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Chưa có hoạt động nào</td></tr>';
+                return;
+            }
+            
+            container.innerHTML = logs.map(log => {
+                let actionIcon = '';
+                let actionColor = '';
+                switch(log.action) {
+                    case 'click_link': actionIcon = '🔗'; actionColor = 'text-blue-600'; break;
+                    case 'create_link': actionIcon = '✨'; actionColor = 'text-green-600'; break;
+                    case 'delete_link': actionIcon = '🗑️'; actionColor = 'text-red-600'; break;
+                    case 'set_name': actionIcon = '👤'; actionColor = 'text-purple-600'; break;
+                    default: actionIcon = '📝'; actionColor = 'text-gray-600';
+                }
+                
+                let detailText = '';
+                if (log.details) {
+                    if (log.details.code) detailText = `/${log.details.code}`;
+                    if (log.details.utm && log.details.utm !== 'direct') detailText += ` (utm: ${log.details.utm})`;
+                }
+                
+                return `
+                    <tr class="log-entry border-b border-gray-50">
+                        <td class="px-4 py-3 text-xs text-gray-500">${log.time}</td>
+                        <td class="px-4 py-3 text-xs font-mono">${log.ip}</td>
+                        <td class="px-4 py-3 text-sm font-medium">${log.user || 'unknown'}</td>
+                        <td class="px-4 py-3"><span class="${actionColor}">${actionIcon} ${log.action.replace('_', ' ')}</span></td>
+                        <td class="px-4 py-3 text-xs text-gray-500">${detailText}</td>
+                    </tr>
+                `;
+            }).join('');
         }
         
         async function deleteLink(code) {
@@ -520,6 +716,8 @@
                 }
             }
         }
+        
+        function refreshLogs() { fetchLogs(); }
         
         // ==================== RENDER FUNCTIONS ====================
         function renderTopLinks(topLinks) {
@@ -571,14 +769,8 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { backgroundColor: '#1F2937', titleColor: '#FFC107' }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: '#E5E7EB' } },
-                        x: { grid: { display: false } }
-                    }
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, grid: { color: '#E5E7EB' } } }
                 }
             });
         }
@@ -594,37 +786,15 @@
             
             document.getElementById('links-table-body').innerHTML = filtered.map(link => `
                 <tr class="hover:bg-gray-50 transition border-b border-gray-50">
-                    <td class="px-6 py-4">
-                        <span class="bg-primary-light text-primary px-2 py-1 rounded text-xs font-mono font-bold">${link.code}</span>
-                    </td>
-                    <td class="px-6 py-4">
-                        <a href="https://${YOUR_DOMAIN}/${link.code}" target="_blank" class="text-primary hover:underline text-sm font-mono">
-                            ${YOUR_DOMAIN}/${link.code}
-                        </a>
-                    </td>
-                    <td class="px-6 py-4 max-w-xs truncate text-gray-600" title="${link.original_url}">
-                        ${link.original_url.substring(0, 50)}${link.original_url.length > 50 ? '...' : ''}
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        <span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full text-xs font-bold">
-                            <i class="fa-solid fa-chart-simple"></i> ${link.clicks || 0}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 text-xs text-gray-500">
-                        ${new Date(link.created_at).toLocaleDateString('vi-VN')}
-                    </td>
+                    <td class="px-6 py-4"><span class="bg-primary-light text-primary px-2 py-1 rounded text-xs font-mono font-bold">${link.code}</span></td>
+                    <td class="px-6 py-4"><a href="https://${YOUR_DOMAIN}/${link.code}" target="_blank" class="text-primary hover:underline text-sm font-mono">${YOUR_DOMAIN}/${link.code}</a></td>
+                    <td class="px-6 py-4 max-w-xs truncate text-gray-600" title="${link.original_url}">${link.original_url.substring(0, 50)}${link.original_url.length > 50 ? '...' : ''}</td>
+                    <td class="px-6 py-4 text-center"><span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-chart-simple"></i> ${link.clicks || 0}</span></td>
+                    <td class="px-6 py-4 text-xs text-gray-500">${new Date(link.created_at).toLocaleDateString('vi-VN')}</td>
                     <td class="px-6 py-4 text-center">
                         <div class="flex items-center justify-center gap-2">
-                            <button onclick="copyToClipboardCustom('${YOUR_DOMAIN}/${link.code}')" 
-                                class="w-8 h-8 rounded hover:bg-primary-light text-primary flex items-center justify-center transition"
-                                title="Sao chép">
-                                <i class="fa-regular fa-copy"></i>
-                            </button>
-                            <button onclick="deleteLink('${link.code}')" 
-                                class="w-8 h-8 rounded hover:bg-red-50 text-red-500 flex items-center justify-center transition"
-                                title="Xóa">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                            <button onclick="copyToClipboardCustom('${YOUR_DOMAIN}/${link.code}')" class="w-8 h-8 rounded hover:bg-primary-light text-primary flex items-center justify-center transition" title="Sao chép"><i class="fa-regular fa-copy"></i></button>
+                            <button onclick="deleteLink('${link.code}')" class="w-8 h-8 rounded hover:bg-red-50 text-red-500 flex items-center justify-center transition" title="Xóa"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </td>
                 </tr>
@@ -660,9 +830,7 @@
             XLSX.writeFile(wb, `url_shortener_${new Date().toISOString().split('T')[0]}.xlsx`);
         }
         
-        function showStats() {
-            switchTab('dashboard');
-        }
+        function showStats() { switchTab('dashboard'); }
         
         // ==================== EVENT HANDLERS ====================
         document.getElementById('shortenForm').addEventListener('submit', async (e) => {
@@ -686,8 +854,18 @@
         
         // Khởi tạo
         document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                document.getElementById('nameModal').classList.add('active');
+            }, 500);
             fetchStats();
             fetchLinks();
+            fetchHourlyStats();
+            setInterval(() => {
+                if (currentTab === 'dashboard') {
+                    fetchStats();
+                    fetchHourlyStats();
+                }
+            }, 30000);
         });
     </script>
 </body>
