@@ -462,15 +462,11 @@
                 return;
             }
             
-            const password = prompt('Nhập mật khẩu logs để xác nhận:');
-            if (!password) return;
-            
             try {
                 const response = await fetch(`${WORKER_URL}/set-name`, {
                     method: 'POST',
                     headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Basic ' + btoa('logs:' + password)
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ name: name })
                 });
@@ -480,7 +476,8 @@
                     Swal.fire('Thành công', 'Đã lưu tên của bạn!', 'success');
                     if (currentTab === 'logs') fetchLogs();
                 } else {
-                    Swal.fire('Lỗi', 'Sai mật khẩu logs!', 'error');
+                    const data = await response.json();
+                    Swal.fire('Lỗi', data.error || 'Không thể lưu tên', 'error');
                 }
             } catch (error) {
                 Swal.fire('Lỗi', error.message, 'error');
