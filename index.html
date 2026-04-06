@@ -56,7 +56,6 @@
         .log-entry { transition: all 0.2s ease; }
         .log-entry:hover { background-color: #FEF3C7; transform: translateX(4px); }
         
-        /* Modal styles */
         .modal {
             display: none;
             position: fixed;
@@ -308,6 +307,7 @@
                                     <th class="px-6 py-4">URL gốc</th>
                                     <th class="px-6 py-4 text-center">Lượt click</th>
                                     <th class="px-6 py-4">Ngày tạo</th>
+                                    <th class="px-6 py-4 text-center">UTM</th>
                                     <th class="px-6 py-4 text-center">Thao tác</th>
                                 </tr>
                             </thead>
@@ -384,7 +384,7 @@
         // ==================== CONFIGURATION ====================
         const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
         const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
-        const LOGS_PASSWORD = 'logpass123'; // Cùng với password trong Worker
+        const LOGS_PASSWORD = 'logpass123';
         
         document.getElementById('current-domain').innerText = YOUR_DOMAIN;
         document.getElementById('domain-preview').innerText = `${YOUR_DOMAIN}/`;
@@ -392,9 +392,8 @@
         let linksData = [];
         let chartInstance = null;
         let hourlyChartInstance = null;
-        let isNameSet = false;
+        let currentTab = 'dashboard';
         
-        // Hiển thị ngày hiện tại
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('vi-VN', {
             weekday: 'long', 
             day: '2-digit', 
@@ -403,46 +402,59 @@
         });
         
         // ==================== AUTHENTICATION ====================
-        function getAuthHeader() {
-            const username = prompt('Tên đăng nhập:');
-            const password = prompt('Mật khẩu:');
+        function getAdminAuth() {
+            const username = prompt('Tên đăng nhập admin:');
+            const password = prompt('Mật khẩu admin:');
             return 'Basic ' + btoa(username + ':' + password);
         }
         
-        async function fetchWithAuth(url, options = {}) {
-            const auth = getAuthHeader();
+        async function fetchWithAdminAuth(url, options = {}) {
+            const auth = getAdminAuth();
             const response = await fetch(url, {
                 ...options,
                 headers: { ...options.headers, 'Authorization': auth }
             });
             if (response.status === 401) {
-                alert('Sai tên đăng nhập hoặc mật khẩu!');
+                Swal.fire('Lỗi', 'Sai tên đăng nhập hoặc mật khẩu admin!', 'error');
                 return null;
             }
             return response;
         }
         
-        // ==================== LOGS AUTH ====================
-        function getLogsAuthHeader() {
-            const username = prompt('Tên (sẽ được lưu lại để theo dõi):');
-            const password = prompt('Mật khẩu xem logs:');
-            return { auth: 'Basic ' + btoa(username + ':' + password), username };
+        function getLogsAuth() {
+            const password = prompt('Nhập mật khẩu xem logs:');
+            return 'Basic ' + btoa('logs:' + password);
         }
         
-        async function fetchLogsWithAuth(url, options = {}) {
-            const { auth, username } = getLogsAuthHeader();
+        async function fetchWithLogsAuth(url, options = {}) {
+            const auth = getLogsAuth();
             const response = await fetch(url, {
                 ...options,
                 headers: { ...options.headers, 'Authorization': auth }
             });
             if (response.status === 401) {
-                alert('Sai mật khẩu logs!');
+                Swal.fire('Lỗi', 'Sai mật khẩu logs!', 'error');
                 return null;
             }
-            return { response, username };
+            return response;
         }
         
         // ==================== SET USER NAME ====================
+        async function checkAndSetName() {
+            try {
+                const response = await fetch(`${WORKER_URL}/get-name`);
+                const data = await response.json();
+                
+                if (!data.name) {
+                    document.getElementById('nameModal').classList.add('active');
+                } else {
+                    isNameSet = true;
+                }
+            } catch (error) {
+                console.error('Error checking name:', error);
+            }
+        }
+        
         async function setUserName() {
             const name = document.getElementById('userName').value.trim();
             if (!name) {
@@ -458,14 +470,13 @@
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': 'Basic ' + btoa(name + ':' + password)
+                        'Authorization': 'Basic ' + btoa('logs:' + password)
                     },
                     body: JSON.stringify({ name: name })
                 });
                 
                 if (response.ok) {
                     document.getElementById('nameModal').classList.remove('active');
-                    isNameSet = true;
                     Swal.fire('Thành công', 'Đã lưu tên của bạn!', 'success');
                     if (currentTab === 'logs') fetchLogs();
                 } else {
@@ -481,7 +492,6 @@
             document.getElementById('loading-overlay').classList.toggle('hidden', !show);
         }
         
-        let currentTab = 'dashboard';
         function switchTab(tab) {
             currentTab = tab;
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -504,15 +514,68 @@
             Swal.fire({ icon: 'success', title: 'Đã sao chép!', timer: 1500, showConfirmButton: false });
         }
         
+        function copyToClipboardCustom(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            Swal.fire({ icon: 'success', title: 'Đã sao chép!', timer: 1000, showConfirmButton: false });
+        }
+        
+        function copyWithUtm(code) {
+            const utm = prompt('Nhập UTM (ví dụ: facebook, google, newsletter, zalo):');
+            if (utm && utm.trim()) {
+                const url = `https://${YOUR_DOMAIN}/${code}?utm=${utm.trim()}`;
+                copyToClipboardCustom(url);
+            } else if (utm === '') {
+                Swal.fire('Lỗi', 'Vui lòng nhập UTM', 'error');
+            }
+        }
+        
+        async function viewUtmStats(code) {
+            showLoading(true);
+            try {
+                const response = await fetch(`${WORKER_URL}/link-utm/${code}`);
+                const data = await response.json();
+                
+                if (data.utms.length === 0) {
+                    Swal.fire('Thống kê UTM', `Link /${code} chưa có lượt click nào`, 'info');
+                    return;
+                }
+                
+                let html = '<div class="text-left max-h-96 overflow-y-auto"><table class="w-full"><thead><tr class="border-b"><th class="text-left py-2">UTM</th><th class="text-right py-2">Số lượt</th></tr></thead><tbody>';
+                data.utms.forEach(([utm, clicks]) => {
+                    const utmName = utm === 'direct' ? '🔗 Truy cập trực tiếp' : '📱 ' + utm;
+                    html += `<tr class="border-b"><td class="py-2">${utmName}</td><td class="py-2 text-right font-bold">${clicks}</td></tr>`;
+                });
+                html += '</tbody></table></div>';
+                
+                Swal.fire({
+                    title: `Thống kê UTM: /${code}`,
+                    html: html,
+                    width: 500,
+                    confirmButtonColor: '#FFC107'
+                });
+            } catch (error) {
+                Swal.fire('Lỗi', error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
         // ==================== API CALLS ====================
         async function shortenUrl(url, customCode = '') {
             showLoading(true);
             try {
-                const response = await fetch(`${WORKER_URL}/shorten`, {
+                const response = await fetchWithAdminAuth(`${WORKER_URL}/shorten`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url, customCode })
                 });
+                
+                if (!response) return;
                 
                 const data = await response.json();
                 
@@ -546,6 +609,8 @@
                 
                 if (data.topLinks && data.topLinks.length > 0) {
                     document.getElementById('stat-top-link').innerText = data.topLinks[0].code;
+                } else {
+                    document.getElementById('stat-top-link').innerText = '-';
                 }
                 
                 renderTopLinks(data.topLinks || []);
@@ -600,9 +665,8 @@
         
         function renderUTMStats(utmStats) {
             const container = document.getElementById('top-sources-list');
-            if (utmStats && Object.keys(utmStats).length > 0) {
-                const sorted = Object.entries(utmStats).sort((a, b) => b[1] - a[1]).slice(0, 5);
-                container.innerHTML = sorted.map(([utm, clicks], index) => `
+            if (utmStats && utmStats.length > 0) {
+                container.innerHTML = utmStats.slice(0, 5).map(([utm, clicks], index) => `
                     <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div class="flex items-center gap-3">
                             <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
@@ -632,7 +696,7 @@
         async function fetchLogs() {
             showLoading(true);
             try {
-                const { response, username } = await fetchLogsWithAuth(`${WORKER_URL}/logs`);
+                const response = await fetchWithLogsAuth(`${WORKER_URL}/logs`);
                 if (!response) return;
                 
                 const data = await response.json();
@@ -645,13 +709,11 @@
         }
         
         function renderLogs(logs, users, dailyStats) {
-            // Render thống kê
             document.getElementById('stat-today-clicks-log').innerText = dailyStats.click_link || 0;
             document.getElementById('stat-today-links').innerText = dailyStats.create_link || 0;
             document.getElementById('stat-today-users').innerText = Object.keys(users).length;
             document.getElementById('stat-today-actions').innerText = Object.values(dailyStats).reduce((a,b) => a+b, 0);
             
-            // Render logs
             const container = document.getElementById('logs-table-body');
             if (!logs || logs.length === 0) {
                 container.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Chưa có hoạt động nào</td></tr>';
@@ -673,6 +735,7 @@
                 if (log.details) {
                     if (log.details.code) detailText = `/${log.details.code}`;
                     if (log.details.utm && log.details.utm !== 'direct') detailText += ` (utm: ${log.details.utm})`;
+                    if (log.details.name) detailText += `: ${log.details.name}`;
                 }
                 
                 return `
@@ -701,7 +764,9 @@
             if (result.isConfirmed) {
                 showLoading(true);
                 try {
-                    const response = await fetch(`${WORKER_URL}/delete/${code}`, { method: 'DELETE' });
+                    const response = await fetchWithAdminAuth(`${WORKER_URL}/delete/${code}`, { method: 'DELETE' });
+                    if (!response) return;
+                    
                     if (response.ok) {
                         Swal.fire('Đã xóa!', '', 'success');
                         fetchLinks();
@@ -793,22 +858,19 @@
                     <td class="px-6 py-4 text-xs text-gray-500">${new Date(link.created_at).toLocaleDateString('vi-VN')}</td>
                     <td class="px-6 py-4 text-center">
                         <div class="flex items-center justify-center gap-2">
-                            <button onclick="copyToClipboardCustom('${YOUR_DOMAIN}/${link.code}')" class="w-8 h-8 rounded hover:bg-primary-light text-primary flex items-center justify-center transition" title="Sao chép"><i class="fa-regular fa-copy"></i></button>
-                            <button onclick="deleteLink('${link.code}')" class="w-8 h-8 rounded hover:bg-red-50 text-red-500 flex items-center justify-center transition" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="copyWithUtm('${link.code}')" class="w-8 h-8 rounded hover:bg-primary-light text-primary flex items-center justify-center transition" title="Copy link có UTM">
+                                <i class="fa-solid fa-tag"></i>
+                            </button>
+                            <button onclick="viewUtmStats('${link.code}')" class="w-8 h-8 rounded hover:bg-blue-50 text-blue-500 flex items-center justify-center transition" title="Xem thống kê UTM">
+                                <i class="fa-solid fa-chart-simple"></i>
+                            </button>
+                            <button onclick="deleteLink('${link.code}')" class="w-8 h-8 rounded hover:bg-red-50 text-red-500 flex items-center justify-center transition" title="Xóa">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
             `).join('');
-        }
-        
-        function copyToClipboardCustom(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = `https://${text}`;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            Swal.fire({ icon: 'success', title: 'Đã sao chép!', timer: 1000, showConfirmButton: false });
         }
         
         function filterLinks() { renderLinks(); }
@@ -853,10 +915,9 @@
         });
         
         // Khởi tạo
+        let isNameSet = false;
         document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                document.getElementById('nameModal').classList.add('active');
-            }, 500);
+            checkAndSetName();
             fetchStats();
             fetchLinks();
             fetchHourlyStats();
