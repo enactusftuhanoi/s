@@ -624,21 +624,68 @@
         }
         
         async function fetchHourlyStats() {
+            showLoading(true);
             try {
+                console.log('Fetching hourly stats...');
                 const response = await fetch(`${WORKER_URL}/hourly-stats`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 const data = await response.json();
-                renderHourlyChart(data);
+                console.log('Hourly stats data:', data);
+                
+                if (data && data.length > 0) {
+                    renderHourlyChart(data);
+                } else {
+                    console.warn('No hourly data received');
+                    // Tạo dữ liệu mẫu để hiển thị
+                    const mockData = [];
+                    for (let i = 0; i <= 23; i++) {
+                        mockData.push({ hour: i, clicks: 0 });
+                    }
+                    renderHourlyChart(mockData);
+                }
             } catch (error) {
                 console.error('Error fetching hourly stats:', error);
+                // Hiển thị thông báo lỗi trên UI
+                const container = document.getElementById('hourlyChart');
+                if (container) {
+                    const ctx = container.getContext('2d');
+                    if (hourlyChartInstance) hourlyChartInstance.destroy();
+                    // Tạo chart rỗng
+                    const mockData = [];
+                    for (let i = 0; i <= 23; i++) {
+                        mockData.push({ hour: i, clicks: 0 });
+                    }
+                    renderHourlyChart(mockData);
+                }
+            } finally {
+                showLoading(false);
             }
         }
         
         function renderHourlyChart(hourlyData) {
-            const ctx = document.getElementById('hourlyChart').getContext('2d');
-            if (hourlyChartInstance) hourlyChartInstance.destroy();
+            const canvas = document.getElementById('hourlyChart');
+            if (!canvas) {
+                console.error('Canvas element not found');
+                return;
+            }
             
-            const labels = hourlyData.map(d => `${d.hour}:00`);
-            const clicks = hourlyData.map(d => d.clicks);
+            const ctx = canvas.getContext('2d');
+            if (hourlyChartInstance) {
+                hourlyChartInstance.destroy();
+            }
+            
+            // Chỉ lấy dữ liệu từ 0h đến giờ hiện tại
+            const now = new Date();
+            const currentHour = now.getHours();
+            const filteredData = hourlyData.filter(d => d.hour <= currentHour);
+            
+            const labels = filteredData.map(d => `${d.hour}:00`);
+            const clicks = filteredData.map(d => d.clicks || 0);
+            
+            console.log('Rendering chart with labels:', labels);
+            console.log('Clicks data:', clicks);
             
             hourlyChartInstance = new Chart(ctx, {
                 type: 'bar',
@@ -656,8 +703,36 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, grid: { color: '#E5E7EB' } } }
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.raw} lượt click`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: '#E5E7EB' },
+                            title: {
+                                display: true,
+                                text: 'Số lượt click'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Giờ'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
                 }
             });
         }
