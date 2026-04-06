@@ -1080,21 +1080,83 @@
                     <td class="px-6 py-4 max-w-xs truncate text-gray-600" title="${link.original_url}">${link.original_url.substring(0, 50)}${link.original_url.length > 50 ? '...' : ''}</td>
                     <td class="px-6 py-4 text-center"><span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-chart-simple"></i> ${link.clicks || 0}</span></td>
                     <td class="px-6 py-4 text-xs text-gray-500">${new Date(link.created_at).toLocaleDateString('vi-VN')}</td>
+                    
+                    <!-- Cột UTM: Copy UTM + Thống kê -->
                     <td class="px-6 py-4 text-center">
                         <div class="flex items-center justify-center gap-2">
-                            <button onclick="copyWithUtm('${link.code}')" class="w-8 h-8 rounded hover:bg-primary-light text-primary flex items-center justify-center transition" title="Copy link có UTM">
+                            <button onclick="copyWithUtm('${link.code}')" class="w-8 h-8 rounded-full hover:bg-primary-light text-primary flex items-center justify-center transition" title="Copy link có UTM">
                                 <i class="fa-solid fa-tag"></i>
                             </button>
-                            <button onclick="viewUtmStats('${link.code}')" class="w-8 h-8 rounded hover:bg-blue-50 text-blue-500 flex items-center justify-center transition" title="Xem thống kê UTM">
+                            <button onclick="viewUtmStats('${link.code}')" class="w-8 h-8 rounded-full hover:bg-blue-100 text-blue-500 flex items-center justify-center transition" title="Xem thống kê UTM">
                                 <i class="fa-solid fa-chart-simple"></i>
                             </button>
-                            <button onclick="deleteLink('${link.code}')" class="w-8 h-8 rounded hover:bg-red-50 text-red-500 flex items-center justify-center transition" title="Xóa">
+                        </div>
+                    </td>
+                    
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="copyLink('${link.code}')" class="w-8 h-8 rounded-full hover:bg-green-100 text-green-600 flex items-center justify-center transition" title="Copy link gốc">
+                                <i class="fa-solid fa-copy"></i>
+                            </button>
+                            <button onclick="confirmDelete('${link.code}')" class="w-8 h-8 rounded-full hover:bg-red-100 text-red-500 flex items-center justify-center transition" title="Xóa link">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
                     </td>
                 </tr>
             `).join('');
+        }
+        
+        // Hàm copy link gốc
+        function copyLink(code) {
+            const url = `https://${YOUR_DOMAIN}/${code}`;
+            copyToClipboardCustom(url);
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã sao chép!',
+                text: url,
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+        
+        // Hàm xóa có confirm
+        async function confirmDelete(code) {
+            const result = await Swal.fire({
+                title: 'Xóa link?',
+                text: `Bạn có chắc chắn muốn xóa link /${code}? Hành động này không thể hoàn tác.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Xóa ngay',
+                cancelButtonText: 'Hủy'
+            });
+            
+            if (result.isConfirmed) {
+                showLoading(true);
+                try {
+                    const response = await fetchWithAdminAuth(`${WORKER_URL}/delete/${code}`, { method: 'DELETE' });
+                    if (!response) {
+                        Swal.fire('Lỗi', 'Bạn chưa đăng nhập admin hoặc phiên đăng nhập hết hạn!', 'error');
+                        return;
+                    }
+                    
+                    if (response.ok) {
+                        Swal.fire('Đã xóa!', `Link /${code} đã được xóa thành công.`, 'success');
+                        fetchLinks();
+                        fetchStats();
+                    } else {
+                        const error = await response.json();
+                        Swal.fire('Lỗi', error.error || 'Không thể xóa link', 'error');
+                    }
+                } catch (error) {
+                    console.error('Delete error:', error);
+                    Swal.fire('Lỗi', error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            }
         }
         
         function filterLinks() { renderLinks(); }
