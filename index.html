@@ -157,6 +157,29 @@
                     </div>
                 </div>
 
+                <!-- UTM Statistics Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-primary"></i>
+                            Top nguồn truy cập (UTM Source)
+                        </h3>
+                        <div id="top-sources-list" class="space-y-3">
+                            <p class="text-xs text-gray-400 italic text-center py-4">Đang tải...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-simple text-primary"></i>
+                            Top chiến dịch (UTM Campaign)
+                        </h3>
+                        <div id="top-campaigns-list" class="space-y-3">
+                            <p class="text-xs text-gray-400 italic text-center py-4">Đang tải...</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                         <h3 class="font-bold text-gray-800 mb-6">Lượt click theo ngày</h3>
@@ -285,9 +308,8 @@
 
     <script>
         // ==================== CONFIGURATION ====================
-        // THAY ĐỔI CÁC GIÁ TRỊ NÀY THEO DOMAIN CỦA BẠN
         const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
-        const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn'; // Thay bằng domain của bạn
+        const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
         
         document.getElementById('current-domain').innerText = YOUR_DOMAIN;
         document.getElementById('domain-preview').innerText = `${YOUR_DOMAIN}/`;
@@ -369,40 +391,91 @@
         }
         
         async function fetchStats() {
-          try {
-            const response = await fetch(`${WORKER_URL}/stats`);
-            
-            if (!response.ok) {
-              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            try {
+                const response = await fetch(`${WORKER_URL}/stats`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Stats data:', data);
+                
+                document.getElementById('stat-total-links').innerText = data.totalLinks || 0;
+                document.getElementById('stat-total-clicks').innerText = data.totalClicks || 0;
+                document.getElementById('stat-today-clicks').innerText = data.todayClicks || 0;
+                document.getElementById('total-clicks-stat').innerText = `${data.totalClicks || 0} lượt click`;
+                
+                if (data.topLinks && data.topLinks.length > 0) {
+                    document.getElementById('stat-top-link').innerText = data.topLinks[0].code;
+                }
+                
+                renderTopLinks(data.topLinks || []);
+                renderChart(data.dailyClicks || []);
+                
+                // Render UTM stats nếu có
+                if (data.utmStats) {
+                    renderUTMStats(data.utmStats);
+                }
+                
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+                document.getElementById('stat-total-links').innerText = '0';
+                document.getElementById('stat-total-clicks').innerText = '0';
+                document.getElementById('stat-today-clicks').innerText = '0';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Không thể tải dữ liệu',
+                    text: error.message,
+                    timer: 3000
+                });
+            }
+        }
+        
+        function renderUTMStats(utmStats) {
+            // Render Top Sources
+            const sourcesContainer = document.getElementById('top-sources-list');
+            if (utmStats.sources && Object.keys(utmStats.sources).length > 0) {
+                const sortedSources = Object.entries(utmStats.sources)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+                
+                sourcesContainer.innerHTML = sortedSources.map(([source, clicks], index) => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
+                            <div>
+                                <p class="text-sm font-bold text-gray-800">${source}</p>
+                            </div>
+                        </div>
+                        <p class="text-sm font-semibold text-gray-600">${clicks} clicks</p>
+                    </div>
+                `).join('');
+            } else {
+                sourcesContainer.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Chưa có dữ liệu UTM</p>';
             }
             
-            const stats = await response.json();
-            console.log('Stats data:', stats); // Debug
-            
-            document.getElementById('stat-total-links').innerText = stats.totalLinks || 0;
-            document.getElementById('stat-total-clicks').innerText = stats.totalClicks || 0;
-            document.getElementById('stat-today-clicks').innerText = stats.todayClicks || 0;
-            document.getElementById('total-clicks-stat').innerText = `${stats.totalClicks || 0} lượt click`;
-            
-            if (stats.topLinks && stats.topLinks.length > 0) {
-              document.getElementById('stat-top-link').innerText = stats.topLinks[0].code;
+            // Render Top Campaigns
+            const campaignsContainer = document.getElementById('top-campaigns-list');
+            if (utmStats.campaigns && Object.keys(utmStats.campaigns).length > 0) {
+                const sortedCampaigns = Object.entries(utmStats.campaigns)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+                
+                campaignsContainer.innerHTML = sortedCampaigns.map(([campaign, clicks], index) => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
+                            <div>
+                                <p class="text-sm font-bold text-gray-800">${campaign}</p>
+                            </div>
+                        </div>
+                        <p class="text-sm font-semibold text-gray-600">${clicks} clicks</p>
+                    </div>
+                `).join('');
+            } else {
+                campaignsContainer.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Chưa có dữ liệu UTM</p>';
             }
-            
-            renderTopLinks(stats.topLinks || []);
-            renderChart(stats.dailyClicks || []);
-            
-          } catch (error) {
-            console.error('Error fetching stats:', error);
-            document.getElementById('stat-total-links').innerText = '0';
-            document.getElementById('stat-total-clicks').innerText = '0';
-            document.getElementById('stat-today-clicks').innerText = '0';
-            Swal.fire({
-              icon: 'error',
-              title: 'Không thể tải dữ liệu',
-              text: error.message,
-              timer: 3000
-            });
-          }
         }
         
         async function fetchLinks() {
@@ -474,7 +547,6 @@
             const ctx = document.getElementById('clicksChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
             
-            // Nếu không có dữ liệu, tạo mảng rỗng
             const labels = (dailyClicks && dailyClicks.length > 0) ? dailyClicks.map(d => d.date) : [];
             const data = (dailyClicks && dailyClicks.length > 0) ? dailyClicks.map(d => d.clicks) : [];
             
