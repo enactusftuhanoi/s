@@ -672,9 +672,6 @@
             }
             
             const ctx = canvas.getContext('2d');
-            if (hourlyChartInstance) {
-                hourlyChartInstance.destroy();
-            }
             
             // Chỉ lấy dữ liệu từ 0h đến giờ hiện tại
             const now = new Date();
@@ -687,6 +684,15 @@
             console.log('Rendering chart with labels:', labels);
             console.log('Clicks data:', clicks);
             
+            if (hourlyChartInstance) {
+                // Cập nhật data cho chart cũ
+                hourlyChartInstance.data.labels = labels;
+                hourlyChartInstance.data.datasets[0].data = clicks;
+                hourlyChartInstance.update();
+                return; // Không tạo mới
+            }
+            
+            // Tạo mới lần đầu tiên
             hourlyChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
