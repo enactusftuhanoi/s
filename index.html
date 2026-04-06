@@ -68,6 +68,7 @@
             align-items: center;
             justify-content: center;
         }
+        .progress-bar { transition: width 0.3s ease; }
         .modal.active { display: flex; }
     </style>
 </head>
@@ -522,13 +523,39 @@
         }
         
         function copyWithUtm(code) {
-            const utm = prompt('Nhập UTM (ví dụ: facebook, google, newsletter, zalo):');
-            if (utm && utm.trim()) {
-                const url = `https://${YOUR_DOMAIN}/${code}?utm=${utm.trim()}`;
-                copyToClipboardCustom(url);
-            } else if (utm === '') {
-                Swal.fire('Lỗi', 'Vui lòng nhập UTM', 'error');
-            }
+            Swal.fire({
+                title: 'Thêm UTM cho link',
+                input: 'text',
+                inputLabel: 'Nhập UTM (ví dụ: facebook, google, newsletter)',
+                inputPlaceholder: 'facebook',
+                showCancelButton: true,
+                confirmButtonText: 'Tạo link',
+                cancelButtonText: 'Hủy',
+                confirmButtonColor: '#FFC107',
+                preConfirm: (utm) => {
+                    if (!utm || !utm.trim()) {
+                        Swal.showValidationMessage('Vui lòng nhập UTM');
+                        return false;
+                    }
+                    if (utm.trim().match(/[^a-zA-Z0-9_-]/)) {
+                        Swal.showValidationMessage('UTM chỉ được chứa chữ cái, số, dấu gạch ngang và gạch dưới');
+                        return false;
+                    }
+                    return utm.trim();
+                }
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    const url = `https://${YOUR_DOMAIN}/${code}?utm=${result.value}`;
+                    copyToClipboardCustom(url);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Đã sao chép!',
+                        text: `Link: ${url}`,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+            });
         }
         
         async function viewUtmStats(code) {
@@ -537,23 +564,61 @@
                 const response = await fetch(`${WORKER_URL}/link-utm/${code}`);
                 const data = await response.json();
                 
-                if (data.utms.length === 0) {
+                if (!data.utms || data.utms.length === 0) {
                     Swal.fire('Thống kê UTM', `Link /${code} chưa có lượt click nào`, 'info');
                     return;
                 }
                 
-                let html = '<div class="text-left max-h-96 overflow-y-auto"><table class="w-full"><thead><tr class="border-b"><th class="text-left py-2">UTM</th><th class="text-right py-2">Số lượt</th></tr></thead><tbody>';
+                const totalClicks = data.utms.reduce((sum, [, clicks]) => sum + clicks, 0);
+                
+                let html = `
+                    <div class="text-left">
+                        <div class="mb-4 p-3 bg-gray-50 rounded-lg text-center">
+                            <span class="text-2xl font-bold text-primary">${totalClicks}</span>
+                            <span class="text-gray-500 ml-1">tổng lượt click</span>
+                        </div>
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-2 text-gray-600">UTM</th>
+                                    <th class="text-right py-2 text-gray-600">Số lượt</th>
+                                    <th class="text-right py-2 text-gray-600">Tỷ lệ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
                 data.utms.forEach(([utm, clicks]) => {
-                    const utmName = utm === 'direct' ? 'Direct' :  + utm;
-                    html += `<tr class="border-b"><td class="py-2">${utmName}</td><td class="py-2 text-right font-bold">${clicks}</td></tr>`;
+                    // Fix lỗi NaN: kiểm tra utm hợp lệ
+                    let utmName = utm;
+                    if (!utm || utm === 'undefined' || utm === 'null' || utm === 'NaN') {
+                        utmName = 'Trực tiếp';
+                    } else if (utm === 'direct' || utm === 'Direct') {
+                        utmName = 'Trực tiếp';
+                    }
+                    
+                    const percent = totalClicks > 0 ? Math.round((clicks / totalClicks) * 100) : 0;
+                    html += `
+                        <tr class="border-b border-gray-100">
+                            <td class="py-2 text-gray-700 font-mono">${utmName}</td>
+                            <td class="py-2 text-right font-bold">${clicks}</td>
+                            <td class="py-2 text-right text-gray-500">${percent}%</td>
+                        </tr>
+                    `;
                 });
-                html += '</tbody></table></div>';
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
                 
                 Swal.fire({
-                    title: `Thống kê UTM: /${code}`,
+                    title: `📊 Thống kê UTM: /${code}`,
                     html: html,
-                    width: 500,
-                    confirmButtonColor: '#FFC107'
+                    width: 550,
+                    confirmButtonColor: '#FFC107',
+                    confirmButtonText: 'Đóng'
                 });
             } catch (error) {
                 Swal.fire('Lỗi', error.message, 'error');
@@ -744,9 +809,17 @@
             try {
                 const response = await fetch(`${WORKER_URL}/top-utm`);
                 const data = await response.json();
-                renderTopUTM(data);
+                
+                // Lọc bỏ các UTM lỗi
+                const cleanedData = data.map(item => ({
+                    ...item,
+                    utms: item.utms.filter(([utm]) => utm && utm !== 'undefined' && utm !== 'null' && utm !== 'NaN')
+                })).filter(item => item.utms.length > 0);
+                
+                renderTopUTM(cleanedData);
             } catch (error) {
                 console.error('Error fetching top UTM:', error);
+                document.getElementById('top-sources-list').innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Lỗi tải dữ liệu</p>';
             }
         }
         
@@ -758,25 +831,36 @@
             }
             
             container.innerHTML = topData.map((item, index) => {
-                // Hiển thị top UTM của từng link
-                const topUtms = item.utms.slice(0, 3); // Lấy top 3 UTM của link này
+                const totalClicks = item.totalClicks || 0;
                 return `
-                    <div class="border-b border-gray-100 pb-3 mb-3">
-                        <div class="flex items-center justify-between mb-2">
+                    <div class="border-b border-gray-100 pb-4 mb-4 last:border-0">
+                        <div class="flex items-center justify-between mb-3">
                             <div class="flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
+                                <span class="w-7 h-7 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
                                 <a href="https://${YOUR_DOMAIN}/${item.link}" target="_blank" class="font-bold text-primary hover:underline">/${item.link}</a>
                             </div>
-                            <span class="text-sm font-bold bg-gray-100 px-2 py-1 rounded">${item.totalClicks} clicks</span>
+                            <span class="text-sm font-bold bg-gray-100 px-3 py-1 rounded-full">${totalClicks} clicks</span>
                         </div>
-                        <div class="ml-8 space-y-1">
-                            ${topUtms.map(([utm, clicks], idx) => `
-                                <div class="flex items-center justify-between text-sm">
-                                    <span class="text-gray-600">${idx + 1}. utm=${utm}</span>
-                                    <span class="font-medium">${clicks} clicks</span>
-                                </div>
-                            `).join('')}
-                            ${item.utms.length > 3 ? `<div class="text-xs text-gray-400 mt-1">+${item.utms.length - 3} UTM khác</div>` : ''}
+                        <div class="ml-9 space-y-2">
+                            ${item.utms.slice(0, 5).map(([utm, clicks], idx) => {
+                                const utmName = (utm === 'direct' || utm === 'Direct') ? 'Trực tiếp' : utm;
+                                const percent = totalClicks > 0 ? Math.round((clicks / totalClicks) * 100) : 0;
+                                return `
+                                    <div class="flex items-center justify-between text-sm">
+                                        <div class="flex items-center gap-2 flex-1">
+                                            <span class="text-gray-500 w-6">${idx + 1}.</span>
+                                            <span class="text-gray-700 font-mono">${utmName}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-32 bg-gray-200 rounded-full h-2">
+                                                <div class="bg-primary h-2 rounded-full" style="width: ${percent}%"></div>
+                                            </div>
+                                            <span class="font-bold text-gray-800 w-16 text-right">${clicks} clicks</span>
+                                            <span class="text-xs text-gray-400 w-12">${percent}%</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 `;
