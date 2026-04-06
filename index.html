@@ -116,7 +116,7 @@
             </a>
             <a href="#" onclick="switchTab('logs')" id="nav-logs" class="nav-item flex items-center px-6 py-3.5 text-sm font-medium transition-all hover:bg-gray-50 group">
                 <i class="fa-solid fa-history w-6 text-gray-400 group-hover:text-primary transition-colors"></i>
-                <span>Logs & Theo dõi</span>
+                <span>Logs</span>
             </a>
         </nav>
 
@@ -259,7 +259,7 @@
                         <div id="result-area" class="mt-8 hidden">
                             <div class="bg-primary-light rounded-xl p-5 border border-primary/20">
                                 <div class="flex items-center justify-between mb-3">
-                                    <span class="text-sm font-bold text-primary">✅ Link rút gọn</span>
+                                    <span class="text-sm font-bold text-primary">Link rút gọn</span>
                                     <i class="fa-solid fa-check-circle text-primary"></i>
                                 </div>
                                 <div class="flex gap-3">
@@ -547,7 +547,7 @@
                 
                 let html = '<div class="text-left max-h-96 overflow-y-auto"><table class="w-full"><thead><tr class="border-b"><th class="text-left py-2">UTM</th><th class="text-right py-2">Số lượt</th></tr></thead><tbody>';
                 data.utms.forEach(([utm, clicks]) => {
-                    const utmName = utm === 'direct' ? '🔗 Truy cập trực tiếp' : '📱 ' + utm;
+                    const utmName = utm === 'direct' ? 'Direct' :  + utm;
                     html += `<tr class="border-b"><td class="py-2">${utmName}</td><td class="py-2 text-right font-bold">${clicks}</td></tr>`;
                 });
                 html += '</tbody></table></div>';
