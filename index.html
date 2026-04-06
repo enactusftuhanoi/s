@@ -616,9 +616,8 @@
                 renderTopLinks(data.topLinks || []);
                 renderChart(data.dailyClicks || []);
                 
-                if (data.utmStats) {
-                    renderUTMStats(data.utmStats);
-                }
+                // Gọi fetchTopUTM để hiển thị top nguồn truy cập
+                await fetchTopUTM();
             } catch (error) {
                 console.error('Error fetching stats:', error);
             }
@@ -663,21 +662,47 @@
             });
         }
         
-        function renderUTMStats(utmStats) {
-            const container = document.getElementById('top-sources-list');
-            if (utmStats && utmStats.length > 0) {
-                container.innerHTML = utmStats.slice(0, 5).map(([utm, clicks], index) => `
-                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div class="flex items-center gap-3">
-                            <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
-                            <span class="text-sm font-mono">${utm === 'direct' ? '🔗 Truy cập trực tiếp' : '📱 ' + utm}</span>
-                        </div>
-                        <span class="text-sm font-bold">${clicks} clicks</span>
-                    </div>
-                `).join('');
-            } else {
-                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Chưa có dữ liệu UTM</p>';
+        async function fetchTopUTM() {
+            try {
+                const response = await fetch(`${WORKER_URL}/top-utm`);
+                const data = await response.json();
+                renderTopUTM(data);
+            } catch (error) {
+                console.error('Error fetching top UTM:', error);
             }
+        }
+        
+        function renderTopUTM(topData) {
+            const container = document.getElementById('top-sources-list');
+            if (!topData || topData.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Chưa có dữ liệu</p>';
+                return;
+            }
+            
+            container.innerHTML = topData.map((item, index) => {
+                // Hiển thị top UTM của từng link
+                const topUtms = item.utms.slice(0, 3); // Lấy top 3 UTM của link này
+                return `
+                    <div class="border-b border-gray-100 pb-3 mb-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
+                                <a href="https://${YOUR_DOMAIN}/${item.link}" target="_blank" class="font-bold text-primary hover:underline">/${item.link}</a>
+                            </div>
+                            <span class="text-sm font-bold bg-gray-100 px-2 py-1 rounded">${item.totalClicks} clicks</span>
+                        </div>
+                        <div class="ml-8 space-y-1">
+                            ${topUtms.map(([utm, clicks], idx) => `
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-600">${idx + 1}. utm=${utm}</span>
+                                    <span class="font-medium">${clicks} clicks</span>
+                                </div>
+                            `).join('')}
+                            ${item.utms.length > 3 ? `<div class="text-xs text-gray-400 mt-1">+${item.utms.length - 3} UTM khác</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
         
         async function fetchLinks() {
@@ -723,28 +748,65 @@
             container.innerHTML = logs.map(log => {
                 let actionIcon = '';
                 let actionColor = '';
+                let actionText = '';
                 switch(log.action) {
-                    case 'click_link': actionIcon = '🔗'; actionColor = 'text-blue-600'; break;
-                    case 'create_link': actionIcon = '✨'; actionColor = 'text-green-600'; break;
-                    case 'delete_link': actionIcon = '🗑️'; actionColor = 'text-red-600'; break;
-                    case 'set_name': actionIcon = '👤'; actionColor = 'text-purple-600'; break;
-                    default: actionIcon = '📝'; actionColor = 'text-gray-600';
+                    case 'click_link': 
+                        actionIcon = '🔗'; 
+                        actionColor = 'text-blue-600'; 
+                        actionText = 'Click link';
+                        break;
+                    case 'create_link': 
+                        actionIcon = '✨'; 
+                        actionColor = 'text-green-600'; 
+                        actionText = 'Tạo link';
+                        break;
+                    case 'delete_link': 
+                        actionIcon = '🗑️'; 
+                        actionColor = 'text-red-600'; 
+                        actionText = 'Xóa link';
+                        break;
+                    case 'set_name': 
+                        actionIcon = '👤'; 
+                        actionColor = 'text-purple-600'; 
+                        actionText = 'Đặt tên';
+                        break;
+                    default: 
+                        actionIcon = '📝'; 
+                        actionColor = 'text-gray-600';
+                        actionText = log.action;
                 }
                 
-                let detailText = '';
+                let detailHtml = '';
                 if (log.details) {
-                    if (log.details.code) detailText = `/${log.details.code}`;
-                    if (log.details.utm && log.details.utm !== 'direct') detailText += ` (utm: ${log.details.utm})`;
-                    if (log.details.name) detailText += `: ${log.details.name}`;
+                    if (log.details.code) {
+                        detailHtml += `<div><strong>Link:</strong> /${log.details.code}</div>`;
+                    }
+                    if (log.details.utm && log.details.utm !== 'direct') {
+                        detailHtml += `<div><strong>UTM:</strong> ${log.details.utm}</div>`;
+                    }
+                    if (log.details.target) {
+                        detailHtml += `<div><strong>Đích:</strong> ${log.details.target.substring(0, 50)}${log.details.target.length > 50 ? '...' : ''}</div>`;
+                    }
+                    if (log.details.name) {
+                        detailHtml += `<div><strong>Tên:</strong> ${log.details.name}</div>`;
+                    }
+                    if (log.details.userAgent) {
+                        detailHtml += `<div><strong>UA:</strong> ${log.details.userAgent.substring(0, 40)}...</div>`;
+                    }
+                    if (log.details.referer && log.details.referer !== 'direct') {
+                        detailHtml += `<div><strong>Referer:</strong> ${log.details.referer.substring(0, 40)}...</div>`;
+                    }
                 }
                 
                 return `
                     <tr class="log-entry border-b border-gray-50">
-                        <td class="px-4 py-3 text-xs text-gray-500">${log.time}</td>
+                        <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">${log.time}</td>
                         <td class="px-4 py-3 text-xs font-mono">${log.ip}</td>
                         <td class="px-4 py-3 text-sm font-medium">${log.user || 'unknown'}</td>
-                        <td class="px-4 py-3"><span class="${actionColor}">${actionIcon} ${log.action.replace('_', ' ')}</span></td>
-                        <td class="px-4 py-3 text-xs text-gray-500">${detailText}</td>
+                        <td class="px-4 py-3"><span class="${actionColor} font-medium">${actionIcon} ${actionText}</span></td>
+                        <td class="px-4 py-3 text-xs text-gray-500">
+                            ${detailHtml || '-'}
+                        </td>
                     </tr>
                 `;
             }).join('');
