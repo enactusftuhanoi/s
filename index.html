@@ -330,7 +330,7 @@
                 
                 <!-- Header với nút chuyển đổi -->
                 <div class="flex items-center justify-between mb-6">
-                    <h2 id="logs-title" class="text-xl font-bold text-gray-800">⚡ Logs hành động</h2>
+                    <h2 id="logs-title" class="text-xl font-bold text-gray-800">Logs hành động</h2>
                     <button id="toggle-logs-btn" onclick="toggleLogsView()" class="px-4 py-2 bg-primary text-gray-800 rounded-lg text-sm font-bold hover:bg-primary-hover transition flex items-center gap-2">
                         <i class="fa-solid fa-arrow-right"></i>
                         Xem logs truy cập link
@@ -397,7 +397,7 @@
         // ==================== CONFIGURATION ====================
         const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
         const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
-        const LOGS_PASSWORD = 'logpass123';
+        const LOGS_PASSWORD = '0';
         
         document.getElementById('current-domain').innerText = YOUR_DOMAIN;
         document.getElementById('domain-preview').innerText = `${YOUR_DOMAIN}/`;
@@ -509,7 +509,7 @@
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(`view-${tab}`).classList.remove('hidden');
             
-            const titles = { dashboard: 'Tổng quan', shortener: 'Rút gọn link', links: 'Quản lý link', logs: 'Logs & Theo dõi' };
+            const titles = { dashboard: 'Tổng quan', shortener: 'Rút gọn link', links: 'Quản lý link', logs: 'Logs' };
             document.getElementById('page-title').innerText = titles[tab];
             
             if (tab === 'dashboard') { fetchStats(); fetchHourlyStats(); }
@@ -1197,7 +1197,7 @@
         function toggleLogsView() {
             if (currentLogType === 'actions') {
                 currentLogType = 'clicks';
-                document.getElementById('logs-title').innerHTML = '🔗 Logs truy cập link';
+                document.getElementById('logs-title').innerHTML = 'Logs truy cập link';
                 document.getElementById('logs-subtitle').innerHTML = 'Lịch sử truy cập link';
                 document.getElementById('toggle-logs-btn').innerHTML = '<i class="fa-solid fa-arrow-left"></i> Quay lại logs hành động';
                 
