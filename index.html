@@ -327,6 +327,17 @@
 
             <!-- Logs View -->
             <div id="view-logs" class="view-section hidden animate-fade-in">
+                
+                <!-- Header với nút chuyển đổi -->
+                <div class="flex items-center justify-between mb-6">
+                    <h2 id="logs-title" class="text-xl font-bold text-gray-800">📋 Logs truy cập link</h2>
+                    <button id="toggle-logs-btn" onclick="toggleLogsView()" class="px-4 py-2 bg-primary text-gray-800 rounded-lg text-sm font-bold hover:bg-primary-hover transition flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        Xem logs hành động
+                    </button>
+                </div>
+            
+                <!-- Thống kê hôm nay -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
                     <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-chart-simple text-primary"></i>
@@ -351,12 +362,13 @@
                         </div>
                     </div>
                 </div>
-
+            
+                <!-- Bảng Logs -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div class="p-4 border-b border-gray-100 flex justify-between items-center">
                         <h3 class="font-bold text-gray-800 flex items-center gap-2">
                             <i class="fa-solid fa-history text-primary"></i>
-                            Lịch sử hoạt động
+                            <span id="logs-subtitle">Lịch sử truy cập link</span>
                         </h3>
                         <button onclick="refreshLogs()" class="px-3 py-1.5 bg-gray-100 rounded-lg text-sm hover:bg-gray-200 transition">
                             <i class="fa-solid fa-rotate-right"></i> Làm mới
@@ -365,20 +377,21 @@
                     <div class="overflow-x-auto max-h-96 overflow-y-auto">
                         <table class="w-full text-left">
                             <thead class="bg-gray-50 sticky top-0">
-                                <tr class="text-xs uppercase text-gray-500 font-semibold">
+                                <tr class="text-xs uppercase text-gray-500 font-semibold" id="logs-table-header">
+                                    <!-- Header sẽ thay đổi theo loại log -->
                                     <th class="px-4 py-3">Thời gian</th>
                                     <th class="px-4 py-3">IP</th>
                                     <th class="px-4 py-3">Người dùng</th>
-                                    <th class="px-4 py-3">Hành động</th>
-                                    <th class="px-4 py-3">Chi tiết</th>
+                                    <th class="px-4 py-3">Link</th>
+                                    <th class="px-4 py-3">UTM</th>
+                                    <th class="px-4 py-3">Đích đến</th>
                                 </tr>
                             </thead>
-                            <tbody id="logs-table-body" class="text-sm divide-y divide-gray-100"></tbody>
+                            <tbody id="logs-table-body"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
-        </div>
     </main>
 
     <script>
@@ -1179,6 +1192,124 @@
         }
         
         function showStats() { switchTab('dashboard'); }
+
+        let currentLogType = 'clicks'; // 'clicks' hoặc 'actions'
+
+        function toggleLogsView() {
+            if (currentLogType === 'clicks') {
+                currentLogType = 'actions';
+                document.getElementById('logs-title').innerHTML = '⚡ Logs hành động';
+                document.getElementById('logs-subtitle').innerHTML = 'Lịch sử hành động';
+                document.getElementById('toggle-logs-btn').innerHTML = '<i class="fa-solid fa-arrow-left"></i> Quay lại logs truy cập';
+                
+                // Đổi header bảng
+                document.getElementById('logs-table-header').innerHTML = `
+                    <th class="px-4 py-3">Thời gian</th>
+                    <th class="px-4 py-3">IP</th>
+                    <th class="px-4 py-3">Người dùng</th>
+                    <th class="px-4 py-3">Hành động</th>
+                    <th class="px-4 py-3">Chi tiết</th>
+                `;
+            } else {
+                currentLogType = 'clicks';
+                document.getElementById('logs-title').innerHTML = '📋 Logs truy cập link';
+                document.getElementById('logs-subtitle').innerHTML = 'Lịch sử truy cập link';
+                document.getElementById('toggle-logs-btn').innerHTML = '<i class="fa-solid fa-arrow-right"></i> Xem logs hành động';
+                
+                // Đổi header bảng
+                document.getElementById('logs-table-header').innerHTML = `
+                    <th class="px-4 py-3">Thời gian</th>
+                    <th class="px-4 py-3">IP</th>
+                    <th class="px-4 py-3">Người dùng</th>
+                    <th class="px-4 py-3">Link</th>
+                    <th class="px-4 py-3">UTM</th>
+                    <th class="px-4 py-3">Đích đến</th>
+                `;
+            }
+            fetchLogs();
+        }
+        
+        async function fetchLogs() {
+            showLoading(true);
+            try {
+                const response = await fetchWithLogsAuth(`${WORKER_URL}/logs`);
+                if (!response) return;
+                
+                const data = await response.json();
+                const clickLogs = data.clickLogs || [];
+                const actionLogs = data.actionLogs || [];
+                const users = data.users || {};
+                
+                // Cập nhật thống kê
+                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+                
+                const todayClicks = clickLogs.filter(log => {
+                    const logDate = log.time?.split(' ')[1]?.split('/').reverse().join('-');
+                    return logDate === today;
+                }).length;
+                
+                const todayActions = actionLogs.filter(log => {
+                    const logDate = log.time?.split(' ')[1]?.split('/').reverse().join('-');
+                    return logDate === today;
+                }).length;
+                
+                const todayNewLinks = actionLogs.filter(log => {
+                    const logDate = log.time?.split(' ')[1]?.split('/').reverse().join('-');
+                    return logDate === today && log.action === 'create_link';
+                }).length;
+                
+                document.getElementById('stat-today-clicks-log').innerText = todayClicks;
+                document.getElementById('stat-today-links').innerText = todayNewLinks;
+                document.getElementById('stat-today-users').innerText = Object.keys(users).length;
+                document.getElementById('stat-today-actions').innerText = todayActions;
+                
+                // Render bảng theo loại
+                if (currentLogType === 'clicks') {
+                    document.getElementById('logs-table-body').innerHTML = clickLogs.map(log => `
+                        <tr class="border-b border-gray-50 hover:bg-gray-50">
+                            <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">${log.time}</td>
+                            <td class="px-4 py-3 text-xs font-mono">${log.ip}</td>
+                            <td class="px-4 py-3 text-sm font-medium">${log.user || 'unknown'}</td>
+                            <td class="px-4 py-3"><a href="https://${YOUR_DOMAIN}/${log.code}" target="_blank" class="text-primary text-sm font-mono">/${log.code}</a></td>
+                            <td class="px-4 py-3"><span class="bg-primary-light px-2 py-1 rounded text-xs">${log.utm || 'Trực tiếp'}</span></td>
+                            <td class="px-4 py-3 text-xs text-gray-500 truncate max-w-xs" title="${log.target}">${log.target?.substring(0, 50)}${log.target?.length > 50 ? '...' : ''}</span></td>
+                        </tr>
+                    `).join('');
+                } else {
+                    document.getElementById('logs-table-body').innerHTML = actionLogs.map(log => {
+                        let actionIcon = '';
+                        let actionText = '';
+                        switch(log.action) {
+                            case 'create_link': actionIcon = '✨'; actionText = 'Tạo link'; break;
+                            case 'delete_link': actionIcon = '🗑️'; actionText = 'Xóa link'; break;
+                            case 'set_name': actionIcon = '👤'; actionText = 'Đặt tên'; break;
+                            default: actionIcon = '📝'; actionText = log.action;
+                        }
+                        
+                        let detailText = '';
+                        if (log.details) {
+                            if (log.details.code) detailText = `/${log.details.code}`;
+                            if (log.details.url) detailText += ` → ${log.details.url.substring(0, 40)}...`;
+                            if (log.details.name) detailText = `"${log.details.name}"`;
+                        }
+                        
+                        return `
+                            <tr class="border-b border-gray-50 hover:bg-gray-50">
+                                <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">${log.time}</td>
+                                <td class="px-4 py-3 text-xs font-mono">${log.ip}</td>
+                                <td class="px-4 py-3 text-sm font-medium">${log.user || 'unknown'}</td>
+                                <td class="px-4 py-3"><span class="inline-flex items-center gap-1">${actionIcon} ${actionText}</span></td>
+                                <td class="px-4 py-3 text-xs text-gray-500">${detailText || '-'}</span></td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Error fetching logs:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
         
         // ==================== EVENT HANDLERS ====================
         document.getElementById('shortenForm').addEventListener('submit', async (e) => {
