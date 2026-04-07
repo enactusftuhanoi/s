@@ -330,10 +330,10 @@
                 
                 <!-- Header với nút chuyển đổi -->
                 <div class="flex items-center justify-between mb-6">
-                    <h2 id="logs-title" class="text-xl font-bold text-gray-800">📋 Logs truy cập link</h2>
+                    <h2 id="logs-title" class="text-xl font-bold text-gray-800">⚡ Logs hành động</h2>
                     <button id="toggle-logs-btn" onclick="toggleLogsView()" class="px-4 py-2 bg-primary text-gray-800 rounded-lg text-sm font-bold hover:bg-primary-hover transition flex items-center gap-2">
                         <i class="fa-solid fa-arrow-right"></i>
-                        Xem logs hành động
+                        Xem logs truy cập link
                     </button>
                 </div>
             
@@ -368,7 +368,7 @@
                     <div class="p-4 border-b border-gray-100 flex justify-between items-center">
                         <h3 class="font-bold text-gray-800 flex items-center gap-2">
                             <i class="fa-solid fa-history text-primary"></i>
-                            <span id="logs-subtitle">Lịch sử truy cập link</span>
+                            <span id="logs-subtitle">Lịch sử hành động</span>
                         </h3>
                         <button onclick="refreshLogs()" class="px-3 py-1.5 bg-gray-100 rounded-lg text-sm hover:bg-gray-200 transition">
                             <i class="fa-solid fa-rotate-right"></i> Làm mới
@@ -378,13 +378,12 @@
                         <table class="w-full text-left">
                             <thead class="bg-gray-50 sticky top-0">
                                 <tr class="text-xs uppercase text-gray-500 font-semibold" id="logs-table-header">
-                                    <!-- Header sẽ thay đổi theo loại log -->
+                                    <!-- Mặc định header cho action logs -->
                                     <th class="px-4 py-3">Thời gian</th>
                                     <th class="px-4 py-3">IP</th>
                                     <th class="px-4 py-3">Người dùng</th>
-                                    <th class="px-4 py-3">Link</th>
-                                    <th class="px-4 py-3">UTM</th>
-                                    <th class="px-4 py-3">Đích đến</th>
+                                    <th class="px-4 py-3">Hành động</th>
+                                    <th class="px-4 py-3">Chi tiết</th>
                                 </tr>
                             </thead>
                             <tbody id="logs-table-body"></tbody>
@@ -1193,28 +1192,14 @@
         
         function showStats() { switchTab('dashboard'); }
 
-        let currentLogType = 'clicks'; // 'clicks' hoặc 'actions'
-
+        let currentLogType = 'actions'; // Mặc định là 'actions'
+        
         function toggleLogsView() {
-            if (currentLogType === 'clicks') {
-                currentLogType = 'actions';
-                document.getElementById('logs-title').innerHTML = '⚡ Logs hành động';
-                document.getElementById('logs-subtitle').innerHTML = 'Lịch sử hành động';
-                document.getElementById('toggle-logs-btn').innerHTML = '<i class="fa-solid fa-arrow-left"></i> Quay lại logs truy cập';
-                
-                // Đổi header bảng
-                document.getElementById('logs-table-header').innerHTML = `
-                    <th class="px-4 py-3">Thời gian</th>
-                    <th class="px-4 py-3">IP</th>
-                    <th class="px-4 py-3">Người dùng</th>
-                    <th class="px-4 py-3">Hành động</th>
-                    <th class="px-4 py-3">Chi tiết</th>
-                `;
-            } else {
+            if (currentLogType === 'actions') {
                 currentLogType = 'clicks';
-                document.getElementById('logs-title').innerHTML = '📋 Logs truy cập link';
+                document.getElementById('logs-title').innerHTML = '🔗 Logs truy cập link';
                 document.getElementById('logs-subtitle').innerHTML = 'Lịch sử truy cập link';
-                document.getElementById('toggle-logs-btn').innerHTML = '<i class="fa-solid fa-arrow-right"></i> Xem logs hành động';
+                document.getElementById('toggle-logs-btn').innerHTML = '<i class="fa-solid fa-arrow-left"></i> Quay lại logs hành động';
                 
                 // Đổi header bảng
                 document.getElementById('logs-table-header').innerHTML = `
@@ -1224,6 +1209,20 @@
                     <th class="px-4 py-3">Link</th>
                     <th class="px-4 py-3">UTM</th>
                     <th class="px-4 py-3">Đích đến</th>
+                `;
+            } else {
+                currentLogType = 'actions';
+                document.getElementById('logs-title').innerHTML = '⚡ Logs hành động';
+                document.getElementById('logs-subtitle').innerHTML = 'Lịch sử hành động';
+                document.getElementById('toggle-logs-btn').innerHTML = '<i class="fa-solid fa-arrow-right"></i> Xem logs truy cập link';
+                
+                // Đổi header bảng
+                document.getElementById('logs-table-header').innerHTML = `
+                    <th class="px-4 py-3">Thời gian</th>
+                    <th class="px-4 py-3">IP</th>
+                    <th class="px-4 py-3">Người dùng</th>
+                    <th class="px-4 py-3">Hành động</th>
+                    <th class="px-4 py-3">Chi tiết</th>
                 `;
             }
             fetchLogs();
@@ -1272,7 +1271,7 @@
                             <td class="px-4 py-3 text-sm font-medium">${log.user || 'unknown'}</td>
                             <td class="px-4 py-3"><a href="https://${YOUR_DOMAIN}/${log.code}" target="_blank" class="text-primary text-sm font-mono">/${log.code}</a></td>
                             <td class="px-4 py-3"><span class="bg-primary-light px-2 py-1 rounded text-xs">${log.utm || 'Trực tiếp'}</span></td>
-                            <td class="px-4 py-3 text-xs text-gray-500 truncate max-w-xs" title="${log.target}">${log.target?.substring(0, 50)}${log.target?.length > 50 ? '...' : ''}</span></td>
+                            <td class="px-4 py-3 text-xs text-gray-500 truncate max-w-xs" title="${log.target}">${log.target?.substring(0, 50)}${log.target?.length > 50 ? '...' : ''}</td>
                         </tr>
                     `).join('');
                 } else {
@@ -1299,7 +1298,7 @@
                                 <td class="px-4 py-3 text-xs font-mono">${log.ip}</td>
                                 <td class="px-4 py-3 text-sm font-medium">${log.user || 'unknown'}</td>
                                 <td class="px-4 py-3"><span class="inline-flex items-center gap-1">${actionIcon} ${actionText}</span></td>
-                                <td class="px-4 py-3 text-xs text-gray-500">${detailText || '-'}</span></td>
+                                <td class="px-4 py-3 text-xs text-gray-500">${detailText || '-'}</td>
                             </tr>
                         `;
                     }).join('');
