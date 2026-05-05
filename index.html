@@ -187,6 +187,12 @@
                     </div>
                 </div>
 
+                <!-- Lượt click theo ngày (7 ngày) - ĐẨY LÊN TRƯỚC -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+                    <h3 class="font-bold text-gray-800 mb-6">Lượt click theo ngày (7 ngày)</h3>
+                    <div class="h-80"><canvas id="clicksChart"></canvas></div>
+                </div>
+
                 <!-- Thanh thống kê theo giờ -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
                     <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -213,11 +219,6 @@
                             <p class="text-xs text-gray-400 italic text-center py-4">Đang tải...</p>
                         </div>
                     </div>
-                </div>
-
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="font-bold text-gray-800 mb-6">Lượt click theo ngày (7 ngày)</h3>
-                    <div class="h-80"><canvas id="clicksChart"></canvas></div>
                 </div>
             </div>
 
@@ -397,7 +398,13 @@
         // ==================== CONFIGURATION ====================
         const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
         const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
-        const LOGS_PASSWORD = '0';
+        
+        // Lấy IP từ localStorage hoặc tạo mới
+        let deviceIP = localStorage.getItem('deviceIP');
+        if (!deviceIP) {
+            deviceIP = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+            localStorage.setItem('deviceIP', deviceIP);
+        }
         
         document.getElementById('current-domain').innerText = YOUR_DOMAIN;
         document.getElementById('domain-preview').innerText = `${YOUR_DOMAIN}/`;
@@ -415,47 +422,52 @@
         });
         
         // ==================== AUTHENTICATION ====================
+        // Lưu admin auth vào localStorage để không phải nhập lại mỗi lần
+        let adminAuth = localStorage.getItem('adminAuth');
+        
         function getAdminAuth() {
+            if (adminAuth) return adminAuth;
+            
             const username = prompt('Tên đăng nhập admin:');
             const password = prompt('Mật khẩu admin:');
-            return 'Basic ' + btoa(username + ':' + password);
+            if (username && password) {
+                adminAuth = 'Basic ' + btoa(username + ':' + password);
+                localStorage.setItem('adminAuth', adminAuth);
+            }
+            return adminAuth;
+        }
+        
+        function clearAdminAuth() {
+            adminAuth = null;
+            localStorage.removeItem('adminAuth');
         }
         
         async function fetchWithAdminAuth(url, options = {}) {
             const auth = getAdminAuth();
+            if (!auth) return null;
+            
             const response = await fetch(url, {
                 ...options,
                 headers: { ...options.headers, 'Authorization': auth }
             });
+            
             if (response.status === 401) {
+                clearAdminAuth();
                 Swal.fire('Lỗi', 'Sai tên đăng nhập hoặc mật khẩu admin!', 'error');
                 return null;
             }
             return response;
         }
         
-        function getLogsAuth() {
-            const password = prompt('Nhập mật khẩu xem logs:');
-            return 'Basic ' + btoa('logs:' + password);
-        }
-        
-        async function fetchWithLogsAuth(url, options = {}) {
-            const auth = getLogsAuth();
-            const response = await fetch(url, {
-                ...options,
-                headers: { ...options.headers, 'Authorization': auth }
-            });
-            if (response.status === 401) {
-                Swal.fire('Lỗi', 'Sai mật khẩu logs!', 'error');
-                return null;
-            }
-            return response;
+        // Logs không cần auth nữa
+        async function fetchLogsData(url, options = {}) {
+            return await fetch(url, options);
         }
         
         // ==================== SET USER NAME ====================
         async function checkAndSetName() {
             try {
-                const response = await fetch(`${WORKER_URL}/get-name`);
+                const response = await fetch(`${WORKER_URL}/get-name?device=${deviceIP}`);
                 const data = await response.json();
                 
                 if (!data.name) {
@@ -481,7 +493,7 @@
                     headers: { 
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ name: name })
+                    body: JSON.stringify({ name: name, device: deviceIP })
                 });
                 
                 if (response.ok) {
@@ -601,12 +613,11 @@
                 `;
                 
                 data.utms.forEach(([utm, clicks]) => {
-                    // Fix lỗi NaN: kiểm tra utm hợp lệ
                     let utmName = utm;
                     if (!utm || utm === 'undefined' || utm === 'null' || utm === 'NaN') {
-                        utmName = 'Trực tiếp';
+                        utmName = 'Direct';
                     } else if (utm === 'direct' || utm === 'Direct') {
-                        utmName = 'Trực tiếp';
+                        utmName = 'Direct';
                     }
                     
                     const percent = totalClicks > 0 ? Math.round((clicks / totalClicks) * 100) : 0;
@@ -614,7 +625,7 @@
                         <tr class="border-b border-gray-100">
                             <td class="py-2 text-gray-700 font-mono">${utmName}</td>
                             <td class="py-2 text-right font-bold">${clicks}</td>
-                            <td class="py-2 text-right text-gray-500">${percent}%</td>
+                            <td class="py-2 text-right text-gray-500">${percent}%</span></td>
                         </tr>
                     `;
                 });
@@ -690,7 +701,6 @@
                 renderTopLinks(data.topLinks || []);
                 renderChart(data.dailyClicks || []);
                 
-                // Gọi fetchTopUTM để hiển thị top nguồn truy cập
                 await fetchTopUTM();
             } catch (error) {
                 console.error('Error fetching stats:', error);
@@ -700,19 +710,15 @@
         async function fetchHourlyStats() {
             showLoading(true);
             try {
-                console.log('Fetching hourly stats...');
                 const response = await fetch(`${WORKER_URL}/hourly-stats`);
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
                 const data = await response.json();
-                console.log('Hourly stats data:', data);
                 
                 if (data && data.length > 0) {
                     renderHourlyChart(data);
                 } else {
-                    console.warn('No hourly data received');
-                    // Tạo dữ liệu mẫu để hiển thị
                     const mockData = [];
                     for (let i = 0; i <= 23; i++) {
                         mockData.push({ hour: i, clicks: 0 });
@@ -721,18 +727,11 @@
                 }
             } catch (error) {
                 console.error('Error fetching hourly stats:', error);
-                // Hiển thị thông báo lỗi trên UI
-                const container = document.getElementById('hourlyChart');
-                if (container) {
-                    const ctx = container.getContext('2d');
-                    if (hourlyChartInstance) hourlyChartInstance.destroy();
-                    // Tạo chart rỗng
-                    const mockData = [];
-                    for (let i = 0; i <= 23; i++) {
-                        mockData.push({ hour: i, clicks: 0 });
-                    }
-                    renderHourlyChart(mockData);
+                const mockData = [];
+                for (let i = 0; i <= 23; i++) {
+                    mockData.push({ hour: i, clicks: 0 });
                 }
+                renderHourlyChart(mockData);
             } finally {
                 showLoading(false);
             }
@@ -740,33 +739,22 @@
         
         function renderHourlyChart(hourlyData) {
             const canvas = document.getElementById('hourlyChart');
-            if (!canvas) {
-                console.error('Canvas element not found');
-                return;
-            }
+            if (!canvas) return;
             
             const ctx = canvas.getContext('2d');
-            
-            // Chỉ lấy dữ liệu từ 0h đến giờ hiện tại
             const now = new Date();
             const currentHour = now.getHours();
             const filteredData = hourlyData.filter(d => d.hour <= currentHour);
-            
             const labels = filteredData.map(d => `${d.hour}:00`);
             const clicks = filteredData.map(d => d.clicks || 0);
             
-            console.log('Rendering chart with labels:', labels);
-            console.log('Clicks data:', clicks);
-            
             if (hourlyChartInstance) {
-                // Cập nhật data cho chart cũ
                 hourlyChartInstance.data.labels = labels;
                 hourlyChartInstance.data.datasets[0].data = clicks;
                 hourlyChartInstance.update();
-                return; // Không tạo mới
+                return;
             }
             
-            // Tạo mới lần đầu tiên
             hourlyChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -783,36 +771,8 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.raw} lượt click`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: { 
-                            beginAtZero: true, 
-                            grid: { color: '#E5E7EB' },
-                            title: {
-                                display: true,
-                                text: 'Số lượt click'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Giờ'
-                            },
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 45
-                            }
-                        }
-                    }
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
                 }
             });
         }
@@ -822,7 +782,6 @@
                 const response = await fetch(`${WORKER_URL}/top-utm`);
                 const data = await response.json();
                 
-                // Lọc bỏ các UTM lỗi
                 const cleanedData = data.map(item => ({
                     ...item,
                     utms: item.utms.filter(([utm]) => utm && utm !== 'undefined' && utm !== 'null' && utm !== 'NaN')
@@ -842,7 +801,10 @@
                 return;
             }
             
-            container.innerHTML = topData.map((item, index) => {
+            // Giới hạn top 5
+            const top5 = topData.slice(0, 5);
+            
+            container.innerHTML = top5.map((item, index) => {
                 const totalClicks = item.totalClicks || 0;
                 return `
                     <div class="border-b border-gray-100 pb-4 mb-4 last:border-0">
@@ -855,7 +817,7 @@
                         </div>
                         <div class="ml-9 space-y-2">
                             ${item.utms.slice(0, 5).map(([utm, clicks], idx) => {
-                                const utmName = (utm === 'direct' || utm === 'Direct') ? 'Trực tiếp' : utm;
+                                let utmName = (utm === 'direct' || utm === 'Direct') ? 'Direct' : utm;
                                 const percent = totalClicks > 0 ? Math.round((clicks / totalClicks) * 100) : 0;
                                 return `
                                     <div class="flex items-center justify-between text-sm">
@@ -890,100 +852,6 @@
             } finally {
                 showLoading(false);
             }
-        }
-        
-        async function fetchLogs() {
-            showLoading(true);
-            try {
-                const response = await fetchWithLogsAuth(`${WORKER_URL}/logs`);
-                if (!response) return;
-                
-                const data = await response.json();
-                renderLogs(data.logs || [], data.users || {}, data.dailyStats || {});
-            } catch (error) {
-                console.error('Error fetching logs:', error);
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        function renderLogs(logs, users, dailyStats) {
-            document.getElementById('stat-today-clicks-log').innerText = dailyStats.click_link || 0;
-            document.getElementById('stat-today-links').innerText = dailyStats.create_link || 0;
-            document.getElementById('stat-today-users').innerText = Object.keys(users).length;
-            document.getElementById('stat-today-actions').innerText = Object.values(dailyStats).reduce((a,b) => a+b, 0);
-            
-            const container = document.getElementById('logs-table-body');
-            if (!logs || logs.length === 0) {
-                container.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Chưa có hoạt động nào</td></tr>';
-                return;
-            }
-            
-            container.innerHTML = logs.map(log => {
-                let actionIcon = '';
-                let actionColor = '';
-                let actionText = '';
-                switch(log.action) {
-                    case 'click_link': 
-                        actionIcon = '🔗'; 
-                        actionColor = 'text-blue-600'; 
-                        actionText = 'Click link';
-                        break;
-                    case 'create_link': 
-                        actionIcon = '✨'; 
-                        actionColor = 'text-green-600'; 
-                        actionText = 'Tạo link';
-                        break;
-                    case 'delete_link': 
-                        actionIcon = '🗑️'; 
-                        actionColor = 'text-red-600'; 
-                        actionText = 'Xóa link';
-                        break;
-                    case 'set_name': 
-                        actionIcon = '👤'; 
-                        actionColor = 'text-purple-600'; 
-                        actionText = 'Đặt tên';
-                        break;
-                    default: 
-                        actionIcon = '📝'; 
-                        actionColor = 'text-gray-600';
-                        actionText = log.action;
-                }
-                
-                let detailHtml = '';
-                if (log.details) {
-                    if (log.details.code) {
-                        detailHtml += `<div><strong>Link:</strong> /${log.details.code}</div>`;
-                    }
-                    if (log.details.utm && log.details.utm !== 'direct') {
-                        detailHtml += `<div><strong>UTM:</strong> ${log.details.utm}</div>`;
-                    }
-                    if (log.details.target) {
-                        detailHtml += `<div><strong>Đích:</strong> ${log.details.target.substring(0, 50)}${log.details.target.length > 50 ? '...' : ''}</div>`;
-                    }
-                    if (log.details.name) {
-                        detailHtml += `<div><strong>Tên:</strong> ${log.details.name}</div>`;
-                    }
-                    if (log.details.userAgent) {
-                        detailHtml += `<div><strong>UA:</strong> ${log.details.userAgent.substring(0, 40)}...</div>`;
-                    }
-                    if (log.details.referer && log.details.referer !== 'direct') {
-                        detailHtml += `<div><strong>Referer:</strong> ${log.details.referer.substring(0, 40)}...</div>`;
-                    }
-                }
-                
-                return `
-                    <tr class="log-entry border-b border-gray-50">
-                        <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">${log.time}</td>
-                        <td class="px-4 py-3 text-xs font-mono">${log.ip}</td>
-                        <td class="px-4 py-3 text-sm font-medium">${log.user || 'unknown'}</td>
-                        <td class="px-4 py-3"><span class="${actionColor} font-medium">${actionIcon} ${actionText}</span></td>
-                        <td class="px-4 py-3 text-xs text-gray-500">
-                            ${detailHtml || '-'}
-                        </td>
-                    </tr>
-                `;
-            }).join('');
         }
         
         async function deleteLink(code) {
@@ -1089,11 +957,10 @@
                 <tr class="hover:bg-gray-50 transition border-b border-gray-50">
                     <td class="px-6 py-4"><span class="bg-primary-light text-primary px-2 py-1 rounded text-xs font-mono font-bold">${link.code}</span></td>
                     <td class="px-6 py-4"><a href="https://${YOUR_DOMAIN}/${link.code}" target="_blank" class="text-primary hover:underline text-sm font-mono">${YOUR_DOMAIN}/${link.code}</a></td>
-                    <td class="px-6 py-4 max-w-xs truncate text-gray-600" title="${link.original_url}">${link.original_url.substring(0, 50)}${link.original_url.length > 50 ? '...' : ''}</td>
+                    <td class="px-6 py-4 max-w-xs truncate text-gray-600" title="${link.original_url}">${link.original_url.substring(0, 50)}${link.original_url.length > 50 ? '...' : ''}</span></td>
                     <td class="px-6 py-4 text-center"><span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-chart-simple"></i> ${link.clicks || 0}</span></td>
-                    <td class="px-6 py-4 text-xs text-gray-500">${new Date(link.created_at).toLocaleDateString('vi-VN')}</td>
+                    <td class="px-6 py-4 text-xs text-gray-500">${new Date(link.created_at).toLocaleDateString('vi-VN')}</span></td>
                     
-                    <!-- Cột UTM: Copy UTM + Thống kê -->
                     <td class="px-6 py-4 text-center">
                         <div class="flex items-center justify-center gap-2">
                             <button onclick="copyWithUtm('${link.code}')" class="w-8 h-8 rounded-full hover:bg-primary-light text-primary flex items-center justify-center transition" title="Copy link có UTM">
@@ -1103,7 +970,7 @@
                                 <i class="fa-solid fa-chart-simple"></i>
                             </button>
                         </div>
-                    </td>
+                    </span>
                     
                     <td class="px-6 py-4 text-center">
                         <div class="flex items-center justify-center gap-2">
@@ -1114,12 +981,11 @@
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
-                    </td>
+                    </span>
                 </tr>
             `).join('');
         }
         
-        // Hàm copy link gốc
         function copyLink(code) {
             const url = `https://${YOUR_DOMAIN}/${code}`;
             copyToClipboardCustom(url);
@@ -1132,7 +998,6 @@
             });
         }
         
-        // Hàm xóa có confirm
         async function confirmDelete(code) {
             const result = await Swal.fire({
                 title: 'Xóa link?',
@@ -1192,7 +1057,7 @@
         
         function showStats() { switchTab('dashboard'); }
 
-        let currentLogType = 'actions'; // Mặc định là 'actions'
+        let currentLogType = 'actions';
         
         function toggleLogsView() {
             if (currentLogType === 'actions') {
@@ -1201,7 +1066,6 @@
                 document.getElementById('logs-subtitle').innerHTML = 'Lịch sử truy cập link';
                 document.getElementById('toggle-logs-btn').innerHTML = '<i class="fa-solid fa-arrow-left"></i> Quay lại logs hành động';
                 
-                // Đổi header bảng
                 document.getElementById('logs-table-header').innerHTML = `
                     <th class="px-4 py-3">Thời gian</th>
                     <th class="px-4 py-3">IP</th>
@@ -1216,7 +1080,6 @@
                 document.getElementById('logs-subtitle').innerHTML = 'Lịch sử hành động';
                 document.getElementById('toggle-logs-btn').innerHTML = '<i class="fa-solid fa-arrow-right"></i> Xem logs truy cập link';
                 
-                // Đổi header bảng
                 document.getElementById('logs-table-header').innerHTML = `
                     <th class="px-4 py-3">Thời gian</th>
                     <th class="px-4 py-3">IP</th>
@@ -1231,15 +1094,17 @@
         async function fetchLogs() {
             showLoading(true);
             try {
-                const response = await fetchWithLogsAuth(`${WORKER_URL}/logs`);
-                if (!response) return;
+                // Không cần auth nữa
+                const response = await fetch(`${WORKER_URL}/logs`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 
                 const data = await response.json();
                 const clickLogs = data.clickLogs || [];
                 const actionLogs = data.actionLogs || [];
                 const users = data.users || {};
                 
-                // Cập nhật thống kê
                 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
                 
                 const todayClicks = clickLogs.filter(log => {
@@ -1262,16 +1127,15 @@
                 document.getElementById('stat-today-users').innerText = Object.keys(users).length;
                 document.getElementById('stat-today-actions').innerText = todayActions;
                 
-                // Render bảng theo loại
                 if (currentLogType === 'clicks') {
                     document.getElementById('logs-table-body').innerHTML = clickLogs.map(log => `
                         <tr class="border-b border-gray-50 hover:bg-gray-50">
                             <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">${log.time}</td>
                             <td class="px-4 py-3 text-xs font-mono">${log.ip}</td>
                             <td class="px-4 py-3 text-sm font-medium">${log.user || 'unknown'}</td>
-                            <td class="px-4 py-3"><a href="https://${YOUR_DOMAIN}/${log.code}" target="_blank" class="text-primary text-sm font-mono">/${log.code}</a></td>
-                            <td class="px-4 py-3"><span class="bg-primary-light px-2 py-1 rounded text-xs">${log.utm || 'Trực tiếp'}</span></td>
-                            <td class="px-4 py-3 text-xs text-gray-500 truncate max-w-xs" title="${log.target}">${log.target?.substring(0, 50)}${log.target?.length > 50 ? '...' : ''}</td>
+                            <td class="px-4 py-3"><a href="https://${YOUR_DOMAIN}/${log.code}" target="_blank" class="text-primary text-sm font-mono">/${log.code}</a></tr>
+                            <td class="px-4 py-3"><span class="bg-primary-light px-2 py-1 rounded text-xs">${log.utm || 'Direct'}</span></td>
+                            <td class="px-4 py-3 text-xs text-gray-500 truncate max-w-xs" title="${log.target}">${log.target?.substring(0, 50)}${log.target?.length > 50 ? '...' : ''}</span></td>
                         </tr>
                     `).join('');
                 } else {
@@ -1298,13 +1162,14 @@
                                 <td class="px-4 py-3 text-xs font-mono">${log.ip}</td>
                                 <td class="px-4 py-3 text-sm font-medium">${log.user || 'unknown'}</td>
                                 <td class="px-4 py-3"><span class="inline-flex items-center gap-1">${actionIcon} ${actionText}</span></td>
-                                <td class="px-4 py-3 text-xs text-gray-500">${detailText || '-'}</td>
+                                <td class="px-4 py-3 text-xs text-gray-500">${detailText || '-'}</span></td>
                             </tr>
                         `;
                     }).join('');
                 }
             } catch (error) {
                 console.error('Error fetching logs:', error);
+                document.getElementById('logs-table-body').innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Lỗi tải logs</td></tr>';
             } finally {
                 showLoading(false);
             }
