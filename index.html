@@ -1118,7 +1118,7 @@ const handleLogin = (a, u, userData) => {
           {loading && <div className="loading-overlay"><div className="spinner" /></div>}
           {tab === 'dashboard' && <DashboardView auth={auth} />}
           {tab === 'create' && <CreateLinkView auth={auth} onCreated={() => {}} />}
-          {tab === 'links' && <LinksView auth={auth} />}
+          {tab === 'links' && <LinksView auth={auth} userRole={userRole} currentUsername={adminUser} />}
           {tab === 'analytics' && <AnalyticsView />}
           {tab === 'admin' && <AdminView auth={auth} currentUser={currentUserInfo} />}
         </div>
