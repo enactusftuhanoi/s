@@ -1,1214 +1,1265 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>URL Shortener | Enactus FTU Hanoi</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>URL Shortener | Enactus FTU Hanoi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --yellow:#FFC107;--yellow-dark:#F59E0B;--yellow-light:#FFFBEB;--yellow-mid:#FEF3C7;
+  --gray-50:#F9FAFB;--gray-100:#F3F4F6;--gray-200:#E5E7EB;--gray-300:#D1D5DB;
+  --gray-400:#9CA3AF;--gray-500:#6B7280;--gray-600:#4B5563;--gray-700:#374151;
+  --gray-800:#1F2937;--gray-900:#111827;
+  --blue:#3B82F6;--green:#10B981;--red:#EF4444;--purple:#8B5CF6;--orange:#F97316;
+  --radius:10px;--radius-lg:16px;--radius-xl:20px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -1px rgba(0,0,0,.04);
+  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.08),0 4px 6px -2px rgba(0,0,0,.04);
+}
+body{background:#F3F4F6;font-family:'DM Sans',sans-serif;color:var(--gray-800);height:100vh;overflow:hidden}
+#root{height:100vh;display:flex;overflow:hidden}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+input,textarea,select{font-family:'DM Sans',sans-serif}
+code,kbd,samp,.mono{font-family:'DM Mono',monospace}
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        primary: { DEFAULT: '#FFC107', hover: '#FFB300', light: '#FFF8E1' },
-                        gray: { 50: '#F9FAFB', 100: '#F3F4F6', 800: '#1F2937' }
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <style>
-        body { background-color: #F3F4F6; font-family: 'Inter', sans-serif; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-        
-        .nav-item.active {
-            background-color: #FFF8E1; color: #B45309; border-right: 4px solid #FFC107;
-        }
-        .loader {
-            border: 3px solid #f3f3f3; border-top: 3px solid #FFC107; border-radius: 50%;
-            width: 24px; height: 24px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .animate-fade-in { animation: fadeIn 0.4s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .copy-btn { transition: all 0.2s ease; }
-        .copy-btn:hover { transform: translateY(-2px); }
-        
-        .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -12px rgba(0, 0, 0, 0.1); }
-        
-        .log-entry { transition: all 0.2s ease; }
-        .log-entry:hover { background-color: #FEF3C7; transform: translateX(4px); }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .progress-bar { transition: width 0.3s ease; }
-        .modal.active { display: flex; }
-    </style>
+/* Auth Screen */
+.auth-screen{width:100%;height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#FFFBEB 0%,#FEF3C7 50%,#F9FAFB 100%)}
+.auth-card{background:white;border-radius:var(--radius-xl);padding:48px;width:420px;box-shadow:var(--shadow-lg);border:1px solid var(--gray-100)}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;justify-content:center}
+.auth-logo img{width:48px;height:48px;object-fit:contain}
+.auth-title{font-size:22px;font-weight:700;color:var(--gray-900)}
+.auth-subtitle{font-size:13px;color:var(--gray-500);margin-top:4px;text-align:center}
+.auth-label{font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px;display:block}
+.auth-input{width:100%;padding:12px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s,box-shadow .2s;background:var(--gray-50)}
+.auth-input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,193,7,.15);background:white}
+.auth-btn{width:100%;padding:14px;background:var(--yellow);border:none;border-radius:var(--radius);font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .2s,transform .1s;color:var(--gray-900)}
+.auth-btn:hover{background:var(--yellow-dark)}
+.auth-btn:active{transform:scale(.98)}
+.auth-form-group{margin-bottom:20px}
+
+/* Sidebar */
+.sidebar{width:240px;background:white;border-right:1px solid var(--gray-200);display:flex;flex-direction:column;flex-shrink:0;z-index:10;box-shadow:var(--shadow)}
+.sidebar-logo{height:68px;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--gray-100);gap:10px;flex-shrink:0}
+.sidebar-logo img{width:36px;height:36px;object-fit:contain}
+.sidebar-logo-text h1{font-size:15px;font-weight:700;line-height:1.2}
+.sidebar-logo-text p{font-size:11px;color:var(--gray-400);margin-top:1px}
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.nav-section-label{font-size:10px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.08em;padding:0 12px;margin:16px 0 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);cursor:pointer;transition:all .15s;font-size:13.5px;font-weight:500;color:var(--gray-600);text-decoration:none;position:relative}
+.nav-item:hover{background:var(--gray-50);color:var(--gray-800)}
+.nav-item.active{background:var(--yellow-mid);color:#92400E;font-weight:600}
+.nav-item.active::before{content:'';position:absolute;right:0;top:4px;bottom:4px;width:3px;background:var(--yellow);border-radius:2px 0 0 2px}
+.nav-item svg,.nav-item .nav-icon{width:18px;height:18px;flex-shrink:0;opacity:.7}
+.nav-item.active svg,.nav-item.active .nav-icon{opacity:1}
+.sidebar-footer{padding:12px;border-top:1px solid var(--gray-100)}
+.sidebar-user{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);background:var(--gray-50);cursor:pointer;transition:background .15s}
+.sidebar-user:hover{background:var(--gray-100)}
+.sidebar-avatar{width:32px;height:32px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--gray-900);flex-shrink:0}
+.sidebar-user-info p{font-size:13px;font-weight:600;line-height:1.3}
+.sidebar-user-info span{font-size:11px;color:var(--gray-400)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:68px;background:white;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0}
+.topbar-title{font-size:20px;font-weight:700;color:var(--gray-900)}
+.topbar-meta{display:flex;align-items:center;gap:16px}
+.topbar-badge{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--gray-500);background:var(--gray-50);padding:6px 12px;border-radius:20px;border:1px solid var(--gray-200)}
+.topbar-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+
+/* Content Area */
+.content{flex:1;overflow-y:auto;padding:24px 28px}
+
+/* Cards */
+.card{background:white;border-radius:var(--radius-lg);border:1px solid var(--gray-100);box-shadow:var(--shadow)}
+.card-header{padding:20px 24px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:15px;font-weight:600;color:var(--gray-800);display:flex;align-items:center;gap:8px}
+.card-body{padding:24px}
+
+/* Stat Cards */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.stat-card{background:white;border-radius:var(--radius-lg);border:1px solid var(--gray-100);padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden;cursor:default;transition:transform .2s,box-shadow .2s}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.stat-card .stat-bg{position:absolute;right:-8px;top:-8px;width:64px;height:64px;border-radius:50%;opacity:.12}
+.stat-card .stat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:18px}
+.stat-card .stat-label{font-size:12px;font-weight:500;color:var(--gray-500);margin-bottom:4px}
+.stat-card .stat-value{font-size:28px;font-weight:700;color:var(--gray-900);line-height:1}
+.stat-card .stat-sub{font-size:11px;color:var(--gray-400);margin-top:4px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:var(--radius);font-size:13.5px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;border:none;white-space:nowrap}
+.btn-primary{background:var(--yellow);color:var(--gray-900)}
+.btn-primary:hover{background:var(--yellow-dark)}
+.btn-secondary{background:var(--gray-100);color:var(--gray-700)}
+.btn-secondary:hover{background:var(--gray-200)}
+.btn-danger{background:#FEE2E2;color:#991B1B}
+.btn-danger:hover{background:#FECACA}
+.btn-ghost{background:transparent;color:var(--gray-600);border:1px solid var(--gray-200)}
+.btn-ghost:hover{background:var(--gray-50)}
+.btn-sm{padding:7px 13px;font-size:12.5px}
+.btn-icon{padding:8px;border-radius:8px;background:transparent;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--gray-500);transition:all .15s}
+.btn-icon:hover{background:var(--gray-100);color:var(--gray-800)}
+
+/* Form */
+.form-group{margin-bottom:18px}
+.form-label{font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:7px;display:block}
+.form-input{width:100%;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s,box-shadow .2s;background:var(--gray-50);color:var(--gray-800)}
+.form-input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,193,7,.12);background:white}
+.form-hint{font-size:11.5px;color:var(--gray-400);margin-top:5px}
+.form-prefix{display:flex;align-items:center;background:var(--gray-100);border:1.5px solid var(--gray-200);border-right:none;padding:10px 13px;border-radius:var(--radius) 0 0 var(--radius);font-size:13px;color:var(--gray-500);font-family:'DM Mono',monospace;white-space:nowrap}
+.form-prefix+.form-input{border-radius:0 var(--radius) var(--radius) 0;border-left:none}
+.input-group{display:flex}
+
+/* Table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{padding:10px 16px;font-size:11.5px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;background:var(--gray-50);border-bottom:1px solid var(--gray-200);white-space:nowrap;text-align:left}
+thead th:first-child{border-radius:var(--radius) 0 0 0}
+thead th:last-child{border-radius:0 var(--radius) 0 0}
+tbody tr{border-bottom:1px solid var(--gray-100);transition:background .1s}
+tbody tr:hover{background:var(--gray-50)}
+tbody td{padding:12px 16px;font-size:13.5px;color:var(--gray-700)}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;gap:4px}
+.badge-yellow{background:var(--yellow-mid);color:#92400E}
+.badge-green{background:#D1FAE5;color:#065F46}
+.badge-red{background:#FEE2E2;color:#991B1B}
+.badge-blue{background:#DBEAFE;color:#1E40AF}
+.badge-gray{background:var(--gray-100);color:var(--gray-600)}
+.badge-purple{background:#EDE9FE;color:#5B21B6}
+.badge-orange{background:#FFF7ED;color:#C2410C}
+
+/* Progress bar */
+.progress-wrap{background:var(--gray-200);border-radius:4px;height:6px;overflow:hidden}
+.progress-bar{height:100%;border-radius:4px;background:var(--yellow);transition:width .4s}
+
+/* Code chip */
+.code-chip{display:inline-flex;align-items:center;gap:5px;background:var(--yellow-mid);color:#92400E;padding:3px 9px;border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;font-weight:500}
+
+/* Loading */
+.loading-overlay{position:absolute;inset:0;background:rgba(255,255,255,.7);backdrop-filter:blur(2px);z-index:50;display:flex;align-items:center;justify-content:center}
+.spinner{width:28px;height:28px;border:3px solid var(--gray-200);border-top-color:var(--yellow);border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fade-in{animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Result box */
+.result-box{background:var(--yellow-light);border:1.5px solid var(--yellow-mid);border-radius:var(--radius-lg);padding:20px;margin-top:20px}
+.result-url{display:flex;gap:10px;align-items:center;margin-top:10px}
+.result-url input{flex:1;padding:10px 14px;background:white;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;font-family:'DM Mono',monospace;color:var(--gray-800);outline:none}
+
+/* Modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:white;border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);max-width:480px;width:100%;max-height:90vh;overflow-y:auto}
+.modal-header{padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:17px;font-weight:700}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:0 24px 24px;display:flex;gap:10px;justify-content:flex-end}
+
+/* QR modal */
+.qr-container{display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px}
+#qrcode canvas,#qrcode img{border-radius:8px}
+
+/* Empty state */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 20px;color:var(--gray-400);text-align:center}
+.empty-state svg{margin-bottom:14px;opacity:.5}
+.empty-state p{font-size:14px;font-weight:500}
+
+/* Tabs */
+.tab-group{display:flex;gap:2px;background:var(--gray-100);padding:3px;border-radius:var(--radius);width:fit-content}
+.tab-btn{padding:7px 16px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:none;font-family:'DM Sans',sans-serif;background:transparent;color:var(--gray-500)}
+.tab-btn.active{background:white;color:var(--gray-800);font-weight:600;box-shadow:var(--shadow)}
+
+/* Chart container */
+.chart-wrap{position:relative;width:100%}
+
+/* Topbar refresh btn */
+.refresh-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--gray-200);background:white;color:var(--gray-600);font-family:'DM Sans',sans-serif;transition:all .15s}
+.refresh-btn:hover{background:var(--gray-50);border-color:var(--gray-300)}
+
+/* Analytics cards */
+.analytics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+
+/* Link expiry indicator */
+.expiry-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 7px;border-radius:5px}
+
+/* Password lock icon */
+.lock-icon{color:var(--gray-400);font-size:14px}
+
+/* UTM link copy area */
+.utm-result{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:10px 14px;font-family:'DM Mono',monospace;font-size:12px;word-break:break-all;color:var(--gray-700);margin-top:8px}
+
+/* Smooth transitions */
+.view-section{animation:fadeIn .25s ease}
+</style>
 </head>
-<body class="text-gray-800 h-screen flex overflow-hidden selection:bg-primary selection:text-white">
+<body>
+<div id="root"></div>
 
-    <!-- Modal đặt tên -->
-    <div id="nameModal" class="modal">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fa-solid fa-user-plus text-2xl text-primary"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800">Chào mừng bạn!</h3>
-                <p class="text-gray-500 text-sm mt-2">Vui lòng đặt tên để hiển thị trong logs</p>
-            </div>
-            <input type="text" id="userName" placeholder="Nhập tên của bạn" class="w-full px-4 py-3 border border-gray-200 rounded-lg mb-4 focus:ring-2 focus:ring-primary focus:border-primary outline-none">
-            <button onclick="setUserName()" class="w-full bg-primary text-gray-800 font-bold py-3 rounded-lg hover:bg-primary-hover transition">
-                Xác nhận
-            </button>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+// ==================== CONFIG ====================
+const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
+const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
+
+// ==================== ICONS (inline SVG) ====================
+const Icon = ({ name, size = 18, color = 'currentColor', style = {} }) => {
+  const icons = {
+    dashboard: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+    link: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
+    list: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+    logs: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+    analytics: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    copy: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
+    trash: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+    qr: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3" fill={color}/><rect x="16" y="5" width="3" height="3" fill={color}/><rect x="16" y="16" width="3" height="3" fill={color}/><rect x="5" y="16" width="3" height="3" fill={color}/></svg>,
+    tag: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+    external: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
+    refresh: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>,
+    download: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+    upload: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+    lock: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+    clock: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+    chart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    close: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+    check: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><polyline points="20 6 9 17 4 12"/></svg>,
+    star: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+    user: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    globe: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+    fire: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,
+    search: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+    edit: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+    logout: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+  };
+  return icons[name] || null;
+};
+
+// ==================== UTILS ====================
+const copyText = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    return true;
+  }
+};
+
+const toast = (title, icon = 'success', timer = 1800) => {
+  Swal.fire({ icon, title, timer, showConfirmButton: false, toast: true, position: 'top-end', timerProgressBar: true });
+};
+
+const confirm = (title, text, confirmText = 'Xác nhận') =>
+  Swal.fire({ title, text, icon: 'warning', showCancelButton: true, confirmButtonColor: '#FFC107', cancelButtonText: 'Hủy', confirmButtonText });
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+const isExpired = (expiryDate) => {
+  if (!expiryDate) return false;
+  return new Date(expiryDate) < new Date();
+};
+
+const daysUntilExpiry = (expiryDate) => {
+  if (!expiryDate) return null;
+  const diff = new Date(expiryDate) - new Date();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+};
+
+// ==================== AUTH SCREEN ====================
+const AuthScreen = ({ onLogin }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!username || !password) { toast('Vui lòng nhập đầy đủ thông tin', 'error'); return; }
+    setLoading(true);
+    const auth = 'Basic ' + btoa(username + ':' + password);
+    try {
+      const res = await fetch(`${WORKER_URL}/links`, { headers: { Authorization: auth } });
+      if (res.ok || res.status === 200) {
+        sessionStorage.setItem('adminAuth', auth);
+        sessionStorage.setItem('adminUser', username);
+        onLogin(auth, username);
+      } else {
+        toast('Sai tên đăng nhập hoặc mật khẩu', 'error');
+      }
+    } catch {
+      toast('Không thể kết nối đến server', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="auth-screen">
+      <div className="auth-card">
+        <div className="auth-logo">
+          <img src="/icon.png" alt="Enactus" onError={e => e.target.style.display='none'} />
+          <div>
+            <div className="auth-title">URL Shortener</div>
+            <div className="auth-subtitle">Enactus FTU Hanoi</div>
+          </div>
         </div>
+
+        <div className="auth-form-group">
+          <label className="auth-label">Tên đăng nhập</label>
+          <input className="auth-input" type="text" placeholder="admin" value={username}
+            onChange={e => setUsername(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+        </div>
+        <div className="auth-form-group">
+          <label className="auth-label">Mật khẩu</label>
+          <input className="auth-input" type="password" placeholder="••••••••" value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+        </div>
+        <button className="auth-btn" onClick={handleLogin} disabled={loading}>
+          {loading ? 'Đang đăng nhập...' : 'Đăng nhập →'}
+        </button>
+      </div>
     </div>
+  );
+};
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm z-20">
-        <div class="h-20 flex items-center px-8 border-b border-gray-100">
-           <img src="/icon.png" alt="Enactus Logo" class="w-10 h-10 mr-3 object-contain">
-            <div>
-                <h1 class="font-bold text-lg tracking-tight">URL Shortener</h1>
-                <p class="text-xs text-gray-400 font-medium">Enactus FTU Hanoi</p>
+// ==================== QR MODAL ====================
+const QRModal = ({ code, onClose }) => {
+  const qrRef = useRef(null);
+  const url = `https://${YOUR_DOMAIN}/${code}`;
+
+  useEffect(() => {
+    if (qrRef.current) {
+      qrRef.current.innerHTML = '';
+      new QRCode(qrRef.current, { text: url, width: 200, height: 200, colorDark: '#1F2937', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+    }
+  }, [code]);
+
+  const downloadQR = () => {
+    const canvas = qrRef.current?.querySelector('canvas');
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = `qr-${code}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">QR Code — /{code}</div>
+          <button className="btn-icon" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+        <div className="modal-body">
+          <div className="qr-container">
+            <div ref={qrRef} id="qrcode" style={{ padding: 16, background: 'white', borderRadius: 12, border: '1px solid #E5E7EB' }} />
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 13, color: 'var(--gray-500)', marginBottom: 4 }}>Link rút gọn</div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--gray-700)', background: 'var(--gray-50)', padding: '6px 12px', borderRadius: 8 }}>{url}</div>
             </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary btn-sm" onClick={() => { copyText(url); toast('Đã sao chép link!'); }}>
+            <Icon name="copy" size={14} /> Sao chép link
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={downloadQR}>
+            <Icon name="download" size={14} /> Tải QR
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== UTM MODAL ====================
+const UTMModal = ({ code, onClose }) => {
+  const [utm, setUtm] = useState('');
+  const generatedUrl = utm.trim() ? `https://${YOUR_DOMAIN}/${code}?utm=${utm.trim()}` : '';
+
+  return (
+    <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">Copy link với UTM</div>
+          <button className="btn-icon" onClick={onClose}><Icon name="close" size={18} /></button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label className="form-label">UTM source</label>
+            <input className="form-input" placeholder="facebook, google, newsletter..." value={utm}
+              onChange={e => setUtm(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ''))} />
+            <div className="form-hint">Chỉ dùng chữ, số, dấu gạch ngang và gạch dưới</div>
+          </div>
+          {generatedUrl && (
+            <div>
+              <div className="form-label" style={{ marginBottom: 6 }}>Link đã tạo</div>
+              <div className="utm-result">{generatedUrl}</div>
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary btn-sm" onClick={onClose}>Hủy</button>
+          <button className="btn btn-primary btn-sm" disabled={!generatedUrl}
+            onClick={() => { copyText(generatedUrl); toast(`Đã sao chép link UTM!`); onClose(); }}>
+            <Icon name="copy" size={14} /> Sao chép
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== DASHBOARD VIEW ====================
+const DashboardView = ({ auth }) => {
+  const [stats, setStats] = useState(null);
+  const [hourly, setHourly] = useState([]);
+  const [topUTM, setTopUTM] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const dailyChartRef = useRef(null);
+  const hourlyChartRef = useRef(null);
+  const dailyChartInst = useRef(null);
+  const hourlyChartInst = useRef(null);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [statsRes, hourlyRes, utmRes] = await Promise.all([
+        fetch(`${WORKER_URL}/stats`),
+        fetch(`${WORKER_URL}/hourly-stats`),
+        fetch(`${WORKER_URL}/top-utm`)
+      ]);
+      const [statsData, hourlyData, utmData] = await Promise.all([statsRes.json(), hourlyRes.json(), utmRes.json()]);
+      setStats(statsData);
+      setHourly(hourlyData || []);
+      setTopUTM((utmData || []).filter(i => i.utms?.length > 0).slice(0, 5));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchAll(); }, []);
+
+  useEffect(() => {
+    if (!stats?.dailyClicks || !dailyChartRef.current) return;
+    const ctx = dailyChartRef.current.getContext('2d');
+    if (dailyChartInst.current) dailyChartInst.current.destroy();
+    const labels = stats.dailyClicks.map(d => d.date);
+    const data = stats.dailyClicks.map(d => d.clicks);
+    dailyChartInst.current = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Lượt click',
+          data,
+          borderColor: '#FFC107',
+          backgroundColor: 'rgba(255,193,7,0.08)',
+          tension: 0.4,
+          fill: true,
+          pointBackgroundColor: '#FFC107',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans' } } }, x: { grid: { display: false }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans' } } } }
+      }
+    });
+  }, [stats]);
+
+  useEffect(() => {
+    if (!hourly.length || !hourlyChartRef.current) return;
+    const ctx = hourlyChartRef.current.getContext('2d');
+    if (hourlyChartInst.current) hourlyChartInst.current.destroy();
+    const now = new Date().getHours();
+    const filtered = hourly.filter(d => d.hour <= now);
+    hourlyChartInst.current = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: filtered.map(d => `${d.hour}:00`),
+        datasets: [{ label: 'Clicks', data: filtered.map(d => d.clicks || 0), backgroundColor: '#FFC107', borderRadius: 6, borderColor: '#F59E0B', borderWidth: 1 }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans' } } }, x: { grid: { display: false }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans', size: 11 } } } }
+      }
+    });
+  }, [hourly]);
+
+  const statCards = [
+    { label: 'Tổng số link', value: stats?.totalLinks || 0, icon: 'link', color: '#FFC107', bg: '#FFFBEB' },
+    { label: 'Tổng lượt click', value: stats?.totalClicks || 0, icon: 'analytics', color: '#3B82F6', bg: '#EFF6FF' },
+    { label: 'Hôm nay', value: stats?.todayClicks || 0, icon: 'clock', color: '#10B981', bg: '#ECFDF5' },
+    { label: 'Link hot nhất', value: stats?.topLinks?.[0]?.code ? `/${stats.topLinks[0].code}` : '-', icon: 'fire', color: '#8B5CF6', bg: '#F5F3FF' },
+  ];
+
+  return (
+    <div className="view-section fade-in">
+      {loading && <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gray-400)' }}><div className="spinner" style={{ margin: '0 auto 12px' }} /><div style={{ fontSize: 14 }}>Đang tải dữ liệu...</div></div>}
+
+      {!loading && <>
+        {/* Stat Cards */}
+        <div className="stats-grid">
+          {statCards.map((s, i) => (
+            <div key={i} className="stat-card">
+              <div className="stat-bg" style={{ background: s.color }} />
+              <div className="stat-icon" style={{ background: s.bg }}>
+                <Icon name={s.icon} size={18} color={s.color} />
+              </div>
+              <div className="stat-label">{s.label}</div>
+              <div className="stat-value" style={{ fontSize: s.label === 'Link hot nhất' ? 20 : 28, fontFamily: s.label === 'Link hot nhất' ? 'DM Mono, monospace' : undefined }}>{s.value}</div>
+            </div>
+          ))}
         </div>
 
-        <nav class="flex-1 py-6 space-y-1 overflow-y-auto">
-            <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Menu</div>
-            <a href="#" onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active flex items-center px-6 py-3.5 text-sm font-medium transition-all hover:bg-gray-50 group">
-                <i class="fa-solid fa-chart-line w-6 text-gray-400 group-hover:text-primary transition-colors"></i>
-                <span>Dashboard</span>
+        {/* Daily Chart */}
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-header">
+            <div className="card-title"><Icon name="chart" size={16} color="var(--yellow-dark)" />Lượt click theo ngày (7 ngày)</div>
+            <button className="refresh-btn" onClick={fetchAll}><Icon name="refresh" size={13} />Làm mới</button>
+          </div>
+          <div className="card-body">
+            <div className="chart-wrap" style={{ height: 240 }}>
+              <canvas ref={dailyChartRef} role="img" aria-label="Line chart: lượt click theo ngày" />
+            </div>
+          </div>
+        </div>
+
+        {/* Hourly Chart */}
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-header">
+            <div className="card-title"><Icon name="clock" size={16} color="var(--blue)" />Lưu lượng theo giờ hôm nay</div>
+          </div>
+          <div className="card-body">
+            <div className="chart-wrap" style={{ height: 200 }}>
+              <canvas ref={hourlyChartRef} role="img" aria-label="Bar chart: lượt click theo giờ" />
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom 2 cols */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {/* Top UTM */}
+          <div className="card">
+            <div className="card-header">
+              <div className="card-title"><Icon name="tag" size={16} color="var(--purple)" />Top nguồn truy cập</div>
+            </div>
+            <div className="card-body" style={{ padding: '16px 20px' }}>
+              {topUTM.length === 0 ? (
+                <div className="empty-state" style={{ padding: '24px 0' }}>
+                  <Icon name="tag" size={28} color="var(--gray-300)" />
+                  <p style={{ marginTop: 8, fontSize: 13 }}>Chưa có dữ liệu UTM</p>
+                </div>
+              ) : topUTM.map((item, i) => {
+                const total = item.totalClicks || 0;
+                return (
+                  <div key={i} style={{ marginBottom: i < topUTM.length - 1 ? 16 : 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gray-800)' }}>{i + 1}</span>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--yellow-dark)', fontWeight: 600 }}>/{item.link}</span>
+                      </div>
+                      <span className="badge badge-gray">{total} clicks</span>
+                    </div>
+                    {item.utms.slice(0, 3).map(([utm, clicks], j) => {
+                      const pct = total > 0 ? Math.round((clicks / total) * 100) : 0;
+                      return (
+                        <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 12 }}>
+                          <span style={{ width: 70, color: 'var(--gray-500)', fontFamily: 'DM Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{utm || 'Direct'}</span>
+                          <div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%` }} /></div></div>
+                          <span style={{ width: 28, textAlign: 'right', color: 'var(--gray-600)', fontWeight: 600 }}>{pct}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Top Links */}
+          <div className="card">
+            <div className="card-header">
+              <div className="card-title"><Icon name="star" size={16} color="var(--yellow-dark)" />Top 5 link phổ biến</div>
+            </div>
+            <div className="card-body" style={{ padding: '16px 20px' }}>
+              {!stats?.topLinks?.length ? (
+                <div className="empty-state" style={{ padding: '24px 0' }}><Icon name="link" size={28} color="var(--gray-300)" /><p style={{ marginTop: 8, fontSize: 13 }}>Chưa có dữ liệu</p></div>
+              ) : stats.topLinks.map((link, i) => {
+                const maxClicks = stats.topLinks[0]?.clicks || 1;
+                const pct = Math.round((link.clicks / maxClicks) * 100);
+                return (
+                  <div key={i} style={{ marginBottom: i < stats.topLinks.length - 1 ? 14 : 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? 'var(--yellow)' : 'var(--gray-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i === 0 ? 'var(--gray-800)' : 'var(--gray-500)' }}>{i + 1}</span>
+                        <a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--yellow-dark)', textDecoration: 'none', fontWeight: 600 }}>/{link.code}</a>
+                      </div>
+                      <span className="badge badge-gray">{link.clicks} clicks</span>
+                    </div>
+                    <div style={{ paddingLeft: 30 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%` }} /></div></div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </>}
+    </div>
+  );
+};
+
+// ==================== CREATE LINK VIEW ====================
+const CreateLinkView = ({ auth, onCreated }) => {
+  const [url, setUrl] = useState('');
+  const [alias, setAlias] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [password, setPassword] = useState('');
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!url) { toast('Vui lòng nhập URL', 'error'); return; }
+    if (alias && !/^[a-zA-Z0-9-]+$/.test(alias)) { toast('Alias chỉ dùng chữ, số, gạch ngang', 'error'); return; }
+    setLoading(true);
+    try {
+      const body = { url };
+      if (alias) body.customCode = alias;
+      if (expiry) body.expiryDate = expiry;
+      if (password) body.password = password;
+
+      const res = await fetch(`${WORKER_URL}/shorten`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: auth },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResult(data.shortUrl);
+        toast('Tạo link thành công! 🎉');
+        if (onCreated) onCreated();
+        setUrl(''); setAlias(''); setExpiry(''); setPassword(''); setShowAdvanced(false);
+      } else {
+        toast(data.error || 'Không thể tạo link', 'error');
+      }
+    } catch {
+      toast('Không thể kết nối server', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="view-section fade-in">
+      <div style={{ maxWidth: 640, margin: '0 auto' }}>
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title"><Icon name="link" size={16} color="var(--yellow-dark)" />Rút gọn URL mới</div>
+          </div>
+          <div className="card-body">
+            <div className="form-group">
+              <label className="form-label">URL cần rút gọn *</label>
+              <input className="form-input" type="url" placeholder="https://example.com/long-url..."
+                value={url} onChange={e => setUrl(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Alias tùy chỉnh</label>
+              <div className="input-group">
+                <div className="form-prefix">{YOUR_DOMAIN}/</div>
+                <input className="form-input" placeholder="my-custom-link" maxLength={20}
+                  value={alias} onChange={e => setAlias(e.target.value)} />
+              </div>
+              <div className="form-hint">Không bắt buộc — chỉ chữ, số, gạch ngang. Tối đa 20 ký tự</div>
+            </div>
+
+            {/* Advanced toggle */}
+            <button onClick={() => setShowAdvanced(!showAdvanced)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--gray-500)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginBottom: 16, fontFamily: 'DM Sans, sans-serif' }}>
+              <Icon name={showAdvanced ? 'close' : 'lock'} size={14} />
+              {showAdvanced ? 'Ẩn tùy chọn nâng cao' : 'Tùy chọn nâng cao (expiry, password)'}
+            </button>
+
+            {showAdvanced && (
+              <div style={{ background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 10, padding: 16, marginBottom: 18 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label"><Icon name="clock" size={13} style={{ verticalAlign: -2, marginRight: 4 }} />Ngày hết hạn</label>
+                    <input className="form-input" type="date" value={expiry}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={e => setExpiry(e.target.value)} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label"><Icon name="lock" size={13} style={{ verticalAlign: -2, marginRight: 4 }} />Mật khẩu</label>
+                    <input className="form-input" type="password" placeholder="Để trống = không có"
+                      value={password} onChange={e => setPassword(e.target.value)} />
+                  </div>
+                </div>
+                <div className="form-hint" style={{ marginTop: 10 }}>
+                  Link có expiry sẽ tự động redirect về trang lỗi sau ngày hết hạn. Link có password yêu cầu nhập mật khẩu khi truy cập.
+                </div>
+              </div>
+            )}
+
+            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: 14, fontSize: 15 }}
+              onClick={handleSubmit} disabled={loading}>
+              {loading ? <><div className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />Đang tạo...</> : <><Icon name="link" size={16} />Rút gọn ngay</>}
+            </button>
+
+            {result && (
+              <div className="result-box">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#92400E' }}><Icon name="check" size={14} style={{ verticalAlign: -2 }} /> Link đã tạo thành công</span>
+                </div>
+                <div className="result-url">
+                  <input readOnly value={result} style={{ flex: 1, padding: '9px 13px', background: 'white', border: '1.5px solid var(--gray-200)', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', color: 'var(--gray-800)', outline: 'none' }} />
+                  <button className="btn btn-primary btn-sm" onClick={() => { copyText(result); toast('Đã sao chép!'); }}>
+                    <Icon name="copy" size={14} /> Copy
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== LINKS MANAGEMENT VIEW ====================
+const LinksView = ({ auth }) => {
+  const [links, setLinks] = useState([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [qrCode, setQrCode] = useState(null);
+  const [utmCode, setUtmCode] = useState(null);
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortDir, setSortDir] = useState('desc');
+
+  const fetch_ = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${WORKER_URL}/links`);
+      setLinks(await res.json());
+    } catch { toast('Lỗi tải danh sách link', 'error'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetch_(); }, []);
+
+  const filtered = useMemo(() => {
+    let arr = links.filter(l => !search || l.code.toLowerCase().includes(search.toLowerCase()) || l.original_url.toLowerCase().includes(search.toLowerCase()));
+    arr = [...arr].sort((a, b) => {
+      let va = a[sortBy], vb = b[sortBy];
+      if (sortBy === 'clicks') { va = va || 0; vb = vb || 0; }
+      if (sortDir === 'asc') return va > vb ? 1 : -1;
+      return va < vb ? 1 : -1;
+    });
+    return arr;
+  }, [links, search, sortBy, sortDir]);
+
+  const handleDelete = async (code) => {
+    const res = await confirm('Xóa link?', `Bạn có chắc muốn xóa /${code}? Không thể hoàn tác.`, 'Xóa');
+    if (!res.isConfirmed) return;
+    try {
+      const r = await fetch(`${WORKER_URL}/delete/${code}`, { method: 'DELETE', headers: { Authorization: auth } });
+      if (r.ok) { toast(`Đã xóa /${code}`); fetch_(); }
+      else { const d = await r.json(); toast(d.error || 'Lỗi xóa', 'error'); }
+    } catch { toast('Lỗi kết nối', 'error'); }
+  };
+
+  const exportExcel = () => {
+    if (!window.XLSX) { toast('Chưa tải thư viện Excel', 'error'); return; }
+    const ws = XLSX.utils.json_to_sheet(links.map(l => ({
+      'Short Code': l.code,
+      'Short URL': `https://${YOUR_DOMAIN}/${l.code}`,
+      'Original URL': l.original_url,
+      'Clicks': l.clicks || 0,
+      'Has Password': l.password ? 'Yes' : 'No',
+      'Expiry Date': l.expiry_date || '-',
+      'Created At': formatDate(l.created_at)
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Links');
+    XLSX.writeFile(wb, `enactus-links-${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast('Đã xuất Excel!');
+  };
+
+  const getExpiryBadge = (link) => {
+    if (!link.expiry_date) return null;
+    const days = daysUntilExpiry(link.expiry_date);
+    if (days < 0) return <span className="badge badge-red"><Icon name="clock" size={10} />Hết hạn</span>;
+    if (days <= 7) return <span className="badge badge-orange"><Icon name="clock" size={10} />{days}d</span>;
+    return <span className="badge badge-green"><Icon name="clock" size={10} />{days}d</span>;
+  };
+
+  return (
+    <div className="view-section fade-in">
+      {qrCode && <QRModal code={qrCode} onClose={() => setQrCode(null)} />}
+      {utmCode && <UTMModal code={utmCode} onClose={() => setUtmCode(null)} />}
+
+      <div className="card">
+        <div className="card-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+            <div style={{ position: 'relative', width: 280 }}>
+              <Icon name="search" size={15} color="var(--gray-400)" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }} />
+              <input className="form-input" style={{ paddingLeft: 36, marginBottom: 0 }} placeholder="Tìm kiếm link..."
+                value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <span className="badge badge-gray">{filtered.length} link</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost btn-sm" onClick={exportExcel}><Icon name="download" size={14} />Excel</button>
+            <button className="refresh-btn" onClick={fetch_}><Icon name="refresh" size={13} />Làm mới</button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
+            <div className="spinner" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="empty-state">
+            <Icon name="link" size={36} color="var(--gray-300)" />
+            <p>Không có link nào{search ? ` khớp với "${search}"` : ''}</p>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Short URL</th>
+                  <th>Destination</th>
+                  <th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                    Clicks {sortBy === 'clicks' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+                  </th>
+                  <th>Trạng thái</th>
+                  <th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('created_at'); setSortDir(sortBy === 'created_at' && sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                    Tạo ngày {sortBy === 'created_at' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+                  </th>
+                  <th style={{ textAlign: 'center' }}>Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(link => (
+                  <tr key={link.code}>
+                    <td><span className="code-chip">{link.code}</span></td>
+                    <td>
+                      <a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank"
+                        style={{ color: 'var(--yellow-dark)', fontFamily: 'DM Mono, monospace', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {YOUR_DOMAIN}/{link.code} <Icon name="external" size={12} />
+                      </a>
+                    </td>
+                    <td>
+                      <div style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5, color: 'var(--gray-500)' }} title={link.original_url}>
+                        {link.original_url}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="badge badge-gray"><Icon name="analytics" size={11} />{link.clicks || 0}</span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {isExpired(link.expiry_date)
+                          ? <span className="badge badge-red">Hết hạn</span>
+                          : <span className="badge badge-green">Active</span>}
+                        {getExpiryBadge(link)}
+                        {link.password && <span className="badge badge-blue"><Icon name="lock" size={10} />Có mật khẩu</span>}
+                      </div>
+                    </td>
+                    <td style={{ fontSize: 12.5, color: 'var(--gray-500)' }}>{formatDate(link.created_at)}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                        <button className="btn-icon" title="Copy link" onClick={() => { copyText(`https://${YOUR_DOMAIN}/${link.code}`); toast('Đã sao chép!'); }}><Icon name="copy" size={15} /></button>
+                        <button className="btn-icon" title="QR Code" onClick={() => setQrCode(link.code)} style={{ color: 'var(--purple)' }}><Icon name="qr" size={15} /></button>
+                        <button className="btn-icon" title="UTM" onClick={() => setUtmCode(link.code)} style={{ color: 'var(--blue)' }}><Icon name="tag" size={15} /></button>
+                        <button className="btn-icon" title="Xóa" onClick={() => handleDelete(link.code)} style={{ color: 'var(--red)' }}><Icon name="trash" size={15} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ==================== ANALYTICS VIEW ====================
+const AnalyticsView = () => {
+  const [logs, setLogs] = useState({ clickLogs: [], actionLogs: [], users: {} });
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('overview');
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${WORKER_URL}/logs`);
+      setLogs(await res.json());
+    } catch { toast('Lỗi tải logs', 'error'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchLogs(); }, []);
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+
+  const todayClicks = useMemo(() => (logs.clickLogs || []).filter(l => {
+    const d = l.time?.split(' ')[1]?.split('/').reverse().join('-');
+    return d === today;
+  }).length, [logs, today]);
+
+  const todayActions = useMemo(() => (logs.actionLogs || []).filter(l => {
+    const d = l.time?.split(' ')[1]?.split('/').reverse().join('-');
+    return d === today;
+  }).length, [logs, today]);
+
+  const todayNewLinks = useMemo(() => (logs.actionLogs || []).filter(l => {
+    const d = l.time?.split(' ')[1]?.split('/').reverse().join('-');
+    return d === today && l.action === 'create_link';
+  }).length, [logs, today]);
+
+  // Device/browser parsing from user agent — worker may store UA
+  const deviceStats = useMemo(() => {
+    const devices = {};
+    (logs.clickLogs || []).forEach(l => {
+      const ua = (l.ua || l.userAgent || '').toLowerCase();
+      let d = 'Unknown';
+      if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) d = 'Mobile';
+      else if (ua.includes('tablet') || ua.includes('ipad')) d = 'Tablet';
+      else if (ua.length > 0) d = 'Desktop';
+      devices[d] = (devices[d] || 0) + 1;
+    });
+    return Object.entries(devices).sort((a, b) => b[1] - a[1]);
+  }, [logs]);
+
+  // Country stats from log
+  const geoStats = useMemo(() => {
+    const countries = {};
+    (logs.clickLogs || []).forEach(l => {
+      const c = l.country || l.cf_country || 'Unknown';
+      countries[c] = (countries[c] || 0) + 1;
+    });
+    return Object.entries(countries).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  }, [logs]);
+
+  const statCards = [
+    { label: 'Clicks hôm nay', value: todayClicks, color: 'var(--yellow-dark)', bg: 'var(--yellow-light)' },
+    { label: 'Link tạo hôm nay', value: todayNewLinks, color: 'var(--blue)', bg: '#EFF6FF' },
+    { label: 'Hành động hôm nay', value: todayActions, color: 'var(--green)', bg: '#ECFDF5' },
+    { label: 'Tổng người dùng', value: Object.keys(logs.users || {}).length, color: 'var(--purple)', bg: '#F5F3FF' },
+  ];
+
+  const actionLabel = { create_link: 'Tạo link', delete_link: 'Xóa link', set_name: 'Đặt tên' };
+  const actionColor = { create_link: 'badge-green', delete_link: 'badge-red', set_name: 'badge-blue' };
+
+  return (
+    <div className="view-section fade-in">
+      {/* Summary */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
+        {statCards.map((s, i) => (
+          <div key={i} className="card" style={{ padding: 18 }}>
+            <div style={{ fontSize: 12, color: 'var(--gray-500)', marginBottom: 6 }}>{s.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div style={{ marginBottom: 16 }}>
+        <div className="tab-group">
+          {[['overview', 'Tổng quan'], ['clicks', 'Click logs'], ['actions', 'Action logs']].map(([key, label]) => (
+            <button key={key} className={`tab-btn ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
+      ) : tab === 'overview' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {/* Device stats */}
+          <div className="card">
+            <div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--blue)" />Thiết bị truy cập</div></div>
+            <div className="card-body">
+              {deviceStats.length === 0 ? <div className="empty-state" style={{ padding: '24px 0' }}><p>Không có dữ liệu</p></div>
+                : deviceStats.map(([device, count], i) => {
+                  const total = deviceStats.reduce((s, [, c]) => s + c, 0);
+                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                  const colors = ['var(--yellow)', 'var(--blue)', 'var(--green)', 'var(--purple)'];
+                  return (
+                    <div key={i} style={{ marginBottom: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 5 }}>
+                        <span style={{ fontWeight: 500 }}>{device}</span>
+                        <span style={{ color: 'var(--gray-500)' }}>{count} ({pct}%)</span>
+                      </div>
+                      <div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: colors[i % colors.length] }} /></div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+          {/* Geo stats */}
+          <div className="card">
+            <div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--green)" />Vị trí địa lý</div></div>
+            <div className="card-body">
+              {geoStats.length === 0 ? <div className="empty-state" style={{ padding: '24px 0' }}><p>Không có dữ liệu<br /><span style={{ fontSize: 12 }}>Worker cần gửi kèm cf_country trong log</span></p></div>
+                : geoStats.map(([country, count], i) => {
+                  const total = geoStats.reduce((s, [, c]) => s + c, 0);
+                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}>
+                      <span style={{ width: 100, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{country}</span>
+                      <div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: 'var(--green)' }} /></div></div>
+                      <span style={{ width: 36, textAlign: 'right', color: 'var(--gray-500)' }}>{count}</span>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+      ) : tab === 'clicks' ? (
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div>
+            <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Đích đến</th></tr></thead>
+              <tbody>
+                {(logs.clickLogs || []).length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--gray-400)' }}>Chưa có log nào</td></tr>
+                ) : (logs.clickLogs || []).map((l, i) => (
+                  <tr key={i}>
+                    <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>{l.time}</td>
+                    <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td>
+                    <td style={{ fontSize: 13 }}>{l.user || <span style={{ color: 'var(--gray-400)' }}>unknown</span>}</td>
+                    <td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip" style={{ textDecoration: 'none' }}>/{l.code}</a></td>
+                    <td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td>
+                    <td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div>
+            <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
+              <tbody>
+                {(logs.actionLogs || []).length === 0 ? (
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--gray-400)' }}>Chưa có log nào</td></tr>
+                ) : (logs.actionLogs || []).map((l, i) => {
+                  let detail = '';
+                  if (l.details?.code) detail = `/${l.details.code}`;
+                  if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`;
+                  if (l.details?.name) detail = `"${l.details.name}"`;
+                  return (
+                    <tr key={i}>
+                      <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>{l.time}</td>
+                      <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td>
+                      <td>{l.user || <span style={{ color: 'var(--gray-400)', fontSize: 13 }}>unknown</span>}</td>
+                      <td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td>
+                      <td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200 }}>{detail || '-'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ==================== NAME MODAL ====================
+const NameModal = ({ auth, onDone }) => {
+  const [name, setName] = useState('');
+  const deviceId = useMemo(() => {
+    let id = localStorage.getItem('deviceId');
+    if (!id) { id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8); localStorage.setItem('deviceId', id); }
+    return id;
+  }, []);
+
+  const save = async () => {
+    if (!name.trim()) { toast('Vui lòng nhập tên', 'error'); return; }
+    try {
+      await fetch(`${WORKER_URL}/set-name`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), device: deviceId })
+      });
+      localStorage.setItem('userName', name.trim());
+      onDone(name.trim());
+    } catch { toast('Lỗi lưu tên', 'error'); }
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">Chào mừng!</div>
+        </div>
+        <div className="modal-body">
+          <p style={{ fontSize: 13.5, color: 'var(--gray-500)', marginBottom: 16 }}>Đặt tên để hiển thị trong logs hệ thống.</p>
+          <div className="form-group">
+            <label className="form-label">Tên của bạn</label>
+            <input className="form-input" placeholder="Nguyễn Văn A" value={name}
+              onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && save()} autoFocus />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-primary" onClick={save}><Icon name="check" size={15} />Xác nhận</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== MAIN APP ====================
+const App = () => {
+  const [auth, setAuth] = useState(() => sessionStorage.getItem('adminAuth'));
+  const [adminUser, setAdminUser] = useState(() => sessionStorage.getItem('adminUser') || '');
+  const [tab, setTab] = useState('dashboard');
+  const [loading, setLoading] = useState(false);
+  const [userName, setUserName] = useState(() => localStorage.getItem('userName'));
+  const [showNameModal, setShowNameModal] = useState(false);
+
+  const handleLogin = (a, u) => { setAuth(a); setAdminUser(u); };
+  const handleLogout = () => { sessionStorage.removeItem('adminAuth'); sessionStorage.removeItem('adminUser'); setAuth(null); setAdminUser(''); };
+
+  useEffect(() => {
+    if (auth && !userName) setShowNameModal(true);
+  }, [auth, userName]);
+
+  useEffect(() => {
+    if (!auth) return;
+    const deviceId = localStorage.getItem('deviceId') || ('device_' + Date.now());
+    fetch(`${WORKER_URL}/get-name?device=${deviceId}`)
+      .then(r => r.json())
+      .then(d => { if (d.name) { setUserName(d.name); localStorage.setItem('userName', d.name); } else if (!localStorage.getItem('userName')) setShowNameModal(true); })
+      .catch(() => { if (!localStorage.getItem('userName')) setShowNameModal(true); });
+  }, [auth]);
+
+  if (!auth) return <AuthScreen onLogin={handleLogin} />;
+
+  const navItems = [
+    { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { key: 'create', label: 'Tạo link mới', icon: 'link' },
+    { key: 'links', label: 'Quản lý link', icon: 'list' },
+    { key: 'analytics', label: 'Analytics & Logs', icon: 'analytics' },
+  ];
+
+  const pageTitles = { dashboard: 'Tổng quan', create: 'Tạo link mới', links: 'Quản lý link', analytics: 'Analytics & Logs' };
+
+  const initials = (adminUser || userName || 'U').substring(0, 2).toUpperCase();
+
+  return (
+    <>
+      {showNameModal && <NameModal auth={auth} onDone={n => { setUserName(n); setShowNameModal(false); }} />}
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <img src="/icon.png" alt="Enactus" onError={e => e.target.style.display='none'} />
+          <div className="sidebar-logo-text">
+            <h1>URL Shortener</h1>
+            <p>Enactus FTU Hanoi</p>
+          </div>
+        </div>
+
+        <nav className="sidebar-nav">
+          <div className="nav-section-label">Menu</div>
+          {navItems.map(item => (
+            <a key={item.key} className={`nav-item ${tab === item.key ? 'active' : ''}`}
+              onClick={() => setTab(item.key)} href="#">
+              <Icon name={item.icon} size={17} />
+              {item.label}
             </a>
-            <a href="#" onclick="switchTab('shortener')" id="nav-shortener" class="nav-item flex items-center px-6 py-3.5 text-sm font-medium transition-all hover:bg-gray-50 group">
-                <i class="fa-solid fa-link w-6 text-gray-400 group-hover:text-primary transition-colors"></i>
-                <span>Tạo link mới</span>
-            </a>
-            <a href="#" onclick="switchTab('links')" id="nav-links" class="nav-item flex items-center px-6 py-3.5 text-sm font-medium transition-all hover:bg-gray-50 group">
-                <i class="fa-solid fa-table-list w-6 text-gray-400 group-hover:text-primary transition-colors"></i>
-                <span>Quản lý link</span>
-            </a>
-            <a href="#" onclick="switchTab('logs')" id="nav-logs" class="nav-item flex items-center px-6 py-3.5 text-sm font-medium transition-all hover:bg-gray-50 group">
-                <i class="fa-solid fa-history w-6 text-gray-400 group-hover:text-primary transition-colors"></i>
-                <span>Logs</span>
-            </a>
+          ))}
         </nav>
 
-        <div class="p-4 border-t border-gray-100">
-            <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
-                <div class="w-10 h-10 rounded-full bg-primary text-gray-800 flex items-center justify-center font-bold">
-                    <i class="fa-solid fa-chart-simple"></i>
-                </div>
-                <div class="flex-1">
-                    <p class="text-sm font-bold text-gray-800">Tổng lượt click</p>
-                    <p class="text-xs text-gray-500" id="total-clicks-stat">0 lượt click</p>
-                </div>
-                <i class="fa-solid fa-chart-pie text-gray-400"></i>
+        <div className="sidebar-footer">
+          <div className="sidebar-user" onClick={() => { if (window.confirm('Đăng xuất?')) handleLogout(); }}>
+            <div className="sidebar-avatar">{initials}</div>
+            <div className="sidebar-user-info">
+              <p>{userName || adminUser || 'Người dùng'}</p>
+              <span>Nhấn để đăng xuất</span>
             </div>
+          </div>
         </div>
-    </aside>
+      </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <header class="h-20 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-8 z-10">
-            <h2 id="page-title" class="text-2xl font-bold text-gray-800">Tổng quan</h2>
-            <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2 text-sm text-gray-500">
-                    <i class="fa-solid fa-globe text-primary"></i>
-                    <span id="current-domain">yourdomain.com</span>
-                </div>
-                <div class="h-8 w-[1px] bg-gray-300"></div>
-                <span class="text-sm font-medium text-gray-500" id="current-date">...</span>
+      <main className="main">
+        <header className="topbar">
+          <div className="topbar-title">{pageTitles[tab]}</div>
+          <div className="topbar-meta">
+            <div className="topbar-badge">
+              <span className="dot" />
+              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{YOUR_DOMAIN}</span>
             </div>
+            <div style={{ fontSize: 13, color: 'var(--gray-500)' }}>
+              {new Date().toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
+            </div>
+          </div>
         </header>
 
-        <div id="loading-overlay" class="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-            <div class="bg-white p-5 rounded-2xl shadow-xl flex flex-col items-center">
-                <div class="loader mb-3"></div>
-                <p class="text-sm font-medium text-gray-500">Đang xử lý...</p>
-            </div>
+        <div className="content" style={{ position: 'relative' }}>
+          {loading && <div className="loading-overlay"><div className="spinner" /></div>}
+          {tab === 'dashboard' && <DashboardView auth={auth} />}
+          {tab === 'create' && <CreateLinkView auth={auth} onCreated={() => {}} />}
+          {tab === 'links' && <LinksView auth={auth} />}
+          {tab === 'analytics' && <AnalyticsView />}
         </div>
+      </main>
+    </>
+  );
+};
 
-        <div class="flex-1 overflow-y-auto p-8" id="content-area">
-            
-            <!-- Dashboard View -->
-            <div id="view-dashboard" class="view-section animate-fade-in">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="stat-card bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden cursor-pointer" onclick="switchTab('links')">
-                        <div class="absolute right-0 top-0 w-24 h-24 bg-primary-light rounded-bl-full -mr-4 -mt-4"></div>
-                        <i class="fa-solid fa-link text-3xl text-primary mb-3"></i>
-                        <p class="text-gray-500 text-sm font-medium mb-1">Tổng số link</p>
-                        <h3 class="text-3xl font-extrabold text-gray-800" id="stat-total-links">0</h3>
-                    </div>
-                    <div class="stat-card bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute right-0 top-0 w-24 h-24 bg-blue-50 rounded-bl-full -mr-4 -mt-4"></div>
-                        <i class="fa-solid fa-chart-line text-3xl text-blue-500 mb-3"></i>
-                        <p class="text-gray-500 text-sm font-medium mb-1">Tổng lượt click</p>
-                        <h3 class="text-3xl font-extrabold text-gray-800" id="stat-total-clicks">0</h3>
-                    </div>
-                    <div class="stat-card bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute right-0 top-0 w-24 h-24 bg-green-50 rounded-bl-full -mr-4 -mt-4"></div>
-                        <i class="fa-solid fa-clock text-3xl text-green-500 mb-3"></i>
-                        <p class="text-gray-500 text-sm font-medium mb-1">Hôm nay</p>
-                        <h3 class="text-3xl font-extrabold text-gray-800" id="stat-today-clicks">0</h3>
-                    </div>
-                    <div class="stat-card bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute right-0 top-0 w-24 h-24 bg-purple-50 rounded-bl-full -mr-4 -mt-4"></div>
-                        <i class="fa-solid fa-fire text-3xl text-purple-500 mb-3"></i>
-                        <p class="text-gray-500 text-sm font-medium mb-1">Link phổ biến</p>
-                        <h3 class="text-3xl font-extrabold text-gray-800" id="stat-top-link">-</h3>
-                    </div>
-                </div>
-
-                <!-- Lượt click theo ngày (7 ngày) - ĐẨY LÊN TRƯỚC -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-                    <h3 class="font-bold text-gray-800 mb-6">Lượt click theo ngày (7 ngày)</h3>
-                    <div class="h-80"><canvas id="clicksChart"></canvas></div>
-                </div>
-
-                <!-- Thanh thống kê theo giờ -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-                    <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-line text-primary"></i>
-                        Lưu lượng truy cập trong ngày (theo giờ)
-                    </h3>
-                    <div class="h-64"><canvas id="hourlyChart"></canvas></div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-chart-pie text-primary"></i>
-                            Top nguồn truy cập (UTM)
-                        </h3>
-                        <div id="top-sources-list" class="space-y-3">
-                            <p class="text-xs text-gray-400 italic text-center py-4">Đang tải...</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="font-bold text-gray-800 mb-4">Top 5 link phổ biến</h3>
-                        <div class="space-y-3" id="top-links-list">
-                            <p class="text-xs text-gray-400 italic text-center py-4">Đang tải...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Shortener View -->
-            <div id="view-shortener" class="view-section hidden animate-fade-in">
-                <div class="max-w-3xl mx-auto">
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-                        <div class="text-center mb-8">
-                            <div class="w-20 h-20 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fa-solid fa-link text-3xl text-primary"></i>
-                            </div>
-                            <h2 class="text-2xl font-bold text-gray-800">Rút gọn URL</h2>
-                            <p class="text-gray-500 mt-2">Dán link dài của bạn vào ô bên dưới</p>
-                        </div>
-
-                        <form id="shortenForm" class="space-y-6">
-                            <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">URL cần rút gọn *</label>
-                                <input type="url" id="originalUrl" required 
-                                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
-                                    placeholder="https://example.com/long_url">
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">Tùy chỉnh alias (không bắt buộc)</label>
-                                <div class="flex items-center gap-3">
-                                    <span class="text-gray-500 bg-gray-100 px-3 py-3 rounded-lg text-sm" id="domain-preview">yourdomain.com/</span>
-                                    <input type="text" id="customCode" maxlength="20"
-                                        class="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
-                                        placeholder="my-custom-link">
-                                </div>
-                                <p class="text-xs text-gray-400 mt-2">Chỉ gồm chữ cái, số, dấu gạch ngang (-). Tối đa 20 ký tự</p>
-                            </div>
-
-                            <button type="submit" class="w-full bg-primary text-gray-800 font-bold py-3 rounded-lg hover:bg-primary-hover transition shadow-md">
-                                <i class="fa-solid fa-scissors mr-2"></i> Rút gọn ngay
-                            </button>
-                        </form>
-
-                        <div id="result-area" class="mt-8 hidden">
-                            <div class="bg-primary-light rounded-xl p-5 border border-primary/20">
-                                <div class="flex items-center justify-between mb-3">
-                                    <span class="text-sm font-bold text-primary">Link rút gọn</span>
-                                    <i class="fa-solid fa-check-circle text-primary"></i>
-                                </div>
-                                <div class="flex gap-3">
-                                    <input type="text" id="shortUrlResult" readonly 
-                                        class="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-mono">
-                                    <button onclick="copyToClipboard()" class="copy-btn px-5 py-2 bg-primary text-gray-800 rounded-lg text-sm font-bold hover:bg-primary-hover transition">
-                                        <i class="fa-regular fa-copy"></i> Sao chép
-                                    </button>
-                                </div>
-                                <p class="text-xs text-gray-500 mt-3">
-                                    <i class="fa-regular fa-clock"></i> Link đã sẵn sàng để sử dụng
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Links Management View -->
-            <div id="view-links" class="view-section hidden animate-fade-in">
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                    <div class="relative w-full md:w-96">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
-                        <input type="text" id="link-search" onkeyup="filterLinks()" 
-                            class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary transition"
-                            placeholder="Tìm kiếm link...">
-                    </div>
-                    <div class="flex gap-3">
-                        <button onclick="exportExcel()" class="px-4 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition flex items-center gap-2">
-                            <i class="fa-solid fa-file-excel text-green-600"></i> Export Excel
-                        </button>
-                        <button onclick="switchTab('shortener')" class="px-4 py-2.5 rounded-lg bg-primary text-gray-800 text-sm font-bold hover:bg-primary-hover transition flex items-center gap-2">
-                            <i class="fa-solid fa-plus"></i> Tạo link mới
-                        </button>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-500 font-semibold">
-                                    <th class="px-6 py-4">Short Code</th>
-                                    <th class="px-6 py-4">Link rút gọn</th>
-                                    <th class="px-6 py-4">URL gốc</th>
-                                    <th class="px-6 py-4 text-center">Lượt click</th>
-                                    <th class="px-6 py-4">Ngày tạo</th>
-                                    <th class="px-6 py-4 text-center">UTM</th>
-                                    <th class="px-6 py-4 text-center">Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody id="links-table-body" class="text-sm divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
-                    <div id="links-empty" class="hidden flex flex-col items-center justify-center py-12 text-center">
-                        <i class="fa-solid fa-folder-open text-gray-300 text-3xl mb-2"></i>
-                        <p class="text-gray-500 text-sm">Chưa có link nào</p>
-                        <button onclick="switchTab('shortener')" class="mt-4 px-4 py-2 bg-primary text-gray-800 rounded-lg text-sm font-bold">
-                            Tạo link đầu tiên
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Logs View -->
-            <div id="view-logs" class="view-section hidden animate-fade-in">
-                
-                <!-- Header với nút chuyển đổi -->
-                <div class="flex items-center justify-between mb-6">
-                    <h2 id="logs-title" class="text-xl font-bold text-gray-800">Logs hành động</h2>
-                    <button id="toggle-logs-btn" onclick="toggleLogsView()" class="px-4 py-2 bg-primary text-gray-800 rounded-lg text-sm font-bold hover:bg-primary-hover transition flex items-center gap-2">
-                        <i class="fa-solid fa-arrow-right"></i>
-                        Xem logs truy cập link
-                    </button>
-                </div>
-            
-                <!-- Thống kê hôm nay -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
-                    <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-simple text-primary"></i>
-                        Thống kê hôm nay
-                    </h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="today-stats">
-                        <div class="text-center p-3 bg-gray-50 rounded-lg">
-                            <p class="text-2xl font-bold text-primary" id="stat-today-clicks-log">0</p>
-                            <p class="text-xs text-gray-500">Lượt click</p>
-                        </div>
-                        <div class="text-center p-3 bg-gray-50 rounded-lg">
-                            <p class="text-2xl font-bold text-green-600" id="stat-today-links">0</p>
-                            <p class="text-xs text-gray-500">Link mới</p>
-                        </div>
-                        <div class="text-center p-3 bg-gray-50 rounded-lg">
-                            <p class="text-2xl font-bold text-blue-600" id="stat-today-users">0</p>
-                            <p class="text-xs text-gray-500">Người dùng</p>
-                        </div>
-                        <div class="text-center p-3 bg-gray-50 rounded-lg">
-                            <p class="text-2xl font-bold text-purple-600" id="stat-today-actions">0</p>
-                            <p class="text-xs text-gray-500">Tổng hành động</p>
-                        </div>
-                    </div>
-                </div>
-            
-                <!-- Bảng Logs -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="p-4 border-b border-gray-100 flex justify-between items-center">
-                        <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                            <i class="fa-solid fa-history text-primary"></i>
-                            <span id="logs-subtitle">Lịch sử hành động</span>
-                        </h3>
-                        <button onclick="refreshLogs()" class="px-3 py-1.5 bg-gray-100 rounded-lg text-sm hover:bg-gray-200 transition">
-                            <i class="fa-solid fa-rotate-right"></i> Làm mới
-                        </button>
-                    </div>
-                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
-                        <table class="w-full text-left">
-                            <thead class="bg-gray-50 sticky top-0">
-                                <tr class="text-xs uppercase text-gray-500 font-semibold" id="logs-table-header">
-                                    <!-- Mặc định header cho action logs -->
-                                    <th class="px-4 py-3">Thời gian</th>
-                                    <th class="px-4 py-3">IP</th>
-                                    <th class="px-4 py-3">Người dùng</th>
-                                    <th class="px-4 py-3">Hành động</th>
-                                    <th class="px-4 py-3">Chi tiết</th>
-                                </tr>
-                            </thead>
-                            <tbody id="logs-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-    </main>
-
-    <script>
-        // ==================== CONFIGURATION ====================
-        const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
-        const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
-        
-        // Lấy IP từ localStorage hoặc tạo mới
-        let deviceIP = localStorage.getItem('deviceIP');
-        if (!deviceIP) {
-            deviceIP = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
-            localStorage.setItem('deviceIP', deviceIP);
-        }
-        
-        document.getElementById('current-domain').innerText = YOUR_DOMAIN;
-        document.getElementById('domain-preview').innerText = `${YOUR_DOMAIN}/`;
-        
-        let linksData = [];
-        let chartInstance = null;
-        let hourlyChartInstance = null;
-        let currentTab = 'dashboard';
-        
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString('vi-VN', {
-            weekday: 'long', 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric'
-        });
-        
-        // ==================== AUTHENTICATION ====================
-        // Lưu admin auth vào localStorage để không phải nhập lại mỗi lần
-        let adminAuth = localStorage.getItem('adminAuth');
-        
-        function getAdminAuth() {
-            if (adminAuth) return adminAuth;
-            
-            const username = prompt('Tên đăng nhập admin:');
-            const password = prompt('Mật khẩu admin:');
-            if (username && password) {
-                adminAuth = 'Basic ' + btoa(username + ':' + password);
-                localStorage.setItem('adminAuth', adminAuth);
-            }
-            return adminAuth;
-        }
-        
-        function clearAdminAuth() {
-            adminAuth = null;
-            localStorage.removeItem('adminAuth');
-        }
-        
-        async function fetchWithAdminAuth(url, options = {}) {
-            const auth = getAdminAuth();
-            if (!auth) return null;
-            
-            const response = await fetch(url, {
-                ...options,
-                headers: { ...options.headers, 'Authorization': auth }
-            });
-            
-            if (response.status === 401) {
-                clearAdminAuth();
-                Swal.fire('Lỗi', 'Sai tên đăng nhập hoặc mật khẩu admin!', 'error');
-                return null;
-            }
-            return response;
-        }
-        
-        // Logs không cần auth nữa
-        async function fetchLogsData(url, options = {}) {
-            return await fetch(url, options);
-        }
-        
-        // ==================== SET USER NAME ====================
-        async function checkAndSetName() {
-            try {
-                const response = await fetch(`${WORKER_URL}/get-name?device=${deviceIP}`);
-                const data = await response.json();
-                
-                if (!data.name) {
-                    document.getElementById('nameModal').classList.add('active');
-                } else {
-                    isNameSet = true;
-                }
-            } catch (error) {
-                console.error('Error checking name:', error);
-            }
-        }
-        
-        async function setUserName() {
-            const name = document.getElementById('userName').value.trim();
-            if (!name) {
-                Swal.fire('Lỗi', 'Vui lòng nhập tên', 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`${WORKER_URL}/set-name`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name: name, device: deviceIP })
-                });
-                
-                if (response.ok) {
-                    document.getElementById('nameModal').classList.remove('active');
-                    Swal.fire('Thành công', 'Đã lưu tên của bạn!', 'success');
-                    if (currentTab === 'logs') fetchLogs();
-                } else {
-                    const data = await response.json();
-                    Swal.fire('Lỗi', data.error || 'Không thể lưu tên', 'error');
-                }
-            } catch (error) {
-                Swal.fire('Lỗi', error.message, 'error');
-            }
-        }
-        
-        // ==================== UTILITY FUNCTIONS ====================
-        function showLoading(show) {
-            document.getElementById('loading-overlay').classList.toggle('hidden', !show);
-        }
-        
-        function switchTab(tab) {
-            currentTab = tab;
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`nav-${tab}`).classList.add('active');
-            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            
-            const titles = { dashboard: 'Tổng quan', shortener: 'Rút gọn link', links: 'Quản lý link', logs: 'Logs' };
-            document.getElementById('page-title').innerText = titles[tab];
-            
-            if (tab === 'dashboard') { fetchStats(); fetchHourlyStats(); }
-            if (tab === 'links') fetchLinks();
-            if (tab === 'logs') fetchLogs();
-        }
-        
-        function copyToClipboard() {
-            const input = document.getElementById('shortUrlResult');
-            input.select();
-            document.execCommand('copy');
-            Swal.fire({ icon: 'success', title: 'Đã sao chép!', timer: 1500, showConfirmButton: false });
-        }
-        
-        function copyToClipboardCustom(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            Swal.fire({ icon: 'success', title: 'Đã sao chép!', timer: 1000, showConfirmButton: false });
-        }
-        
-        function copyWithUtm(code) {
-            Swal.fire({
-                title: 'Thêm UTM cho link',
-                input: 'text',
-                inputLabel: 'Nhập UTM (ví dụ: facebook, google, newsletter)',
-                inputPlaceholder: 'facebook',
-                showCancelButton: true,
-                confirmButtonText: 'Tạo link',
-                cancelButtonText: 'Hủy',
-                confirmButtonColor: '#FFC107',
-                preConfirm: (utm) => {
-                    if (!utm || !utm.trim()) {
-                        Swal.showValidationMessage('Vui lòng nhập UTM');
-                        return false;
-                    }
-                    if (utm.trim().match(/[^a-zA-Z0-9_-]/)) {
-                        Swal.showValidationMessage('UTM chỉ được chứa chữ cái, số, dấu gạch ngang và gạch dưới');
-                        return false;
-                    }
-                    return utm.trim();
-                }
-            }).then((result) => {
-                if (result.isConfirmed && result.value) {
-                    const url = `https://${YOUR_DOMAIN}/${code}?utm=${result.value}`;
-                    copyToClipboardCustom(url);
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Đã sao chép!',
-                        text: `Link: ${url}`,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                }
-            });
-        }
-        
-        async function viewUtmStats(code) {
-            showLoading(true);
-            try {
-                const response = await fetch(`${WORKER_URL}/link-utm/${code}`);
-                const data = await response.json();
-                
-                if (!data.utms || data.utms.length === 0) {
-                    Swal.fire('Thống kê UTM', `Link /${code} chưa có lượt click nào`, 'info');
-                    return;
-                }
-                
-                const totalClicks = data.utms.reduce((sum, [, clicks]) => sum + clicks, 0);
-                
-                let html = `
-                    <div class="text-left">
-                        <div class="mb-4 p-3 bg-gray-50 rounded-lg text-center">
-                            <span class="text-2xl font-bold text-primary">${totalClicks}</span>
-                            <span class="text-gray-500 ml-1">tổng lượt click</span>
-                        </div>
-                        <table class="w-full">
-                            <thead>
-                                <tr class="border-b border-gray-200">
-                                    <th class="text-left py-2 text-gray-600">UTM</th>
-                                    <th class="text-right py-2 text-gray-600">Số lượt</th>
-                                    <th class="text-right py-2 text-gray-600">Tỷ lệ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-                
-                data.utms.forEach(([utm, clicks]) => {
-                    let utmName = utm;
-                    if (!utm || utm === 'undefined' || utm === 'null' || utm === 'NaN') {
-                        utmName = 'Direct';
-                    } else if (utm === 'direct' || utm === 'Direct') {
-                        utmName = 'Direct';
-                    }
-                    
-                    const percent = totalClicks > 0 ? Math.round((clicks / totalClicks) * 100) : 0;
-                    html += `
-                        <tr class="border-b border-gray-100">
-                            <td class="py-2 text-gray-700 font-mono">${utmName}</td>
-                            <td class="py-2 text-right font-bold">${clicks}</td>
-                            <td class="py-2 text-right text-gray-500">${percent}%</span></td>
-                        </tr>
-                    `;
-                });
-                
-                html += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-                
-                Swal.fire({
-                    title: `📊 Thống kê UTM: /${code}`,
-                    html: html,
-                    width: 550,
-                    confirmButtonColor: '#FFC107',
-                    confirmButtonText: 'Đóng'
-                });
-            } catch (error) {
-                Swal.fire('Lỗi', error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        // ==================== API CALLS ====================
-        async function shortenUrl(url, customCode = '') {
-            showLoading(true);
-            try {
-                const response = await fetchWithAdminAuth(`${WORKER_URL}/shorten`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, customCode })
-                });
-                
-                if (!response) return;
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    document.getElementById('shortUrlResult').value = data.shortUrl;
-                    document.getElementById('result-area').classList.remove('hidden');
-                    Swal.fire({ icon: 'success', title: 'Tạo link thành công!', timer: 2000, showConfirmButton: false });
-                    fetchLinks();
-                    fetchStats();
-                } else {
-                    Swal.fire('Lỗi', data.error || 'Không thể tạo link', 'error');
-                }
-            } catch (error) {
-                Swal.fire('Lỗi', 'Không thể kết nối đến server', 'error');
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        async function fetchStats() {
-            try {
-                const response = await fetch(`${WORKER_URL}/stats`);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                const data = await response.json();
-                
-                document.getElementById('stat-total-links').innerText = data.totalLinks || 0;
-                document.getElementById('stat-total-clicks').innerText = data.totalClicks || 0;
-                document.getElementById('stat-today-clicks').innerText = data.todayClicks || 0;
-                document.getElementById('total-clicks-stat').innerText = `${data.totalClicks || 0} lượt click`;
-                
-                if (data.topLinks && data.topLinks.length > 0) {
-                    document.getElementById('stat-top-link').innerText = data.topLinks[0].code;
-                } else {
-                    document.getElementById('stat-top-link').innerText = '-';
-                }
-                
-                renderTopLinks(data.topLinks || []);
-                renderChart(data.dailyClicks || []);
-                
-                await fetchTopUTM();
-            } catch (error) {
-                console.error('Error fetching stats:', error);
-            }
-        }
-        
-        async function fetchHourlyStats() {
-            showLoading(true);
-            try {
-                const response = await fetch(`${WORKER_URL}/hourly-stats`);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                const data = await response.json();
-                
-                if (data && data.length > 0) {
-                    renderHourlyChart(data);
-                } else {
-                    const mockData = [];
-                    for (let i = 0; i <= 23; i++) {
-                        mockData.push({ hour: i, clicks: 0 });
-                    }
-                    renderHourlyChart(mockData);
-                }
-            } catch (error) {
-                console.error('Error fetching hourly stats:', error);
-                const mockData = [];
-                for (let i = 0; i <= 23; i++) {
-                    mockData.push({ hour: i, clicks: 0 });
-                }
-                renderHourlyChart(mockData);
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        function renderHourlyChart(hourlyData) {
-            const canvas = document.getElementById('hourlyChart');
-            if (!canvas) return;
-            
-            const ctx = canvas.getContext('2d');
-            const now = new Date();
-            const currentHour = now.getHours();
-            const filteredData = hourlyData.filter(d => d.hour <= currentHour);
-            const labels = filteredData.map(d => `${d.hour}:00`);
-            const clicks = filteredData.map(d => d.clicks || 0);
-            
-            if (hourlyChartInstance) {
-                hourlyChartInstance.data.labels = labels;
-                hourlyChartInstance.data.datasets[0].data = clicks;
-                hourlyChartInstance.update();
-                return;
-            }
-            
-            hourlyChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Lượt click',
-                        data: clicks,
-                        backgroundColor: '#FFC107',
-                        borderRadius: 8,
-                        borderColor: '#FFB300',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
-        }
-        
-        async function fetchTopUTM() {
-            try {
-                const response = await fetch(`${WORKER_URL}/top-utm`);
-                const data = await response.json();
-                
-                const cleanedData = data.map(item => ({
-                    ...item,
-                    utms: item.utms.filter(([utm]) => utm && utm !== 'undefined' && utm !== 'null' && utm !== 'NaN')
-                })).filter(item => item.utms.length > 0);
-                
-                renderTopUTM(cleanedData);
-            } catch (error) {
-                console.error('Error fetching top UTM:', error);
-                document.getElementById('top-sources-list').innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Lỗi tải dữ liệu</p>';
-            }
-        }
-        
-        function renderTopUTM(topData) {
-            const container = document.getElementById('top-sources-list');
-            if (!topData || topData.length === 0) {
-                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Chưa có dữ liệu</p>';
-                return;
-            }
-            
-            // Giới hạn top 5
-            const top5 = topData.slice(0, 5);
-            
-            container.innerHTML = top5.map((item, index) => {
-                const totalClicks = item.totalClicks || 0;
-                return `
-                    <div class="border-b border-gray-100 pb-4 mb-4 last:border-0">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <span class="w-7 h-7 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
-                                <a href="https://${YOUR_DOMAIN}/${item.link}" target="_blank" class="font-bold text-primary hover:underline">/${item.link}</a>
-                            </div>
-                            <span class="text-sm font-bold bg-gray-100 px-3 py-1 rounded-full">${totalClicks} clicks</span>
-                        </div>
-                        <div class="ml-9 space-y-2">
-                            ${item.utms.slice(0, 5).map(([utm, clicks], idx) => {
-                                let utmName = (utm === 'direct' || utm === 'Direct') ? 'Direct' : utm;
-                                const percent = totalClicks > 0 ? Math.round((clicks / totalClicks) * 100) : 0;
-                                return `
-                                    <div class="flex items-center justify-between text-sm">
-                                        <div class="flex items-center gap-2 flex-1">
-                                            <span class="text-gray-500 w-6">${idx + 1}.</span>
-                                            <span class="text-gray-700 font-mono">${utmName}</span>
-                                        </div>
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-32 bg-gray-200 rounded-full h-2">
-                                                <div class="bg-primary h-2 rounded-full" style="width: ${percent}%"></div>
-                                            </div>
-                                            <span class="font-bold text-gray-800 w-16 text-right">${clicks} clicks</span>
-                                            <span class="text-xs text-gray-400 w-12">${percent}%</span>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        async function fetchLinks() {
-            showLoading(true);
-            try {
-                const response = await fetch(`${WORKER_URL}/links`);
-                linksData = await response.json();
-                renderLinks();
-            } catch (error) {
-                console.error('Error fetching links:', error);
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        async function deleteLink(code) {
-            const result = await Swal.fire({
-                title: 'Xóa link?',
-                text: `Bạn có chắc muốn xóa link /${code}?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Xóa',
-                cancelButtonText: 'Hủy'
-            });
-            
-            if (result.isConfirmed) {
-                showLoading(true);
-                try {
-                    const response = await fetchWithAdminAuth(`${WORKER_URL}/delete/${code}`, { method: 'DELETE' });
-                    if (!response) return;
-                    
-                    if (response.ok) {
-                        Swal.fire('Đã xóa!', '', 'success');
-                        fetchLinks();
-                        fetchStats();
-                    } else {
-                        Swal.fire('Lỗi', 'Không thể xóa link', 'error');
-                    }
-                } catch (error) {
-                    Swal.fire('Lỗi', error.message, 'error');
-                } finally {
-                    showLoading(false);
-                }
-            }
-        }
-        
-        function refreshLogs() { fetchLogs(); }
-        
-        // ==================== RENDER FUNCTIONS ====================
-        function renderTopLinks(topLinks) {
-            const container = document.getElementById('top-links-list');
-            if (!topLinks || topLinks.length === 0) {
-                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">Chưa có dữ liệu</p>';
-                return;
-            }
-            
-            container.innerHTML = topLinks.map((link, index) => `
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-primary-light transition cursor-pointer" onclick="window.open('https://${YOUR_DOMAIN}/${link.code}', '_blank')">
-                    <div class="flex items-center gap-3">
-                        <span class="w-6 h-6 rounded-full bg-primary text-gray-800 text-xs font-bold flex items-center justify-center">${index + 1}</span>
-                        <div>
-                            <p class="text-sm font-bold text-gray-800">/${link.code}</p>
-                            <p class="text-xs text-gray-500">${link.clicks} lượt click</p>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-arrow-right text-gray-400"></i>
-                </div>
-            `).join('');
-        }
-        
-        function renderChart(dailyClicks) {
-            const ctx = document.getElementById('clicksChart').getContext('2d');
-            if (chartInstance) chartInstance.destroy();
-            
-            const labels = (dailyClicks && dailyClicks.length > 0) ? dailyClicks.map(d => d.date) : [];
-            const data = (dailyClicks && dailyClicks.length > 0) ? dailyClicks.map(d => d.clicks) : [];
-            
-            chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Lượt click',
-                        data: data,
-                        borderColor: '#FFC107',
-                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointBackgroundColor: '#FFC107',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, grid: { color: '#E5E7EB' } } }
-                }
-            });
-        }
-        
-        function renderLinks() {
-            const term = document.getElementById('link-search')?.value.toLowerCase() || '';
-            const filtered = linksData.filter(link => 
-                link.code.toLowerCase().includes(term) || 
-                link.original_url.toLowerCase().includes(term)
-            );
-            
-            document.getElementById('links-empty').classList.toggle('hidden', filtered.length > 0);
-            
-            document.getElementById('links-table-body').innerHTML = filtered.map(link => `
-                <tr class="hover:bg-gray-50 transition border-b border-gray-50">
-                    <td class="px-6 py-4"><span class="bg-primary-light text-primary px-2 py-1 rounded text-xs font-mono font-bold">${link.code}</span></td>
-                    <td class="px-6 py-4"><a href="https://${YOUR_DOMAIN}/${link.code}" target="_blank" class="text-primary hover:underline text-sm font-mono">${YOUR_DOMAIN}/${link.code}</a></td>
-                    <td class="px-6 py-4 max-w-xs truncate text-gray-600" title="${link.original_url}">${link.original_url.substring(0, 50)}${link.original_url.length > 50 ? '...' : ''}</span></td>
-                    <td class="px-6 py-4 text-center"><span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full text-xs font-bold"><i class="fa-solid fa-chart-simple"></i> ${link.clicks || 0}</span></td>
-                    <td class="px-6 py-4 text-xs text-gray-500">${new Date(link.created_at).toLocaleDateString('vi-VN')}</span></td>
-                    
-                    <td class="px-6 py-4 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button onclick="copyWithUtm('${link.code}')" class="w-8 h-8 rounded-full hover:bg-primary-light text-primary flex items-center justify-center transition" title="Copy link có UTM">
-                                <i class="fa-solid fa-tag"></i>
-                            </button>
-                            <button onclick="viewUtmStats('${link.code}')" class="w-8 h-8 rounded-full hover:bg-blue-100 text-blue-500 flex items-center justify-center transition" title="Xem thống kê UTM">
-                                <i class="fa-solid fa-chart-simple"></i>
-                            </button>
-                        </div>
-                    </span>
-                    
-                    <td class="px-6 py-4 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button onclick="copyLink('${link.code}')" class="w-8 h-8 rounded-full hover:bg-green-100 text-green-600 flex items-center justify-center transition" title="Copy link gốc">
-                                <i class="fa-solid fa-copy"></i>
-                            </button>
-                            <button onclick="confirmDelete('${link.code}')" class="w-8 h-8 rounded-full hover:bg-red-100 text-red-500 flex items-center justify-center transition" title="Xóa link">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </div>
-                    </span>
-                </tr>
-            `).join('');
-        }
-        
-        function copyLink(code) {
-            const url = `https://${YOUR_DOMAIN}/${code}`;
-            copyToClipboardCustom(url);
-            Swal.fire({
-                icon: 'success',
-                title: 'Đã sao chép!',
-                text: url,
-                timer: 1500,
-                showConfirmButton: false
-            });
-        }
-        
-        async function confirmDelete(code) {
-            const result = await Swal.fire({
-                title: 'Xóa link?',
-                text: `Bạn có chắc chắn muốn xóa link /${code}? Hành động này không thể hoàn tác.`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Xóa ngay',
-                cancelButtonText: 'Hủy'
-            });
-            
-            if (result.isConfirmed) {
-                showLoading(true);
-                try {
-                    const response = await fetchWithAdminAuth(`${WORKER_URL}/delete/${code}`, { method: 'DELETE' });
-                    if (!response) {
-                        Swal.fire('Lỗi', 'Bạn chưa đăng nhập admin hoặc phiên đăng nhập hết hạn!', 'error');
-                        return;
-                    }
-                    
-                    if (response.ok) {
-                        Swal.fire('Đã xóa!', `Link /${code} đã được xóa thành công.`, 'success');
-                        fetchLinks();
-                        fetchStats();
-                    } else {
-                        const error = await response.json();
-                        Swal.fire('Lỗi', error.error || 'Không thể xóa link', 'error');
-                    }
-                } catch (error) {
-                    console.error('Delete error:', error);
-                    Swal.fire('Lỗi', error.message, 'error');
-                } finally {
-                    showLoading(false);
-                }
-            }
-        }
-        
-        function filterLinks() { renderLinks(); }
-        
-        function exportExcel() {
-            if (typeof XLSX === 'undefined') {
-                Swal.fire('Lỗi', 'Thư viện Excel chưa được tải', 'error');
-                return;
-            }
-            const ws = XLSX.utils.json_to_sheet(linksData.map(l => ({
-                'Short Code': l.code,
-                'Short URL': `https://${YOUR_DOMAIN}/${l.code}`,
-                'Original URL': l.original_url,
-                'Clicks': l.clicks || 0,
-                'Created At': new Date(l.created_at).toLocaleString('vi-VN')
-            })));
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Links');
-            XLSX.writeFile(wb, `url_shortener_${new Date().toISOString().split('T')[0]}.xlsx`);
-        }
-        
-        function showStats() { switchTab('dashboard'); }
-
-        let currentLogType = 'actions';
-        
-        function toggleLogsView() {
-            if (currentLogType === 'actions') {
-                currentLogType = 'clicks';
-                document.getElementById('logs-title').innerHTML = 'Logs truy cập link';
-                document.getElementById('logs-subtitle').innerHTML = 'Lịch sử truy cập link';
-                document.getElementById('toggle-logs-btn').innerHTML = '<i class="fa-solid fa-arrow-left"></i> Quay lại logs hành động';
-                
-                document.getElementById('logs-table-header').innerHTML = `
-                    <th class="px-4 py-3">Thời gian</th>
-                    <th class="px-4 py-3">IP</th>
-                    <th class="px-4 py-3">Người dùng</th>
-                    <th class="px-4 py-3">Link</th>
-                    <th class="px-4 py-3">UTM</th>
-                    <th class="px-4 py-3">Đích đến</th>
-                `;
-            } else {
-                currentLogType = 'actions';
-                document.getElementById('logs-title').innerHTML = '⚡ Logs hành động';
-                document.getElementById('logs-subtitle').innerHTML = 'Lịch sử hành động';
-                document.getElementById('toggle-logs-btn').innerHTML = '<i class="fa-solid fa-arrow-right"></i> Xem logs truy cập link';
-                
-                document.getElementById('logs-table-header').innerHTML = `
-                    <th class="px-4 py-3">Thời gian</th>
-                    <th class="px-4 py-3">IP</th>
-                    <th class="px-4 py-3">Người dùng</th>
-                    <th class="px-4 py-3">Hành động</th>
-                    <th class="px-4 py-3">Chi tiết</th>
-                `;
-            }
-            fetchLogs();
-        }
-        
-        async function fetchLogs() {
-            showLoading(true);
-            try {
-                // Không cần auth nữa
-                const response = await fetch(`${WORKER_URL}/logs`);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                const data = await response.json();
-                const clickLogs = data.clickLogs || [];
-                const actionLogs = data.actionLogs || [];
-                const users = data.users || {};
-                
-                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
-                
-                const todayClicks = clickLogs.filter(log => {
-                    const logDate = log.time?.split(' ')[1]?.split('/').reverse().join('-');
-                    return logDate === today;
-                }).length;
-                
-                const todayActions = actionLogs.filter(log => {
-                    const logDate = log.time?.split(' ')[1]?.split('/').reverse().join('-');
-                    return logDate === today;
-                }).length;
-                
-                const todayNewLinks = actionLogs.filter(log => {
-                    const logDate = log.time?.split(' ')[1]?.split('/').reverse().join('-');
-                    return logDate === today && log.action === 'create_link';
-                }).length;
-                
-                document.getElementById('stat-today-clicks-log').innerText = todayClicks;
-                document.getElementById('stat-today-links').innerText = todayNewLinks;
-                document.getElementById('stat-today-users').innerText = Object.keys(users).length;
-                document.getElementById('stat-today-actions').innerText = todayActions;
-                
-                if (currentLogType === 'clicks') {
-                    document.getElementById('logs-table-body').innerHTML = clickLogs.map(log => `
-                        <tr class="border-b border-gray-50 hover:bg-gray-50">
-                            <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">${log.time}</td>
-                            <td class="px-4 py-3 text-xs font-mono">${log.ip}</td>
-                            <td class="px-4 py-3 text-sm font-medium">${log.user || 'unknown'}</td>
-                            <td class="px-4 py-3"><a href="https://${YOUR_DOMAIN}/${log.code}" target="_blank" class="text-primary text-sm font-mono">/${log.code}</a></tr>
-                            <td class="px-4 py-3"><span class="bg-primary-light px-2 py-1 rounded text-xs">${log.utm || 'Direct'}</span></td>
-                            <td class="px-4 py-3 text-xs text-gray-500 truncate max-w-xs" title="${log.target}">${log.target?.substring(0, 50)}${log.target?.length > 50 ? '...' : ''}</span></td>
-                        </tr>
-                    `).join('');
-                } else {
-                    document.getElementById('logs-table-body').innerHTML = actionLogs.map(log => {
-                        let actionIcon = '';
-                        let actionText = '';
-                        switch(log.action) {
-                            case 'create_link': actionIcon = '✨'; actionText = 'Tạo link'; break;
-                            case 'delete_link': actionIcon = '🗑️'; actionText = 'Xóa link'; break;
-                            case 'set_name': actionIcon = '👤'; actionText = 'Đặt tên'; break;
-                            default: actionIcon = '📝'; actionText = log.action;
-                        }
-                        
-                        let detailText = '';
-                        if (log.details) {
-                            if (log.details.code) detailText = `/${log.details.code}`;
-                            if (log.details.url) detailText += ` → ${log.details.url.substring(0, 40)}...`;
-                            if (log.details.name) detailText = `"${log.details.name}"`;
-                        }
-                        
-                        return `
-                            <tr class="border-b border-gray-50 hover:bg-gray-50">
-                                <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">${log.time}</td>
-                                <td class="px-4 py-3 text-xs font-mono">${log.ip}</td>
-                                <td class="px-4 py-3 text-sm font-medium">${log.user || 'unknown'}</td>
-                                <td class="px-4 py-3"><span class="inline-flex items-center gap-1">${actionIcon} ${actionText}</span></td>
-                                <td class="px-4 py-3 text-xs text-gray-500">${detailText || '-'}</span></td>
-                            </tr>
-                        `;
-                    }).join('');
-                }
-            } catch (error) {
-                console.error('Error fetching logs:', error);
-                document.getElementById('logs-table-body').innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Lỗi tải logs</td></tr>';
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        // ==================== EVENT HANDLERS ====================
-        document.getElementById('shortenForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const url = document.getElementById('originalUrl').value;
-            const customCode = document.getElementById('customCode').value;
-            
-            if (!url) {
-                Swal.fire('Lỗi', 'Vui lòng nhập URL', 'error');
-                return;
-            }
-            
-            if (customCode && !/^[a-zA-Z0-9-]+$/.test(customCode)) {
-                Swal.fire('Lỗi', 'Code chỉ được chứa chữ cái, số và dấu gạch ngang', 'error');
-                return;
-            }
-            
-            await shortenUrl(url, customCode);
-            document.getElementById('shortenForm').reset();
-        });
-        
-        // Khởi tạo
-        let isNameSet = false;
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAndSetName();
-            fetchStats();
-            fetchLinks();
-            fetchHourlyStats();
-            setInterval(() => {
-                if (currentTab === 'dashboard') {
-                    fetchStats();
-                    fetchHourlyStats();
-                }
-            }, 30000);
-        });
-    </script>
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
 </body>
 </html>
