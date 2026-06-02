@@ -689,7 +689,7 @@ const CreateLinkView = ({ auth, onCreated }) => {
 };
 
 // ==================== LINKS MANAGEMENT VIEW ====================
-const LinksView = ({ auth }) => {
+const LinksView = ({ auth, userRole, currentUsername }) => {
   const [links, setLinks] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -697,17 +697,51 @@ const LinksView = ({ auth }) => {
   const [utmCode, setUtmCode] = useState(null);
   const [sortBy, setSortBy] = useState('created_at');
   const [sortDir, setSortDir] = useState('desc');
+  const [publicMode, setPublicMode] = useState(false);
+
+  const fetchPublicMode = useCallback(async () => {
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/settings/public`, { headers: { Authorization: auth } });
+      const data = await res.json();
+      setPublicMode(data.enabled);
+    } catch (e) {}
+  }, [auth]);
 
   const fetchLinks = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${WORKER_URL}/links`);
-      setLinks(await res.json());
+      const res = await fetch(`${WORKER_URL}/links`, { headers: { Authorization: auth } });
+      const data = await res.json();
+      // Lọc theo quyền: nếu ko phải Admin và ko public mode thì chỉ thấy link mình tạo hoặc link được public
+      const userCanSeeAll = userRole === 'Admin' || userRole === 'SuperAdmin';
+      let filteredData = data;
+      if (!userCanSeeAll && !publicMode) {
+        filteredData = data.filter(l => l.created_by === currentUsername);
+      } else if (!userCanSeeAll && publicMode) {
+        filteredData = data.filter(l => l.created_by === currentUsername || l.is_public === true);
+      }
+      setLinks(filteredData);
     } catch { toast('Lỗi tải danh sách link', 'error'); }
     finally { setLoading(false); }
-  }, []);
+  }, [auth, userRole, currentUsername, publicMode]);
 
-  useEffect(() => { fetchLinks(); }, []);
+  useEffect(() => { fetchPublicMode(); fetchLinks(); }, []);
+
+  const toggleLinkPublic = async (code, currentStatus) => {
+    try {
+      const res = await fetch(`${WORKER_URL}/link/${code}/toggle-public`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: auth },
+        body: JSON.stringify({ is_public: !currentStatus })
+      });
+      if (res.ok) {
+        toast(!currentStatus ? 'Đã public link' : 'Đã private link');
+        fetchLinks();
+      } else {
+        toast('Không có quyền', 'error');
+      }
+    } catch { toast('Lỗi', 'error'); }
+  };
 
   const filtered = useMemo(() => {
     let arr = links.filter(l => !search || l.code.toLowerCase().includes(search.toLowerCase()) || l.original_url.toLowerCase().includes(search.toLowerCase()));
@@ -737,8 +771,8 @@ const LinksView = ({ auth }) => {
       'Short URL': `https://${YOUR_DOMAIN}/${l.code}`,
       'Original URL': l.original_url,
       'Clicks': l.clicks || 0,
-      'Has Password': l.password ? 'Yes' : 'No',
-      'Expiry Date': l.expiry_date || '-',
+      'Public': l.is_public ? 'Yes' : 'No',
+      'Created By': l.created_by,
       'Created At': formatDate(l.created_at)
     })));
     const wb = XLSX.utils.book_new();
@@ -746,6 +780,8 @@ const LinksView = ({ auth }) => {
     XLSX.writeFile(wb, `enactus-links-${new Date().toISOString().split('T')[0]}.xlsx`);
     toast('Đã xuất Excel!');
   };
+
+  const canManagePublic = userRole === 'Admin' || userRole === 'SuperAdmin';
 
   return (
     <div className="view-section fade-in">
@@ -760,6 +796,7 @@ const LinksView = ({ auth }) => {
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <span className="badge badge-gray">{filtered.length} link</span>
+            {publicMode && <span className="badge badge-yellow"><Icon name="globe" size={12} /> Public Mode</span>}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-ghost btn-sm" onClick={exportExcel}><Icon name="download" size={14} />Excel</button>
@@ -773,7 +810,9 @@ const LinksView = ({ auth }) => {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Code</th><th>Short URL</th><th>Destination</th><th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Clicks {sortBy === 'clicks' ? (sortDir === 'desc' ? '↓' : '↑') : ''}</th><th>Trạng thái</th><th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('created_at'); setSortDir(sortBy === 'created_at' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Tạo ngày</th><th style={{ textAlign: 'center' }}>Hành động</th></tr></thead>
+              <thead>
+                <tr><th>Code</th><th>Short URL</th><th>Destination</th><th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Clicks</th><th>Người tạo</th><th>Public</th><th>Hành động</th></tr>
+              </thead>
               <tbody>
                 {filtered.map(link => (
                   <tr key={link.code}>
@@ -781,14 +820,26 @@ const LinksView = ({ auth }) => {
                     <td><a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{ color: 'var(--yellow-dark)', fontFamily: 'DM Mono, monospace', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>{YOUR_DOMAIN}/{link.code} <Icon name="external" size={12} /></a></td>
                     <td><div style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5, color: 'var(--gray-500)' }} title={link.original_url}>{link.original_url}</div></td>
                     <td><span className="badge badge-gray"><Icon name="analytics" size={11} />{link.clicks || 0}</span></td>
-                    <td><span className="badge badge-green">Active</span></td>
-                    <td style={{ fontSize: 12.5, color: 'var(--gray-500)' }}>{formatDate(link.created_at)}</td>
-                    <td><div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                        <button className="btn-icon" title="Copy link" onClick={() => { copyText(`https://${YOUR_DOMAIN}/${link.code}`); toast('Đã sao chép!'); }}><Icon name="copy" size={15} /></button>
-                        <button className="btn-icon" title="QR Code" onClick={() => setQrCode(link.code)} style={{ color: 'var(--purple)' }}><Icon name="qr" size={15} /></button>
-                        <button className="btn-icon" title="UTM" onClick={() => setUtmCode(link.code)} style={{ color: 'var(--blue)' }}><Icon name="tag" size={15} /></button>
-                        <button className="btn-icon" title="Xóa" onClick={() => handleDelete(link.code)} style={{ color: 'var(--red)' }}><Icon name="trash" size={15} /></button>
-                      </div></td>
+                    <td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{link.created_by || 'unknown'}</td>
+                    <td>
+                      {canManagePublic ? (
+                        <button className={`btn-icon ${link.is_public ? 'text-green' : 'text-gray'}`} onClick={() => toggleLinkPublic(link.code, link.is_public)} title={link.is_public ? 'Đang public - Click để private' : 'Đang private - Click để public'}>
+                          <Icon name={link.is_public ? 'globe' : 'lock'} size={16} color={link.is_public ? '#10B981' : '#6B7280'} />
+                        </button>
+                      ) : (
+                        <span className="badge badge-gray">{link.is_public ? 'Public' : 'Private'}</span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn-icon" onClick={() => { copyText(`https://${YOUR_DOMAIN}/${link.code}`); toast('Đã sao chép!'); }}><Icon name="copy" size={15} /></button>
+                        <button className="btn-icon" onClick={() => setQrCode(link.code)} style={{ color: 'var(--purple)' }}><Icon name="qr" size={15} /></button>
+                        <button className="btn-icon" onClick={() => setUtmCode(link.code)} style={{ color: 'var(--blue)' }}><Icon name="tag" size={15} /></button>
+                        {(link.created_by === currentUsername || userRole === 'Admin' || userRole === 'SuperAdmin') && (
+                          <button className="btn-icon" onClick={() => handleDelete(link.code)} style={{ color: 'var(--red)' }}><Icon name="trash" size={15} /></button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -799,7 +850,6 @@ const LinksView = ({ auth }) => {
     </div>
   );
 };
-
 // ==================== ANALYTICS VIEW ====================
 const AnalyticsView = () => {
   const [logs, setLogs] = useState({ clickLogs: [], actionLogs: [], users: {} });
@@ -1008,9 +1058,18 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState(() => localStorage.getItem('userName'));
   const [showNameModal, setShowNameModal] = useState(false);
+  const [userFullname, setUserFullname] = useState(() => localStorage.getItem('userFullname') || '');
 
-  const handleLogin = (a, u, userData) => { setAuth(a); setAdminUser(u); setCurrentUserInfo(userData); setUserRole(userData?.role || 'Member'); };
-  const handleLogout = () => { sessionStorage.removeItem('adminAuth'); sessionStorage.removeItem('adminUser'); sessionStorage.removeItem('userRole'); setAuth(null); setAdminUser(''); setUserRole('Member'); };
+const handleLogin = (a, u, userData) => { 
+  setAuth(a); 
+  setAdminUser(u); 
+  setCurrentUserInfo(userData); 
+  setUserRole(userData?.role || 'Member');
+  if (userData?.fullname) {
+    setUserFullname(userData.fullname);
+    localStorage.setItem('userFullname', userData.fullname);
+  }
+};  const handleLogout = () => { sessionStorage.removeItem('adminAuth'); sessionStorage.removeItem('adminUser'); sessionStorage.removeItem('userRole'); setAuth(null); setAdminUser(''); setUserRole('Member'); };
 
   useEffect(() => { if (auth && !userName) setShowNameModal(true); }, [auth, userName]);
 
@@ -1043,7 +1102,15 @@ const App = () => {
       <aside className="sidebar">
         <div className="sidebar-logo"><img src="/icon.png" alt="Enactus" onError={e => e.target.style.display='none'} /><div className="sidebar-logo-text"><h1>URL Shortener</h1><p>Enactus FTU Hanoi</p></div></div>
         <nav className="sidebar-nav"><div className="nav-section-label">Menu</div>{navItems.map(item => (<a key={item.key} className={`nav-item ${tab === item.key ? 'active' : ''}`} onClick={() => setTab(item.key)} href="#"><Icon name={item.icon} size={17} />{item.label}</a>))}</nav>
-        <div className="sidebar-footer"><div className="sidebar-user" onClick={() => { if (window.confirm('Đăng xuất?')) handleLogout(); }}><div className="sidebar-avatar">{initials}</div><div className="sidebar-user-info"><p>{userName || adminUser || 'Người dùng'}</p><span>Nhấn để đăng xuất</span></div></div></div>
+        <div className="sidebar-footer"><div className="sidebar-user" onClick={() => { if (window.confirm('Đăng xuất?')) handleLogout(); }}>
+  <div className="sidebar-avatar">
+    {(userFullname ? userFullname.substring(0,2).toUpperCase() : (userName ? userName.substring(0,2).toUpperCase() : (adminUser ? adminUser.substring(0,2).toUpperCase() : 'U')))}
+  </div>
+  <div className="sidebar-user-info">
+    <p>{userFullname || userName || adminUser || 'Người dùng'}</p>
+    <span>{userRole || 'Member'}</span>
+  </div>
+</div></div>
       </aside>
       <main className="main">
         <header className="topbar"><div className="topbar-title">{pageTitles[tab]}</div><div className="topbar-meta"><div className="topbar-badge"><span className="dot" /><span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{YOUR_DOMAIN}</span></div><div style={{ fontSize: 13, color: 'var(--gray-500)' }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}</div></div></header>
