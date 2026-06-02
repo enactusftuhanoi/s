@@ -269,7 +269,7 @@ const toast = (title, icon = 'success', timer = 1800) => {
 };
 
 const confirm = (title, text, confirmText = 'Xác nhận') =>
-  Swal.fire({ title, text, icon: 'warning', showCancelButton: true, confirmButtonColor: '#FFC107', cancelButtonText: 'Hủy', confirmButtonText });
+  Swal.fire({ title, text, icon: 'warning', showCancelButton: true, confirmButtonColor: '#FFC107', cancelButtonText: 'Hủy', confirmButtonText: confirmText });
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '-';
