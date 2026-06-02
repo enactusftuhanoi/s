@@ -216,7 +216,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
 const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
 
-// ==================== ICONS (inline SVG) ====================
+// ==================== ICONS ====================
 const Icon = ({ name, size = 18, color = 'currentColor', style = {} }) => {
   const icons = {
     dashboard: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
@@ -276,35 +276,36 @@ const formatDate = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
-const isExpired = (expiryDate) => {
-  if (!expiryDate) return false;
-  return new Date(expiryDate) < new Date();
-};
-
-const daysUntilExpiry = (expiryDate) => {
-  if (!expiryDate) return null;
-  const diff = new Date(expiryDate) - new Date();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
-};
-
 // ==================== AUTH SCREEN ====================
 const AuthScreen = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-const handleLogin = async () => {
+  const handleLogin = async () => {
     if (!username || !password) { toast('Vui lòng nhập đầy đủ thông tin', 'error'); return; }
     setLoading(true);
     const auth = 'Basic ' + btoa(username + ':' + password);
     try {
-      // Kiểm tra đúng mật khẩu admin:Enactus@2026
-      if (username === 'admin' && password === 'Enactus@2026') {
+      const res = await fetch(`${WORKER_URL}/admin/current-user`, {
+        headers: { Authorization: auth }
+      });
+      
+      if (res.ok) {
+        const userData = await res.json();
         sessionStorage.setItem('adminAuth', auth);
         sessionStorage.setItem('adminUser', username);
-        onLogin(auth, username);
+        sessionStorage.setItem('userRole', userData.role);
+        onLogin(auth, username, userData);
       } else {
-        toast('Sai tên đăng nhập hoặc mật khẩu', 'error');
+        if (username === 'admin' && password === 'Enactus@2026') {
+          sessionStorage.setItem('adminAuth', auth);
+          sessionStorage.setItem('adminUser', username);
+          sessionStorage.setItem('userRole', 'SuperAdmin');
+          onLogin(auth, username, { role: 'SuperAdmin', username: 'admin' });
+        } else {
+          toast('Sai tên đăng nhập hoặc mật khẩu', 'error');
+        }
       }
     } catch {
       toast('Không thể kết nối đến server', 'error');
@@ -323,7 +324,6 @@ const handleLogin = async () => {
             <div className="auth-subtitle">Enactus FTU Hanoi</div>
           </div>
         </div>
-
         <div className="auth-form-group">
           <label className="auth-label">Tên đăng nhập</label>
           <input className="auth-input" type="text" placeholder="admin" value={username}
@@ -472,28 +472,8 @@ const DashboardView = ({ auth }) => {
     const data = stats.dailyClicks.map(d => d.clicks);
     dailyChartInst.current = new Chart(ctx, {
       type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Lượt click',
-          data,
-          borderColor: '#FFC107',
-          backgroundColor: 'rgba(255,193,7,0.08)',
-          tension: 0.4,
-          fill: true,
-          pointBackgroundColor: '#FFC107',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 7
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans' } } }, x: { grid: { display: false }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans' } } } }
-      }
+      data: { labels, datasets: [{ label: 'Lượt click', data, borderColor: '#FFC107', backgroundColor: 'rgba(255,193,7,0.08)', tension: 0.4, fill: true, pointBackgroundColor: '#FFC107', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 7 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans' } } }, x: { grid: { display: false }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans' } } } } }
     });
   }, [stats]);
 
@@ -505,16 +485,8 @@ const DashboardView = ({ auth }) => {
     const filtered = hourly.filter(d => d.hour <= now);
     hourlyChartInst.current = new Chart(ctx, {
       type: 'bar',
-      data: {
-        labels: filtered.map(d => `${d.hour}:00`),
-        datasets: [{ label: 'Clicks', data: filtered.map(d => d.clicks || 0), backgroundColor: '#FFC107', borderRadius: 6, borderColor: '#F59E0B', borderWidth: 1 }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans' } } }, x: { grid: { display: false }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans', size: 11 } } } }
-      }
+      data: { labels: filtered.map(d => `${d.hour}:00`), datasets: [{ label: 'Clicks', data: filtered.map(d => d.clicks || 0), backgroundColor: '#FFC107', borderRadius: 6, borderColor: '#F59E0B', borderWidth: 1 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans' } } }, x: { grid: { display: false }, ticks: { color: '#9CA3AF', font: { family: 'DM Sans', size: 11 } } } } }
     });
   }, [hourly]);
 
@@ -528,61 +500,34 @@ const DashboardView = ({ auth }) => {
   return (
     <div className="view-section fade-in">
       {loading && <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gray-400)' }}><div className="spinner" style={{ margin: '0 auto 12px' }} /><div style={{ fontSize: 14 }}>Đang tải dữ liệu...</div></div>}
-
       {!loading && <>
-        {/* Stat Cards */}
         <div className="stats-grid">
           {statCards.map((s, i) => (
             <div key={i} className="stat-card">
               <div className="stat-bg" style={{ background: s.color }} />
-              <div className="stat-icon" style={{ background: s.bg }}>
-                <Icon name={s.icon} size={18} color={s.color} />
-              </div>
+              <div className="stat-icon" style={{ background: s.bg }}><Icon name={s.icon} size={18} color={s.color} /></div>
               <div className="stat-label">{s.label}</div>
               <div className="stat-value" style={{ fontSize: s.label === 'Link hot nhất' ? 20 : 28, fontFamily: s.label === 'Link hot nhất' ? 'DM Mono, monospace' : undefined }}>{s.value}</div>
             </div>
           ))}
         </div>
-
-        {/* Daily Chart */}
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-header">
             <div className="card-title"><Icon name="chart" size={16} color="var(--yellow-dark)" />Lượt click theo ngày (7 ngày)</div>
             <button className="refresh-btn" onClick={fetchAll}><Icon name="refresh" size={13} />Làm mới</button>
           </div>
-          <div className="card-body">
-            <div className="chart-wrap" style={{ height: 240 }}>
-              <canvas ref={dailyChartRef} role="img" aria-label="Line chart: lượt click theo ngày" />
-            </div>
-          </div>
+          <div className="card-body"><div className="chart-wrap" style={{ height: 240 }}><canvas ref={dailyChartRef} /></div></div>
         </div>
-
-        {/* Hourly Chart */}
         <div className="card" style={{ marginBottom: 16 }}>
-          <div className="card-header">
-            <div className="card-title"><Icon name="clock" size={16} color="var(--blue)" />Lưu lượng theo giờ hôm nay</div>
-          </div>
-          <div className="card-body">
-            <div className="chart-wrap" style={{ height: 200 }}>
-              <canvas ref={hourlyChartRef} role="img" aria-label="Bar chart: lượt click theo giờ" />
-            </div>
-          </div>
+          <div className="card-header"><div className="card-title"><Icon name="clock" size={16} color="var(--blue)" />Lưu lượng theo giờ hôm nay</div></div>
+          <div className="card-body"><div className="chart-wrap" style={{ height: 200 }}><canvas ref={hourlyChartRef} /></div></div>
         </div>
-
-        {/* Bottom 2 cols */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          {/* Top UTM */}
           <div className="card">
-            <div className="card-header">
-              <div className="card-title"><Icon name="tag" size={16} color="var(--purple)" />Top nguồn truy cập</div>
-            </div>
+            <div className="card-header"><div className="card-title"><Icon name="tag" size={16} color="var(--purple)" />Top nguồn truy cập</div></div>
             <div className="card-body" style={{ padding: '16px 20px' }}>
-              {topUTM.length === 0 ? (
-                <div className="empty-state" style={{ padding: '24px 0' }}>
-                  <Icon name="tag" size={28} color="var(--gray-300)" />
-                  <p style={{ marginTop: 8, fontSize: 13 }}>Chưa có dữ liệu UTM</p>
-                </div>
-              ) : topUTM.map((item, i) => {
+              {topUTM.length === 0 ? <div className="empty-state" style={{ padding: '24px 0' }}><Icon name="tag" size={28} color="var(--gray-300)" /><p style={{ marginTop: 8, fontSize: 13 }}>Chưa có dữ liệu UTM</p></div>
+              : topUTM.map((item, i) => {
                 const total = item.totalClicks || 0;
                 return (
                   <div key={i} style={{ marginBottom: i < topUTM.length - 1 ? 16 : 0 }}>
@@ -608,16 +553,11 @@ const DashboardView = ({ auth }) => {
               })}
             </div>
           </div>
-
-          {/* Top Links */}
           <div className="card">
-            <div className="card-header">
-              <div className="card-title"><Icon name="star" size={16} color="var(--yellow-dark)" />Top 5 link phổ biến</div>
-            </div>
+            <div className="card-header"><div className="card-title"><Icon name="star" size={16} color="var(--yellow-dark)" />Top 5 link phổ biến</div></div>
             <div className="card-body" style={{ padding: '16px 20px' }}>
-              {!stats?.topLinks?.length ? (
-                <div className="empty-state" style={{ padding: '24px 0' }}><Icon name="link" size={28} color="var(--gray-300)" /><p style={{ marginTop: 8, fontSize: 13 }}>Chưa có dữ liệu</p></div>
-              ) : stats.topLinks.map((link, i) => {
+              {!stats?.topLinks?.length ? <div className="empty-state" style={{ padding: '24px 0' }}><Icon name="link" size={28} color="var(--gray-300)" /><p style={{ marginTop: 8, fontSize: 13 }}>Chưa có dữ liệu</p></div>
+              : stats.topLinks.map((link, i) => {
                 const maxClicks = stats.topLinks[0]?.clicks || 1;
                 const pct = Math.round((link.clicks / maxClicks) * 100);
                 return (
@@ -686,9 +626,7 @@ const CreateLinkView = ({ auth, onCreated }) => {
     <div className="view-section fade-in">
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
         <div className="card">
-          <div className="card-header">
-            <div className="card-title"><Icon name="link" size={16} color="var(--yellow-dark)" />Rút gọn URL mới</div>
-          </div>
+          <div className="card-header"><div className="card-title"><Icon name="link" size={16} color="var(--yellow-dark)" />Rút gọn URL mới</div></div>
           <div className="card-body">
             <div className="form-group">
               <label className="form-label">URL cần rút gọn *</label>
@@ -696,7 +634,6 @@ const CreateLinkView = ({ auth, onCreated }) => {
                 value={url} onChange={e => setUrl(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
             </div>
-
             <div className="form-group">
               <label className="form-label">Alias tùy chỉnh</label>
               <div className="input-group">
@@ -706,14 +643,11 @@ const CreateLinkView = ({ auth, onCreated }) => {
               </div>
               <div className="form-hint">Không bắt buộc — chỉ chữ, số, gạch ngang. Tối đa 20 ký tự</div>
             </div>
-
-            {/* Advanced toggle */}
             <button onClick={() => setShowAdvanced(!showAdvanced)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--gray-500)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginBottom: 16, fontFamily: 'DM Sans, sans-serif' }}>
               <Icon name={showAdvanced ? 'close' : 'lock'} size={14} />
               {showAdvanced ? 'Ẩn tùy chọn nâng cao' : 'Tùy chọn nâng cao (expiry, password)'}
             </button>
-
             {showAdvanced && (
               <div style={{ background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 10, padding: 16, marginBottom: 18 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -729,17 +663,13 @@ const CreateLinkView = ({ auth, onCreated }) => {
                       value={password} onChange={e => setPassword(e.target.value)} />
                   </div>
                 </div>
-                <div className="form-hint" style={{ marginTop: 10 }}>
-                  Link có expiry sẽ tự động redirect về trang lỗi sau ngày hết hạn. Link có password yêu cầu nhập mật khẩu khi truy cập.
-                </div>
+                <div className="form-hint" style={{ marginTop: 10 }}>Link có expiry sẽ tự động redirect về trang lỗi sau ngày hết hạn.</div>
               </div>
             )}
-
             <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: 14, fontSize: 15 }}
               onClick={handleSubmit} disabled={loading}>
               {loading ? <><div className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />Đang tạo...</> : <><Icon name="link" size={16} />Rút gọn ngay</>}
             </button>
-
             {result && (
               <div className="result-box">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -747,9 +677,7 @@ const CreateLinkView = ({ auth, onCreated }) => {
                 </div>
                 <div className="result-url">
                   <input readOnly value={result} style={{ flex: 1, padding: '9px 13px', background: 'white', border: '1.5px solid var(--gray-200)', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', color: 'var(--gray-800)', outline: 'none' }} />
-                  <button className="btn btn-primary btn-sm" onClick={() => { copyText(result); toast('Đã sao chép!'); }}>
-                    <Icon name="copy" size={14} /> Copy
-                  </button>
+                  <button className="btn btn-primary btn-sm" onClick={() => { copyText(result); toast('Đã sao chép!'); }}><Icon name="copy" size={14} /> Copy</button>
                 </div>
               </div>
             )}
@@ -770,7 +698,7 @@ const LinksView = ({ auth }) => {
   const [sortBy, setSortBy] = useState('created_at');
   const [sortDir, setSortDir] = useState('desc');
 
-  const fetch_ = useCallback(async () => {
+  const fetchLinks = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`${WORKER_URL}/links`);
@@ -779,7 +707,7 @@ const LinksView = ({ auth }) => {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetch_(); }, []);
+  useEffect(() => { fetchLinks(); }, []);
 
   const filtered = useMemo(() => {
     let arr = links.filter(l => !search || l.code.toLowerCase().includes(search.toLowerCase()) || l.original_url.toLowerCase().includes(search.toLowerCase()));
@@ -797,7 +725,7 @@ const LinksView = ({ auth }) => {
     if (!res.isConfirmed) return;
     try {
       const r = await fetch(`${WORKER_URL}/delete/${code}`, { method: 'DELETE', headers: { Authorization: auth } });
-      if (r.ok) { toast(`Đã xóa /${code}`); fetch_(); }
+      if (r.ok) { toast(`Đã xóa /${code}`); fetchLinks(); }
       else { const d = await r.json(); toast(d.error || 'Lỗi xóa', 'error'); }
     } catch { toast('Lỗi kết nối', 'error'); }
   };
@@ -819,19 +747,10 @@ const LinksView = ({ auth }) => {
     toast('Đã xuất Excel!');
   };
 
-  const getExpiryBadge = (link) => {
-    if (!link.expiry_date) return null;
-    const days = daysUntilExpiry(link.expiry_date);
-    if (days < 0) return <span className="badge badge-red"><Icon name="clock" size={10} />Hết hạn</span>;
-    if (days <= 7) return <span className="badge badge-orange"><Icon name="clock" size={10} />{days}d</span>;
-    return <span className="badge badge-green"><Icon name="clock" size={10} />{days}d</span>;
-  };
-
   return (
     <div className="view-section fade-in">
       {qrCode && <QRModal code={qrCode} onClose={() => setQrCode(null)} />}
       {utmCode && <UTMModal code={utmCode} onClose={() => setUtmCode(null)} />}
-
       <div className="card">
         <div className="card-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
@@ -844,73 +763,32 @@ const LinksView = ({ auth }) => {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-ghost btn-sm" onClick={exportExcel}><Icon name="download" size={14} />Excel</button>
-            <button className="refresh-btn" onClick={fetch_}><Icon name="refresh" size={13} />Làm mới</button>
+            <button className="refresh-btn" onClick={fetchLinks}><Icon name="refresh" size={13} />Làm mới</button>
           </div>
         </div>
-
         {loading ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
-            <div className="spinner" />
-          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}><div className="spinner" /></div>
         ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <Icon name="link" size={36} color="var(--gray-300)" />
-            <p>Không có link nào{search ? ` khớp với "${search}"` : ''}</p>
-          </div>
+          <div className="empty-state"><Icon name="link" size={36} color="var(--gray-300)" /><p>Không có link nào{search ? ` khớp với "${search}"` : ''}</p></div>
         ) : (
           <div className="table-wrap">
             <table>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Short URL</th>
-                  <th>Destination</th>
-                  <th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>
-                    Clicks {sortBy === 'clicks' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
-                  </th>
-                  <th>Trạng thái</th>
-                  <th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('created_at'); setSortDir(sortBy === 'created_at' && sortDir === 'desc' ? 'asc' : 'desc'); }}>
-                    Tạo ngày {sortBy === 'created_at' ? (sortDir === 'desc' ? '↓' : '↑') : ''}
-                  </th>
-                  <th style={{ textAlign: 'center' }}>Hành động</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Code</th><th>Short URL</th><th>Destination</th><th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Clicks {sortBy === 'clicks' ? (sortDir === 'desc' ? '↓' : '↑') : ''}</th><th>Trạng thái</th><th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('created_at'); setSortDir(sortBy === 'created_at' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Tạo ngày</th><th style={{ textAlign: 'center' }}>Hành động</th></tr></thead>
               <tbody>
                 {filtered.map(link => (
                   <tr key={link.code}>
                     <td><span className="code-chip">{link.code}</span></td>
-                    <td>
-                      <a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank"
-                        style={{ color: 'var(--yellow-dark)', fontFamily: 'DM Mono, monospace', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {YOUR_DOMAIN}/{link.code} <Icon name="external" size={12} />
-                      </a>
-                    </td>
-                    <td>
-                      <div style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5, color: 'var(--gray-500)' }} title={link.original_url}>
-                        {link.original_url}
-                      </div>
-                    </td>
-                    <td>
-                      <span className="badge badge-gray"><Icon name="analytics" size={11} />{link.clicks || 0}</span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {isExpired(link.expiry_date)
-                          ? <span className="badge badge-red">Hết hạn</span>
-                          : <span className="badge badge-green">Active</span>}
-                        {getExpiryBadge(link)}
-                        {link.password && <span className="badge badge-blue"><Icon name="lock" size={10} />Có mật khẩu</span>}
-                      </div>
-                    </td>
+                    <td><a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{ color: 'var(--yellow-dark)', fontFamily: 'DM Mono, monospace', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>{YOUR_DOMAIN}/{link.code} <Icon name="external" size={12} /></a></td>
+                    <td><div style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5, color: 'var(--gray-500)' }} title={link.original_url}>{link.original_url}</div></td>
+                    <td><span className="badge badge-gray"><Icon name="analytics" size={11} />{link.clicks || 0}</span></td>
+                    <td><span className="badge badge-green">Active</span></td>
                     <td style={{ fontSize: 12.5, color: 'var(--gray-500)' }}>{formatDate(link.created_at)}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                    <td><div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                         <button className="btn-icon" title="Copy link" onClick={() => { copyText(`https://${YOUR_DOMAIN}/${link.code}`); toast('Đã sao chép!'); }}><Icon name="copy" size={15} /></button>
                         <button className="btn-icon" title="QR Code" onClick={() => setQrCode(link.code)} style={{ color: 'var(--purple)' }}><Icon name="qr" size={15} /></button>
                         <button className="btn-icon" title="UTM" onClick={() => setUtmCode(link.code)} style={{ color: 'var(--blue)' }}><Icon name="tag" size={15} /></button>
                         <button className="btn-icon" title="Xóa" onClick={() => handleDelete(link.code)} style={{ color: 'var(--red)' }}><Icon name="trash" size={15} /></button>
-                      </div>
-                    </td>
+                      </div></td>
                   </tr>
                 ))}
               </tbody>
@@ -940,23 +818,10 @@ const AnalyticsView = () => {
   useEffect(() => { fetchLogs(); }, []);
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+  const todayClicks = useMemo(() => (logs.clickLogs || []).filter(l => { const d = l.time?.split(' ')[1]?.split('/').reverse().join('-'); return d === today; }).length, [logs]);
+  const todayActions = useMemo(() => (logs.actionLogs || []).filter(l => { const d = l.time?.split(' ')[1]?.split('/').reverse().join('-'); return d === today; }).length, [logs]);
+  const todayNewLinks = useMemo(() => (logs.actionLogs || []).filter(l => { const d = l.time?.split(' ')[1]?.split('/').reverse().join('-'); return d === today && l.action === 'create_link'; }).length, [logs]);
 
-  const todayClicks = useMemo(() => (logs.clickLogs || []).filter(l => {
-    const d = l.time?.split(' ')[1]?.split('/').reverse().join('-');
-    return d === today;
-  }).length, [logs, today]);
-
-  const todayActions = useMemo(() => (logs.actionLogs || []).filter(l => {
-    const d = l.time?.split(' ')[1]?.split('/').reverse().join('-');
-    return d === today;
-  }).length, [logs, today]);
-
-  const todayNewLinks = useMemo(() => (logs.actionLogs || []).filter(l => {
-    const d = l.time?.split(' ')[1]?.split('/').reverse().join('-');
-    return d === today && l.action === 'create_link';
-  }).length, [logs, today]);
-
-  // Device/browser parsing from user agent — worker may store UA
   const deviceStats = useMemo(() => {
     const devices = {};
     (logs.clickLogs || []).forEach(l => {
@@ -970,7 +835,6 @@ const AnalyticsView = () => {
     return Object.entries(devices).sort((a, b) => b[1] - a[1]);
   }, [logs]);
 
-  // Country stats from log
   const geoStats = useMemo(() => {
     const countries = {};
     (logs.clickLogs || []).forEach(l => {
@@ -980,139 +844,139 @@ const AnalyticsView = () => {
     return Object.entries(countries).sort((a, b) => b[1] - a[1]).slice(0, 8);
   }, [logs]);
 
-  const statCards = [
-    { label: 'Clicks hôm nay', value: todayClicks, color: 'var(--yellow-dark)', bg: 'var(--yellow-light)' },
-    { label: 'Link tạo hôm nay', value: todayNewLinks, color: 'var(--blue)', bg: '#EFF6FF' },
-    { label: 'Hành động hôm nay', value: todayActions, color: 'var(--green)', bg: '#ECFDF5' },
-    { label: 'Tổng người dùng', value: Object.keys(logs.users || {}).length, color: 'var(--purple)', bg: '#F5F3FF' },
-  ];
-
   const actionLabel = { create_link: 'Tạo link', delete_link: 'Xóa link', set_name: 'Đặt tên' };
   const actionColor = { create_link: 'badge-green', delete_link: 'badge-red', set_name: 'badge-blue' };
 
   return (
     <div className="view-section fade-in">
-      {/* Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
-        {statCards.map((s, i) => (
-          <div key={i} className="card" style={{ padding: 18 }}>
-            <div style={{ fontSize: 12, color: 'var(--gray-500)', marginBottom: 6 }}>{s.label}</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.value}</div>
-          </div>
-        ))}
+        <div className="card" style={{ padding: 18 }}><div style={{ fontSize: 12, color: 'var(--gray-500)', marginBottom: 6 }}>Clicks hôm nay</div><div style={{ fontSize: 28, fontWeight: 700, color: 'var(--yellow-dark)' }}>{todayClicks}</div></div>
+        <div className="card" style={{ padding: 18 }}><div style={{ fontSize: 12, color: 'var(--gray-500)', marginBottom: 6 }}>Link tạo hôm nay</div><div style={{ fontSize: 28, fontWeight: 700, color: 'var(--blue)' }}>{todayNewLinks}</div></div>
+        <div className="card" style={{ padding: 18 }}><div style={{ fontSize: 12, color: 'var(--gray-500)', marginBottom: 6 }}>Hành động hôm nay</div><div style={{ fontSize: 28, fontWeight: 700, color: 'var(--green)' }}>{todayActions}</div></div>
+        <div className="card" style={{ padding: 18 }}><div style={{ fontSize: 12, color: 'var(--gray-500)', marginBottom: 6 }}>Tổng người dùng</div><div style={{ fontSize: 28, fontWeight: 700, color: 'var(--purple)' }}>{Object.keys(logs.users || {}).length}</div></div>
       </div>
-
-      {/* Tabs */}
-      <div style={{ marginBottom: 16 }}>
-        <div className="tab-group">
-          {[['overview', 'Tổng quan'], ['clicks', 'Click logs'], ['actions', 'Action logs']].map(([key, label]) => (
-            <button key={key} className={`tab-btn ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>{label}</button>
-          ))}
-        </div>
-      </div>
-
-      {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
-      ) : tab === 'overview' ? (
+      <div style={{ marginBottom: 16 }}><div className="tab-group">
+        <button className={`tab-btn ${tab === 'overview' ? 'active' : ''}`} onClick={() => setTab('overview')}>Tổng quan</button>
+        <button className={`tab-btn ${tab === 'clicks' ? 'active' : ''}`} onClick={() => setTab('clicks')}>Click logs</button>
+        <button className={`tab-btn ${tab === 'actions' ? 'active' : ''}`} onClick={() => setTab('actions')}>Action logs</button>
+      </div></div>
+      {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
+      : tab === 'overview' ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          {/* Device stats */}
-          <div className="card">
-            <div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--blue)" />Thiết bị truy cập</div></div>
-            <div className="card-body">
-              {deviceStats.length === 0 ? <div className="empty-state" style={{ padding: '24px 0' }}><p>Không có dữ liệu</p></div>
-                : deviceStats.map(([device, count], i) => {
-                  const total = deviceStats.reduce((s, [, c]) => s + c, 0);
-                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-                  const colors = ['var(--yellow)', 'var(--blue)', 'var(--green)', 'var(--purple)'];
-                  return (
-                    <div key={i} style={{ marginBottom: 14 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 5 }}>
-                        <span style={{ fontWeight: 500 }}>{device}</span>
-                        <span style={{ color: 'var(--gray-500)' }}>{count} ({pct}%)</span>
-                      </div>
-                      <div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: colors[i % colors.length] }} /></div>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-          {/* Geo stats */}
-          <div className="card">
-            <div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--green)" />Vị trí địa lý</div></div>
-            <div className="card-body">
-              {geoStats.length === 0 ? <div className="empty-state" style={{ padding: '24px 0' }}><p>Không có dữ liệu<br /><span style={{ fontSize: 12 }}>Worker cần gửi kèm cf_country trong log</span></p></div>
-                : geoStats.map(([country, count], i) => {
-                  const total = geoStats.reduce((s, [, c]) => s + c, 0);
-                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-                  return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}>
-                      <span style={{ width: 100, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{country}</span>
-                      <div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: 'var(--green)' }} /></div></div>
-                      <span style={{ width: 36, textAlign: 'right', color: 'var(--gray-500)' }}>{count}</span>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
+          <div className="card"><div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--blue)" />Thiết bị truy cập</div></div><div className="card-body">{deviceStats.length === 0 ? <div className="empty-state">Không có dữ liệu</div> : deviceStats.map(([device, count], i) => { const total = deviceStats.reduce((s, [, c]) => s + c, 0); const pct = total > 0 ? Math.round((count / total) * 100) : 0; const colors = ['var(--yellow)', 'var(--blue)', 'var(--green)', 'var(--purple)']; return (<div key={i} style={{ marginBottom: 14 }}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 5 }}><span style={{ fontWeight: 500 }}>{device}</span><span style={{ color: 'var(--gray-500)' }}>{count} ({pct}%)</span></div><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: colors[i % colors.length] }} /></div></div>); })}</div></div>
+          <div className="card"><div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--green)" />Vị trí địa lý</div></div><div className="card-body">{geoStats.length === 0 ? <div className="empty-state">Không có dữ liệu</div> : geoStats.map(([country, count], i) => { const total = geoStats.reduce((s, [, c]) => s + c, 0); const pct = total > 0 ? Math.round((count / total) * 100) : 0; return (<div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}><span style={{ width: 100, fontWeight: 500 }}>{country}</span><div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: 'var(--green)' }} /></div></div><span style={{ width: 36, textAlign: 'right', color: 'var(--gray-500)' }}>{count}</span></div>); })}</div></div>
         </div>
       ) : tab === 'clicks' ? (
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div>
-            <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Đích đến</th></tr></thead>
-              <tbody>
-                {(logs.clickLogs || []).length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--gray-400)' }}>Chưa có log nào</td></tr>
-                ) : (logs.clickLogs || []).map((l, i) => (
-                  <tr key={i}>
-                    <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>{l.time}</td>
-                    <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td>
-                    <td style={{ fontSize: 13 }}>{l.user || <span style={{ color: 'var(--gray-400)' }}>unknown</span>}</td>
-                    <td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip" style={{ textDecoration: 'none' }}>/{l.code}</a></td>
-                    <td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td>
-                    <td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <div className="card"><div className="card-header"><div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Đích đến</th></tr></thead><tbody>{(logs.clickLogs || []).length === 0 ? <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.clickLogs || []).map((l, i) => (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip">/{l.code}</a></td><td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td></tr>))}</tbody></table></div></div>
       ) : (
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div>
-            <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
-              <tbody>
-                {(logs.actionLogs || []).length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--gray-400)' }}>Chưa có log nào</td></tr>
-                ) : (logs.actionLogs || []).map((l, i) => {
-                  let detail = '';
-                  if (l.details?.code) detail = `/${l.details.code}`;
-                  if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`;
-                  if (l.details?.name) detail = `"${l.details.name}"`;
-                  return (
-                    <tr key={i}>
-                      <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>{l.time}</td>
-                      <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td>
-                      <td>{l.user || <span style={{ color: 'var(--gray-400)', fontSize: 13 }}>unknown</span>}</td>
-                      <td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td>
-                      <td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200 }}>{detail || '-'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <div className="card"><div className="card-header"><div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead><tbody>{(logs.actionLogs || []).length === 0 ? <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.actionLogs || []).map((l, i) => { let detail = ''; if (l.details?.code) detail = `/${l.details.code}`; if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`; if (l.details?.name) detail = `"${l.details.name}"`; return (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{detail || '-'}</td></tr>); })}</tbody></table></div></div>
       )}
+    </div>
+  );
+};
+
+// ==================== ADMIN VIEW ====================
+const AdminView = ({ auth, currentUser }) => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [publicMode, setPublicMode] = useState(false);
+  const [selectedUserLogs, setSelectedUserLogs] = useState(null);
+  const [form, setForm] = useState({ fullname: '', department: '', username: '', role: 'Member' });
+
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/users`, { headers: { Authorization: auth } });
+      if (res.status === 403) { toast('Bạn không có quyền truy cập', 'error'); return; }
+      const data = await res.json();
+      setUsers(data);
+    } catch (e) { toast('Lỗi tải users', 'error'); } finally { setLoading(false); }
+  }, [auth]);
+
+  const fetchPublicMode = useCallback(async () => {
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/settings/public`, { headers: { Authorization: auth } });
+      const data = await res.json();
+      setPublicMode(data.enabled);
+    } catch (e) {}
+  }, [auth]);
+
+  useEffect(() => { fetchUsers(); fetchPublicMode(); }, []);
+
+  const handleSaveUser = async () => {
+    if (!form.username) { toast('Vui lòng nhập username', 'error'); return; }
+    try {
+      const method = editingUser ? 'PUT' : 'POST';
+      const url = editingUser ? `${WORKER_URL}/admin/users/${editingUser.username}` : `${WORKER_URL}/admin/users`;
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', Authorization: auth }, body: JSON.stringify(form) });
+      if (res.ok) {
+        toast(editingUser ? 'Cập nhật thành công' : 'Tạo user thành công. Mật khẩu = username');
+        fetchUsers();
+        setShowUserModal(false);
+        setEditingUser(null);
+        setForm({ fullname: '', department: '', username: '', role: 'Member' });
+      } else { const err = await res.json(); toast(err.error || 'Lỗi', 'error'); }
+    } catch { toast('Lỗi kết nối', 'error'); }
+  };
+
+  const handleResetPassword = async (username) => {
+    const confirm = await Swal.fire({ title: 'Reset mật khẩu?', text: `Mật khẩu mới: ${username}`, icon: 'warning', showCancelButton: true });
+    if (!confirm.isConfirmed) return;
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/users/${username}/reset-password`, { method: 'POST', headers: { Authorization: auth } });
+      if (res.ok) toast(`Mật khẩu mới: ${username}`, 'success');
+    } catch { toast('Lỗi reset', 'error'); }
+  };
+
+  const handleToggleStatus = async (username) => {
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/users/${username}/toggle-status`, { method: 'POST', headers: { Authorization: auth } });
+      if (res.ok) { toast('Đã thay đổi trạng thái'); fetchUsers(); }
+    } catch { toast('Lỗi', 'error'); }
+  };
+
+  const handleDeleteUser = async (username) => {
+    const confirm = await Swal.fire({ title: 'Xóa user?', text: `Xóa ${username}?`, icon: 'error', showCancelButton: true });
+    if (!confirm.isConfirmed) return;
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/users/${username}`, { method: 'DELETE', headers: { Authorization: auth } });
+      if (res.ok) { toast('Đã xóa user'); fetchUsers(); }
+    } catch { toast('Lỗi', 'error'); }
+  };
+
+  const viewUserLogs = async (username) => {
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/logs/${username}`, { headers: { Authorization: auth } });
+      const logs = await res.json();
+      setSelectedUserLogs({ username, logs });
+    } catch { toast('Lỗi tải logs', 'error'); }
+  };
+
+  const togglePublicMode = async () => {
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/settings/public`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: auth }, body: JSON.stringify({ enabled: !publicMode }) });
+      if (res.ok) { setPublicMode(!publicMode); toast(publicMode ? 'Private Mode' : 'Public Mode'); }
+    } catch { toast('Lỗi', 'error'); }
+  };
+
+  const roleBadgeColor = { SuperAdmin: 'badge-purple', Admin: 'badge-blue', Member: 'badge-gray' };
+
+  return (
+    <div className="view-section fade-in">
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-header"><div className="card-title"><Icon name="globe" size={16} color="var(--yellow-dark)" />Chế độ xem</div><button className={`btn ${publicMode ? 'btn-primary' : 'btn-secondary'}`} onClick={togglePublicMode}><Icon name={publicMode ? 'check' : 'lock'} size={14} />{publicMode ? '🔓 Public Mode' : '🔒 Private Mode'}</button></div>
+        <div className="card-body"><div style={{ fontSize: 13, color: 'var(--gray-500)' }}>{publicMode ? 'Tất cả thành viên đều xem được toàn bộ link' : 'Mỗi thành viên chỉ xem được link mình tạo'}</div></div>
+      </div>
+      <div className="card">
+        <div className="card-header"><div className="card-title"><Icon name="user" size={16} color="var(--purple)" />Quản lý tài khoản</div><button className="btn btn-primary btn-sm" onClick={() => { setEditingUser(null); setForm({ fullname: '', department: '', username: '', role: 'Member' }); setShowUserModal(true); }}><Icon name="user" size={14} /> Thêm user</button></div>
+        {loading ? <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner" /></div> : (
+          <div className="table-wrap"><table><thead><tr><th>Fullname</th><th>Department</th><th>Username</th><th>Role</th><th>Status</th><th>Created At</th><th>Actions</th></tr></thead><tbody>{users.map(user => (<tr key={user.username} style={{ opacity: user.status === 'disabled' ? 0.5 : 1 }}><td style={{ fontWeight: 500 }}>{user.fullname || '-'}</td><td>{user.department || '-'}</td><td><span className="code-chip">{user.username}</span></td><td><span className={`badge ${roleBadgeColor[user.role] || 'badge-gray'}`}>{user.role}</span></td><td><span className={`badge ${user.status === 'active' ? 'badge-green' : 'badge-red'}`}>{user.status === 'active' ? 'Active' : 'Disabled'}</span></td><td style={{ fontSize: 12 }}>{formatDate(user.created_at)}</td><td><div style={{ display: 'flex', gap: 5 }}><button className="btn-icon" onClick={() => { setEditingUser(user); setForm({ fullname: user.fullname || '', department: user.department || '', username: user.username, role: user.role }); setShowUserModal(true); }}><Icon name="edit" size={14} /></button><button className="btn-icon" onClick={() => handleResetPassword(user.username)}><Icon name="lock" size={14} /></button><button className="btn-icon" onClick={() => handleToggleStatus(user.username)}><Icon name={user.status === 'active' ? 'close' : 'check'} size={14} /></button><button className="btn-icon" onClick={() => viewUserLogs(user.username)}><Icon name="logs" size={14} /></button>{user.username !== 'admin' && <button className="btn-icon" onClick={() => handleDeleteUser(user.username)} style={{ color: 'var(--red)' }}><Icon name="trash" size={14} /></button>}</div></td></tr>))}</tbody></table></div>
+        )}
+      </div>
+      {showUserModal && (<div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowUserModal(false)}><div className="modal"><div className="modal-header"><div className="modal-title">{editingUser ? 'Sửa user' : 'Thêm user mới'}</div><button className="btn-icon" onClick={() => setShowUserModal(false)}><Icon name="close" size={18} /></button></div><div className="modal-body"><div className="form-group"><label className="form-label">Họ và tên</label><input className="form-input" value={form.fullname} onChange={e => setForm({ ...form, fullname: e.target.value })} /></div><div className="form-group"><label className="form-label">Phòng ban</label><input className="form-input" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} /></div><div className="form-group"><label className="form-label">Username</label><input className="form-input" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} disabled={!!editingUser} /></div><div className="form-group"><label className="form-label">Role</label><select className="form-input" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}><option value="Member">Member</option><option value="Admin">Admin</option>{currentUser?.role === 'SuperAdmin' && <option value="SuperAdmin">SuperAdmin</option>}</select></div>{!editingUser && <div className="form-hint">Mật khẩu mặc định = username</div>}</div><div className="modal-footer"><button className="btn btn-secondary" onClick={() => setShowUserModal(false)}>Hủy</button><button className="btn btn-primary" onClick={handleSaveUser}>Lưu</button></div></div></div>)}
+      {selectedUserLogs && (<div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setSelectedUserLogs(null)}><div className="modal" style={{ maxWidth: 600 }}><div className="modal-header"><div className="modal-title">Logs của {selectedUserLogs.username}</div><button className="btn-icon" onClick={() => setSelectedUserLogs(null)}><Icon name="close" size={18} /></button></div><div className="modal-body">{selectedUserLogs.logs.length === 0 ? <div className="empty-state">Chưa có logs</div> : <div style={{ maxHeight: 400, overflowY: 'auto' }}>{selectedUserLogs.logs.map((log, i) => (<div key={i} style={{ padding: '8px 0', borderBottom: '1px solid var(--gray-100)', fontSize: 12 }}><div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--gray-500)' }}>{log.time}</div><div><span className="badge badge-gray">{log.action}</span> {log.details?.code && `/${log.details.code}`}</div></div>))}</div>}</div></div></div>)}
     </div>
   );
 };
@@ -1120,70 +984,40 @@ const AnalyticsView = () => {
 // ==================== NAME MODAL ====================
 const NameModal = ({ auth, onDone }) => {
   const [name, setName] = useState('');
-  const deviceId = useMemo(() => {
-    let id = localStorage.getItem('deviceId');
-    if (!id) { id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8); localStorage.setItem('deviceId', id); }
-    return id;
-  }, []);
+  const deviceId = useMemo(() => { let id = localStorage.getItem('deviceId'); if (!id) { id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8); localStorage.setItem('deviceId', id); } return id; }, []);
 
   const save = async () => {
     if (!name.trim()) { toast('Vui lòng nhập tên', 'error'); return; }
     try {
-      await fetch(`${WORKER_URL}/set-name`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), device: deviceId })
-      });
+      await fetch(`${WORKER_URL}/set-name`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), device: deviceId }) });
       localStorage.setItem('userName', name.trim());
       onDone(name.trim());
     } catch { toast('Lỗi lưu tên', 'error'); }
   };
 
-  return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <div className="modal-header">
-          <div className="modal-title">Chào mừng!</div>
-        </div>
-        <div className="modal-body">
-          <p style={{ fontSize: 13.5, color: 'var(--gray-500)', marginBottom: 16 }}>Đặt tên để hiển thị trong logs hệ thống.</p>
-          <div className="form-group">
-            <label className="form-label">Tên của bạn</label>
-            <input className="form-input" placeholder="Nguyễn Văn A" value={name}
-              onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && save()} autoFocus />
-          </div>
-        </div>
-        <div className="modal-footer">
-          <button className="btn btn-primary" onClick={save}><Icon name="check" size={15} />Xác nhận</button>
-        </div>
-      </div>
-    </div>
-  );
+  return (<div className="modal-backdrop"><div className="modal"><div className="modal-header"><div className="modal-title">Chào mừng!</div></div><div className="modal-body"><p style={{ fontSize: 13.5, color: 'var(--gray-500)', marginBottom: 16 }}>Đặt tên để hiển thị trong logs hệ thống.</p><div className="form-group"><label className="form-label">Tên của bạn</label><input className="form-input" placeholder="Nguyễn Văn A" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && save()} autoFocus /></div></div><div className="modal-footer"><button className="btn btn-primary" onClick={save}><Icon name="check" size={15} />Xác nhận</button></div></div></div>);
 };
 
 // ==================== MAIN APP ====================
 const App = () => {
   const [auth, setAuth] = useState(() => sessionStorage.getItem('adminAuth'));
   const [adminUser, setAdminUser] = useState(() => sessionStorage.getItem('adminUser') || '');
+  const [userRole, setUserRole] = useState(() => sessionStorage.getItem('userRole') || 'Member');
+  const [currentUserInfo, setCurrentUserInfo] = useState(null);
   const [tab, setTab] = useState('dashboard');
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState(() => localStorage.getItem('userName'));
   const [showNameModal, setShowNameModal] = useState(false);
 
-  const handleLogin = (a, u) => { setAuth(a); setAdminUser(u); };
-  const handleLogout = () => { sessionStorage.removeItem('adminAuth'); sessionStorage.removeItem('adminUser'); setAuth(null); setAdminUser(''); };
+  const handleLogin = (a, u, userData) => { setAuth(a); setAdminUser(u); setCurrentUserInfo(userData); setUserRole(userData?.role || 'Member'); };
+  const handleLogout = () => { sessionStorage.removeItem('adminAuth'); sessionStorage.removeItem('adminUser'); sessionStorage.removeItem('userRole'); setAuth(null); setAdminUser(''); setUserRole('Member'); };
 
-  useEffect(() => {
-    if (auth && !userName) setShowNameModal(true);
-  }, [auth, userName]);
+  useEffect(() => { if (auth && !userName) setShowNameModal(true); }, [auth, userName]);
 
   useEffect(() => {
     if (!auth) return;
     const deviceId = localStorage.getItem('deviceId') || ('device_' + Date.now());
-    fetch(`${WORKER_URL}/get-name?device=${deviceId}`)
-      .then(r => r.json())
-      .then(d => { if (d.name) { setUserName(d.name); localStorage.setItem('userName', d.name); } else if (!localStorage.getItem('userName')) setShowNameModal(true); })
-      .catch(() => { if (!localStorage.getItem('userName')) setShowNameModal(true); });
+    fetch(`${WORKER_URL}/get-name?device=${deviceId}`).then(r => r.json()).then(d => { if (d.name) { setUserName(d.name); localStorage.setItem('userName', d.name); } else if (!localStorage.getItem('userName')) setShowNameModal(true); }).catch(() => { if (!localStorage.getItem('userName')) setShowNameModal(true); });
   }, [auth]);
 
   if (!auth) return <AuthScreen onLogin={handleLogin} />;
@@ -1192,67 +1026,34 @@ const App = () => {
     { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
     { key: 'create', label: 'Tạo link mới', icon: 'link' },
     { key: 'links', label: 'Quản lý link', icon: 'list' },
-    { key: 'analytics', label: 'Analytics & Logs', icon: 'analytics' },
   ];
+  if (userRole === 'Admin' || userRole === 'SuperAdmin') {
+    navItems.push({ key: 'analytics', label: 'Analytics & Logs', icon: 'analytics' });
+  }
+  if (userRole === 'SuperAdmin') {
+    navItems.push({ key: 'admin', label: 'Admin Panel', icon: 'user' });
+  }
 
-  const pageTitles = { dashboard: 'Tổng quan', create: 'Tạo link mới', links: 'Quản lý link', analytics: 'Analytics & Logs' };
-
+  const pageTitles = { dashboard: 'Tổng quan', create: 'Tạo link mới', links: 'Quản lý link', analytics: 'Analytics & Logs', admin: 'Admin Panel' };
   const initials = (adminUser || userName || 'U').substring(0, 2).toUpperCase();
 
   return (
     <>
       {showNameModal && <NameModal auth={auth} onDone={n => { setUserName(n); setShowNameModal(false); }} />}
       <aside className="sidebar">
-        <div className="sidebar-logo">
-          <img src="/icon.png" alt="Enactus" onError={e => e.target.style.display='none'} />
-          <div className="sidebar-logo-text">
-            <h1>URL Shortener</h1>
-            <p>Enactus FTU Hanoi</p>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <div className="nav-section-label">Menu</div>
-          {navItems.map(item => (
-            <a key={item.key} className={`nav-item ${tab === item.key ? 'active' : ''}`}
-              onClick={() => setTab(item.key)} href="#">
-              <Icon name={item.icon} size={17} />
-              {item.label}
-            </a>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div className="sidebar-user" onClick={() => { if (window.confirm('Đăng xuất?')) handleLogout(); }}>
-            <div className="sidebar-avatar">{initials}</div>
-            <div className="sidebar-user-info">
-              <p>{userName || adminUser || 'Người dùng'}</p>
-              <span>Nhấn để đăng xuất</span>
-            </div>
-          </div>
-        </div>
+        <div className="sidebar-logo"><img src="/icon.png" alt="Enactus" onError={e => e.target.style.display='none'} /><div className="sidebar-logo-text"><h1>URL Shortener</h1><p>Enactus FTU Hanoi</p></div></div>
+        <nav className="sidebar-nav"><div className="nav-section-label">Menu</div>{navItems.map(item => (<a key={item.key} className={`nav-item ${tab === item.key ? 'active' : ''}`} onClick={() => setTab(item.key)} href="#"><Icon name={item.icon} size={17} />{item.label}</a>))}</nav>
+        <div className="sidebar-footer"><div className="sidebar-user" onClick={() => { if (window.confirm('Đăng xuất?')) handleLogout(); }}><div className="sidebar-avatar">{initials}</div><div className="sidebar-user-info"><p>{userName || adminUser || 'Người dùng'}</p><span>Nhấn để đăng xuất</span></div></div></div>
       </aside>
-
       <main className="main">
-        <header className="topbar">
-          <div className="topbar-title">{pageTitles[tab]}</div>
-          <div className="topbar-meta">
-            <div className="topbar-badge">
-              <span className="dot" />
-              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{YOUR_DOMAIN}</span>
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--gray-500)' }}>
-              {new Date().toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
-            </div>
-          </div>
-        </header>
-
+        <header className="topbar"><div className="topbar-title">{pageTitles[tab]}</div><div className="topbar-meta"><div className="topbar-badge"><span className="dot" /><span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{YOUR_DOMAIN}</span></div><div style={{ fontSize: 13, color: 'var(--gray-500)' }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}</div></div></header>
         <div className="content" style={{ position: 'relative' }}>
           {loading && <div className="loading-overlay"><div className="spinner" /></div>}
           {tab === 'dashboard' && <DashboardView auth={auth} />}
           {tab === 'create' && <CreateLinkView auth={auth} onCreated={() => {}} />}
           {tab === 'links' && <LinksView auth={auth} />}
           {tab === 'analytics' && <AnalyticsView />}
+          {tab === 'admin' && <AdminView auth={auth} currentUser={currentUserInfo} />}
         </div>
       </main>
     </>
