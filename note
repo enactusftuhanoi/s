@@ -1,0 +1,882 @@
+export default {
+  async fetch(request, env) {
+    // Handle CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': 'https://s.enactusftuhanoi.id.vn',
+          'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS, PUT',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Max-Age': '86400',
+        },
+      });
+    }
+
+    const url = new URL(request.url);
+    const path = url.pathname.slice(1);
+    const method = request.method;
+    const hostname = url.hostname;
+    const clientIP = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
+
+    function corsResponse(body, status = 200, contentType = 'application/json') {
+      return new Response(body, {
+        status: status,
+        headers: {
+          'Content-Type': contentType,
+          'Access-Control-Allow-Origin': 'https://s.enactusftuhanoi.id.vn',
+          'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS, PUT',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
+      });
+    }
+
+    // ==================== USER MANAGEMENT FUNCTIONS ====================
+
+    async function initDefaultUser(env) {
+      const usersData = await env.ADMIN_STORAGE.get("users");
+      if (!usersData) {
+        const defaultUser = {
+          id: "1",
+          fullname: "Super Administrator",
+          department: "IT",
+          username: "superadmin",
+          password: btoa("superadmin"),
+          role: "SuperAdmin",
+          status: "active",
+          must_change_password: false,
+          created_by: "system",
+          created_at: new Date().toISOString()
+        };
+        await env.ADMIN_STORAGE.put("users", JSON.stringify([defaultUser]));
+      }
+    }
+
+    async function getUserByUsername(env, username) {
+      const usersData = await env.ADMIN_STORAGE.get("users");
+      const users = usersData ? JSON.parse(usersData) : [];
+      return users.find(u => u.username === username);
+    }
+
+    async function getAllUsers(env) {
+      const usersData = await env.ADMIN_STORAGE.get("users");
+      const users = usersData ? JSON.parse(usersData) : [];
+      return users.map(u => {
+        const { password, ...userWithoutPassword } = u;
+        return userWithoutPassword;
+      });
+    }
+
+    async function createNewUser(env, userData, createdBy) {
+      let users = [];
+      const usersData = await env.ADMIN_STORAGE.get("users");
+      if (usersData) users = JSON.parse(usersData);
+
+      if (users.find(u => u.username === userData.username)) {
+        throw new Error("Username already exists");
+      }
+
+      const newUser = {
+        id: Date.now().toString(),
+        fullname: userData.fullname || "",
+        department: userData.department || "",
+        username: userData.username,
+        password: btoa(userData.username),
+        role: userData.role || "Member",
+        status: "active",
+        // FIX: User mới bắt buộc đổi mật khẩu lần đầu
+        must_change_password: true,
+        created_by: createdBy,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      users.push(newUser);
+      await env.ADMIN_STORAGE.put("users", JSON.stringify(users));
+
+      const { password, ...result } = newUser;
+      return result;
+    }
+
+    async function updateExistingUser(env, username, updates, updatedBy) {
+      let users = [];
+      const usersData = await env.ADMIN_STORAGE.get("users");
+      if (usersData) users = JSON.parse(usersData);
+
+      const index = users.findIndex(u => u.username === username);
+      if (index === -1) throw new Error("User not found");
+
+      if (users[index].role === "SuperAdmin" && updatedBy !== users[index].username) {
+        throw new Error("Cannot modify SuperAdmin");
+      }
+
+      users[index] = {
+        ...users[index],
+        fullname: updates.fullname !== undefined ? updates.fullname : users[index].fullname,
+        department: updates.department !== undefined ? updates.department : users[index].department,
+        role: updates.role !== undefined ? updates.role : users[index].role,
+        status: updates.status !== undefined ? updates.status : users[index].status,
+        updated_at: new Date().toISOString(),
+        updated_by: updatedBy
+      };
+
+      await env.ADMIN_STORAGE.put("users", JSON.stringify(users));
+
+      const { password, ...result } = users[index];
+      return result;
+    }
+
+    async function resetUserPassword(env, username, resetBy) {
+      let users = [];
+      const usersData = await env.ADMIN_STORAGE.get("users");
+      if (usersData) users = JSON.parse(usersData);
+
+      const index = users.findIndex(u => u.username === username);
+      if (index === -1) throw new Error("User not found");
+
+      if (users[index].role === "SuperAdmin" && resetBy !== username) {
+        throw new Error("Cannot reset SuperAdmin password");
+      }
+
+      users[index].password = btoa(username);
+      // FIX: Sau khi reset, bắt buộc đổi mật khẩu lần sau đăng nhập
+      users[index].must_change_password = true;
+      users[index].updated_at = new Date().toISOString();
+
+      await env.ADMIN_STORAGE.put("users", JSON.stringify(users));
+      return { success: true, newPassword: username };
+    }
+
+    // FIX: Hàm đổi mật khẩu mới
+    async function changeUserPassword(env, username, currentPassword, newPassword) {
+      let users = [];
+      const usersData = await env.ADMIN_STORAGE.get("users");
+      if (usersData) users = JSON.parse(usersData);
+
+      const index = users.findIndex(u => u.username === username);
+      if (index === -1) throw new Error("User not found");
+
+      // Kiểm tra mật khẩu hiện tại
+      if (users[index].password !== btoa(currentPassword)) {
+        throw new Error("Mật khẩu hiện tại không đúng");
+      }
+
+      if (newPassword.length < 6) {
+        throw new Error("Mật khẩu mới phải có ít nhất 6 ký tự");
+      }
+
+      // Không cho đặt lại mật khẩu trùng với username (mặc định)
+      if (newPassword === username) {
+        throw new Error("Mật khẩu mới không được trùng với tên đăng nhập");
+      }
+
+      users[index].password = btoa(newPassword);
+      users[index].must_change_password = false;
+      users[index].updated_at = new Date().toISOString();
+
+      await env.ADMIN_STORAGE.put("users", JSON.stringify(users));
+      return { success: true };
+    }
+
+    async function deleteExistingUser(env, username, deletedBy) {
+      let users = [];
+      const usersData = await env.ADMIN_STORAGE.get("users");
+      if (usersData) users = JSON.parse(usersData);
+
+      const userToDelete = users.find(u => u.username === username);
+      if (!userToDelete) throw new Error("User not found");
+
+      if (userToDelete.role === "SuperAdmin") {
+        throw new Error("Cannot delete SuperAdmin");
+      }
+
+      users = users.filter(u => u.username !== username);
+      await env.ADMIN_STORAGE.put("users", JSON.stringify(users));
+      return { success: true };
+    }
+
+    async function toggleUserStatus(env, username, toggledBy) {
+      let users = [];
+      const usersData = await env.ADMIN_STORAGE.get("users");
+      if (usersData) users = JSON.parse(usersData);
+
+      const index = users.findIndex(u => u.username === username);
+      if (index === -1) throw new Error("User not found");
+
+      users[index].status = users[index].status === "active" ? "disabled" : "active";
+      users[index].updated_at = new Date().toISOString();
+      users[index].updated_by = toggledBy;
+
+      await env.ADMIN_STORAGE.put("users", JSON.stringify(users));
+
+      const { password, ...result } = users[index];
+      return result;
+    }
+
+    async function addUserLog(env, username, action, details, ip) {
+      const logEntry = {
+        id: Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        time: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+        timestamp: Date.now(),
+        username: username,
+        action: action,
+        details: details,
+        ip: ip
+      };
+
+      let userLogs = [];
+      const existing = await env.ADMIN_STORAGE.get(`user_logs_${username}`);
+      if (existing) userLogs = JSON.parse(existing);
+
+      userLogs.unshift(logEntry);
+      if (userLogs.length > 200) userLogs = userLogs.slice(0, 200);
+      await env.ADMIN_STORAGE.put(`user_logs_${username}`, JSON.stringify(userLogs));
+    }
+
+    async function getUserLogsByUsername(env, username) {
+      const existing = await env.ADMIN_STORAGE.get(`user_logs_${username}`);
+      return existing ? JSON.parse(existing) : [];
+    }
+
+    async function getPublicMode(env) {
+      const setting = await env.ADMIN_STORAGE.get("public_mode");
+      return setting === "true";
+    }
+
+    async function setPublicModeSetting(env, enabled, setBy) {
+      await env.ADMIN_STORAGE.put("public_mode", enabled.toString());
+      await addUserLog(env, setBy, "set_public_mode", { enabled: enabled }, "");
+      return { enabled: enabled };
+    }
+
+    async function getCurrentUser(request, env) {
+      const auth = request.headers.get('Authorization');
+      if (!auth || !auth.startsWith('Basic ')) return null;
+
+      const base64Credentials = auth.split(' ')[1];
+      const credentials = atob(base64Credentials);
+      const colonIndex = credentials.indexOf(':');
+      const username = credentials.substring(0, colonIndex);
+      const password = credentials.substring(colonIndex + 1);
+
+      // if (username === 'admin' && password === 'Enactus@2026') {
+      //   return { username: username, role: "SuperAdmin", status: "active", isEnvAdmin: true, must_change_password: false };
+      // }
+
+      const user = await getUserByUsername(env, username);
+      if (user && user.password === btoa(password) && user.status === "active") {
+        return {
+          username: user.username,
+          role: user.role,
+          status: user.status,
+          fullname: user.fullname,
+          department: user.department,
+          // FIX: Trả về flag must_change_password
+          must_change_password: user.must_change_password === true
+        };
+      }
+      return null;
+    }
+
+    // Initialize default user
+    await initDefaultUser(env);
+
+    // ==================== AUTH CHECK FOR UI ====================
+    if (hostname === 's.enactusftuhanoi.id.vn' && path === "") {
+      return fetch("https://enactusftuhanoi.github.io/s/");
+    }
+
+    // ==================== ADMIN API ENDPOINTS ====================
+
+    // GET /admin/current-user
+    if (path === "admin/current-user" && method === "GET") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser) {
+        return corsResponse(JSON.stringify({ error: "Unauthorized" }), 401);
+      }
+      return corsResponse(JSON.stringify(currentUser));
+    }
+
+    // POST /admin/change-password — đổi mật khẩu (tự đổi)
+    if (path === "admin/change-password" && method === "POST") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser) {
+        return corsResponse(JSON.stringify({ error: "Unauthorized" }), 401);
+      }
+      // Tài khoản env admin không cần đổi mật khẩu
+      if (currentUser.isEnvAdmin) {
+        return corsResponse(JSON.stringify({ error: "Tài khoản này không thể đổi mật khẩu qua đây" }), 400);
+      }
+      try {
+        const body = await request.json();
+        const { currentPassword, newPassword } = body;
+        if (!currentPassword || !newPassword) {
+          return corsResponse(JSON.stringify({ error: "Thiếu thông tin" }), 400);
+        }
+        await changeUserPassword(env, currentUser.username, currentPassword, newPassword);
+        await addUserLog(env, currentUser.username, "change_password", {}, clientIP);
+        return corsResponse(JSON.stringify({ success: true }));
+      } catch (error) {
+        return corsResponse(JSON.stringify({ error: error.message }), 400);
+      }
+    }
+
+    // GET /admin/users
+    if (path === "admin/users" && method === "GET") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser || currentUser.role !== "SuperAdmin") {
+        return corsResponse(JSON.stringify({ error: "Unauthorized - SuperAdmin only" }), 403);
+      }
+      const users = await getAllUsers(env);
+      return corsResponse(JSON.stringify(users));
+    }
+
+    // POST /admin/users
+    if (path === "admin/users" && method === "POST") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser || (currentUser.role !== "SuperAdmin" && currentUser.role !== "Admin")) {
+        return corsResponse(JSON.stringify({ error: "Unauthorized" }), 403);
+      }
+      try {
+        const body = await request.json();
+        const { fullname, department, username, role } = body;
+        if (!username) return corsResponse(JSON.stringify({ error: "Username required" }), 400);
+        if (currentUser.role === "Admin" && role === "SuperAdmin") {
+          return corsResponse(JSON.stringify({ error: "Admin cannot create SuperAdmin" }), 403);
+        }
+        const newUser = await createNewUser(env, { fullname, department, username, role: role || "Member" }, currentUser.username);
+        await addUserLog(env, currentUser.username, "create_user", { username: username, role: role }, clientIP);
+        return corsResponse(JSON.stringify(newUser));
+      } catch (error) {
+        return corsResponse(JSON.stringify({ error: error.message }), 400);
+      }
+    }
+
+    // PUT /admin/users/:username
+    if (path.startsWith("admin/users/") && method === "PUT") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser || (currentUser.role !== "SuperAdmin" && currentUser.role !== "Admin")) {
+        return corsResponse(JSON.stringify({ error: "Unauthorized" }), 403);
+      }
+      const targetUsername = path.split("/")[2];
+      try {
+        const body = await request.json();
+        const { fullname, department, role, status } = body;
+        if (currentUser.role === "Admin") {
+          const targetUser = await getUserByUsername(env, targetUsername);
+          if (targetUser && targetUser.role === "SuperAdmin") {
+            return corsResponse(JSON.stringify({ error: "Admin cannot modify SuperAdmin" }), 403);
+          }
+        }
+        const updated = await updateExistingUser(env, targetUsername, { fullname, department, role, status }, currentUser.username);
+        await addUserLog(env, currentUser.username, "update_user", { username: targetUsername }, clientIP);
+        return corsResponse(JSON.stringify(updated));
+      } catch (error) {
+        return corsResponse(JSON.stringify({ error: error.message }), 400);
+      }
+    }
+
+    // DELETE /admin/users/:username
+    if (path.startsWith("admin/users/") && method === "DELETE") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser || currentUser.role !== "SuperAdmin") {
+        return corsResponse(JSON.stringify({ error: "Unauthorized - SuperAdmin only" }), 403);
+      }
+      const targetUsername = path.split("/")[2];
+      try {
+        await deleteExistingUser(env, targetUsername, currentUser.username);
+        await addUserLog(env, currentUser.username, "delete_user", { username: targetUsername }, clientIP);
+        return corsResponse(JSON.stringify({ success: true }));
+      } catch (error) {
+        return corsResponse(JSON.stringify({ error: error.message }), 400);
+      }
+    }
+
+    // POST /admin/users/:username/reset-password
+    if (path.match(/admin\/users\/.+\/reset-password/) && method === "POST") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser || currentUser.role !== "SuperAdmin") {
+        return corsResponse(JSON.stringify({ error: "Unauthorized - SuperAdmin only" }), 403);
+      }
+      const targetUsername = path.split("/")[2];
+      try {
+        const result = await resetUserPassword(env, targetUsername, currentUser.username);
+        await addUserLog(env, currentUser.username, "reset_password", { username: targetUsername }, clientIP);
+        return corsResponse(JSON.stringify(result));
+      } catch (error) {
+        return corsResponse(JSON.stringify({ error: error.message }), 400);
+      }
+    }
+
+    // POST /admin/users/:username/toggle-status
+    if (path.match(/admin\/users\/.+\/toggle-status/) && method === "POST") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser || (currentUser.role !== "SuperAdmin" && currentUser.role !== "Admin")) {
+        return corsResponse(JSON.stringify({ error: "Unauthorized" }), 403);
+      }
+      const targetUsername = path.split("/")[2];
+      try {
+        const result = await toggleUserStatus(env, targetUsername, currentUser.username);
+        await addUserLog(env, currentUser.username, "toggle_status", { username: targetUsername, newStatus: result.status }, clientIP);
+        return corsResponse(JSON.stringify(result));
+      } catch (error) {
+        return corsResponse(JSON.stringify({ error: error.message }), 400);
+      }
+    }
+
+    // GET /admin/logs/:username
+    if (path.match(/admin\/logs\/.+/)) {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser || (currentUser.role !== "SuperAdmin" && currentUser.role !== "Admin")) {
+        return corsResponse(JSON.stringify({ error: "Unauthorized" }), 403);
+      }
+      const targetUsername = path.split("/")[2];
+      const logs = await getUserLogsByUsername(env, targetUsername);
+      return corsResponse(JSON.stringify(logs));
+    }
+
+    // GET /admin/settings/public
+    if (path === "admin/settings/public" && method === "GET") {
+      const enabled = await getPublicMode(env);
+      return corsResponse(JSON.stringify({ enabled }));
+    }
+
+    // POST /admin/settings/public
+    if (path === "admin/settings/public" && method === "POST") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser || (currentUser.role !== "SuperAdmin" && currentUser.role !== "Admin")) {
+        return corsResponse(JSON.stringify({ error: "Unauthorized" }), 403);
+      }
+      try {
+        const body = await request.json();
+        const { enabled } = body;
+        const result = await setPublicModeSetting(env, enabled, currentUser.username);
+        return corsResponse(JSON.stringify(result));
+      } catch (error) {
+        return corsResponse(JSON.stringify({ error: error.message }), 400);
+      }
+    }
+
+    // ==================== ORIGINAL API ENDPOINTS ====================
+
+    // favicon & icon
+    if (path === "favicon.ico") {
+      return fetch("https://enactusftuhanoi.github.io/s/favicon.ico");
+    }
+    if (path === "icon.png") {
+      return fetch("https://enactusftuhanoi.github.io/s/icon.png");
+    }
+
+    // API get-name
+    if (path === "get-name" && method === "GET") {
+      const usersData = await env.LOG_STORAGE.get("users");
+      const users = usersData ? JSON.parse(usersData) : {};
+      const userName = users[clientIP]?.name || null;
+      return corsResponse(JSON.stringify({ name: userName }));
+    }
+
+    // API set-name
+    if (path === "set-name" && method === "POST") {
+      try {
+        const body = await request.json();
+        let { name } = body;
+        name = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const usersData = await env.LOG_STORAGE.get("users");
+        const users = usersData ? JSON.parse(usersData) : {};
+        users[clientIP] = { name: name, firstSeen: getToday(), lastSeen: getToday() };
+        await env.LOG_STORAGE.put("users", JSON.stringify(users));
+        return corsResponse(JSON.stringify({ success: true, name: name }));
+      } catch (error) {
+        return corsResponse(JSON.stringify({ error: error.message }), 400);
+      }
+    }
+
+    // API logs
+    if (path === "logs" && method === "GET") {
+      const clickLogsData = await env.LOG_STORAGE.get("click_logs");
+      const clickLogs = clickLogsData ? JSON.parse(clickLogsData) : [];
+      const actionLogsData = await env.LOG_STORAGE.get("action_logs");
+      const actionLogs = actionLogsData ? JSON.parse(actionLogsData) : [];
+      const usersData = await env.LOG_STORAGE.get("users");
+      const users = usersData ? JSON.parse(usersData) : {};
+      return corsResponse(JSON.stringify({ clickLogs, actionLogs, users }));
+    }
+
+    // API hourly-stats
+    if (path === "hourly-stats" && method === "GET") {
+      try {
+        const today = getToday();
+        const hourlyData = [];
+        for (let i = 0; i <= 23; i++) hourlyData.push({ hour: i, clicks: 0 });
+
+        const clickLogsData = await env.LOG_STORAGE.get("click_logs");
+        if (clickLogsData) {
+          const clickLogs = JSON.parse(clickLogsData);
+          clickLogs.forEach(log => {
+            if (log.time) {
+              const logDate = log.time.split(' ')[1]?.split('/').reverse().join('-');
+              if (logDate === today) {
+                const hour = parseInt(log.time.split(' ')[0].split(':')[0]);
+                if (!isNaN(hour) && hour >= 0 && hour <= 23) hourlyData[hour].clicks++;
+              }
+            }
+          });
+        }
+        const now = new Date();
+        const currentHour = now.getHours();
+        const result = hourlyData.filter(h => h.hour <= currentHour);
+        return corsResponse(JSON.stringify(result));
+      } catch (error) {
+        return corsResponse(JSON.stringify([]));
+      }
+    }
+
+    // API stats
+    if (path === "stats" && method === "GET") {
+      const stats = await getStats(env);
+      const linkUTMStats = await getLinkUTMStats(env);
+      return corsResponse(JSON.stringify({ ...stats, linkUTMStats }));
+    }
+
+    // API links
+    if (path === "links" && method === "GET") {
+      const currentUser = await getCurrentUser(request, env);
+      const username = currentUser?.username || null;
+      const publicMode = await getPublicMode(env);
+      const links = await getAllLinks(env, username, publicMode);
+      return corsResponse(JSON.stringify(links));
+    }
+
+    // API shorten
+    if (path === "shorten" && method === "POST") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser) {
+        return corsResponse(JSON.stringify({ error: "Unauthorized" }), 401);
+      }
+      try {
+        const body = await request.json();
+        const { url: originalUrl, customCode } = body;
+        const result = await createShortUrl(env, originalUrl, customCode, currentUser.username);
+        await addActionLog(env, clientIP, currentUser.username, 'create_link', { code: result.code, url: originalUrl });
+        return corsResponse(JSON.stringify(result));
+      } catch (error) {
+        return corsResponse(JSON.stringify({ error: error.message }), 400);
+      }
+    }
+
+    // API delete
+    if (path.startsWith("delete/") && method === "DELETE") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser) {
+        return corsResponse(JSON.stringify({ error: "Unauthorized" }), 401);
+      }
+      const code = path.split("/")[1];
+      await deleteLink(env, code, currentUser.username);
+      await addActionLog(env, clientIP, currentUser.username, 'delete_link', { code: code });
+      return corsResponse(JSON.stringify({ success: true }));
+    }
+
+    // API top-utm
+    if (path === "top-utm" && method === "GET") {
+      const linkUTMStats = await getLinkUTMStats(env);
+      const topByLink = [];
+      for (const [code, utms] of Object.entries(linkUTMStats)) {
+        const sortedUtms = Object.entries(utms).sort((a, b) => b[1] - a[1]);
+        if (sortedUtms.length > 0) {
+          topByLink.push({
+            link: code,
+            topUtm: sortedUtms[0][0],
+            totalClicks: Object.values(utms).reduce((a, b) => a + b, 0),
+            utms: sortedUtms
+          });
+        }
+      }
+      topByLink.sort((a, b) => b.totalClicks - a.totalClicks);
+      return corsResponse(JSON.stringify(topByLink));
+    }
+
+    // POST /link/:code/toggle-public
+    if (path.match(/link\/.+\/toggle-public/) && method === "POST") {
+      const currentUser = await getCurrentUser(request, env);
+      if (!currentUser || (currentUser.role !== "Admin" && currentUser.role !== "SuperAdmin")) {
+        return corsResponse(JSON.stringify({ error: "Unauthorized" }), 403);
+      }
+      const code = path.split("/")[1];
+      try {
+        const body = await request.json();
+        const { is_public } = body;
+
+        let publicLinks = await env.ADMIN_STORAGE.get("public_links");
+        publicLinks = publicLinks ? JSON.parse(publicLinks) : [];
+
+        if (is_public && !publicLinks.includes(code)) {
+          publicLinks.push(code);
+        } else if (!is_public && publicLinks.includes(code)) {
+          publicLinks = publicLinks.filter(c => c !== code);
+        }
+
+        await env.ADMIN_STORAGE.put("public_links", JSON.stringify(publicLinks));
+        return corsResponse(JSON.stringify({ success: true, is_public: is_public }));
+      } catch (error) {
+        return corsResponse(JSON.stringify({ error: error.message }), 400);
+      }
+    }
+
+    // REDIRECT SHORT URL
+    if (path !== "" && !path.includes("/")) {
+      const longURL = await env.URL_STORAGE.get(path);
+      if (longURL) {
+        const utm = url.searchParams.get('utm') || 'direct';
+        const usersData = await env.LOG_STORAGE.get("users");
+        const users = usersData ? JSON.parse(usersData) : {};
+        const userName = users[clientIP]?.name || null;
+        await updateStatsWithUTM(env, path, utm);
+        await addClickLog(env, clientIP, userName, path, utm, longURL);
+        return Response.redirect(longURL, 302);
+      }
+      return new Response('Link not found', { status: 404 });
+    }
+
+    return new Response('Not Found', { status: 404 });
+  },
+};
+
+// ==================== HELPER FUNCTIONS ====================
+
+function getToday() {
+  const now = new Date();
+  return now.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+}
+
+function generateRandomCode() {
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+async function getStats(env) {
+  let stats = { totalClick: 0, todayClick: 0, lastDay: getToday(), topLinks: {} };
+  const statsData = await env.STATS_STORAGE.get("global");
+  if (statsData) stats = JSON.parse(statsData);
+
+  const allLinks = await getAllLinks(env, null, false);
+  const totalLinks = allLinks.length;
+
+  const today = getToday();
+  let todayClicks = stats.todayClick || 0;
+  if (stats.lastDay !== today) todayClicks = 0;
+
+  const topLinksArray = Object.entries(stats.topLinks || {})
+    .map(([code, clicks]) => ({ code, clicks }))
+    .sort((a, b) => b.clicks - a.clicks)
+    .slice(0, 5);
+
+  const dailyClicks = await getDailyClicks(env);
+
+  return {
+    totalLinks: totalLinks,
+    totalClicks: stats.totalClick || 0,
+    todayClicks: todayClicks,
+    topLinks: topLinksArray,
+    dailyClicks: dailyClicks
+  };
+}
+
+async function getAllLinks(env, username = null, publicMode = false) {
+  const links = [];
+  const linkListData = await env.STATS_STORAGE.get("link_list");
+  const linkList = linkListData ? JSON.parse(linkListData) : [];
+  const statsData = await env.STATS_STORAGE.get("global");
+  const stats = statsData ? JSON.parse(statsData) : {};
+  const topLinks = stats.topLinks || {};
+  const linkOwnersData = await env.STATS_STORAGE.get("link_owners");
+  const linkOwners = linkOwnersData ? JSON.parse(linkOwnersData) : {};
+
+  const publicLinksData = await env.ADMIN_STORAGE.get("public_links");
+  const publicLinks = publicLinksData ? JSON.parse(publicLinksData) : [];
+
+  for (const code of linkList) {
+    const originalUrl = await env.URL_STORAGE.get(code);
+    if (originalUrl) {
+      const owner = linkOwners[code] || "unknown";
+      const isPublic = publicLinks.includes(code);
+
+      let show = false;
+
+      if (username === "superadmin") {
+        show = true;
+      }
+      else {
+        const usersData = await env.ADMIN_STORAGE.get("users");
+        const users = usersData ? JSON.parse(usersData) : [];
+        const currentUser = users.find(u => u.username === username);
+        const isAdmin = currentUser && (currentUser.role === "Admin" || currentUser.role === "SuperAdmin");
+        
+        if (isAdmin) {
+          show = true;
+        } else if (owner === username) {
+          show = true;
+        } else if (publicMode && isPublic) {
+          show = true;
+        } else if (!publicMode && isPublic && username) {
+          show = true;
+        }
+      }
+
+      if (show) {
+        links.push({
+          code: code,
+          original_url: originalUrl,
+          clicks: topLinks[code] || 0,
+          created_at: new Date().toISOString(),
+          created_by: owner,
+          is_public: isPublic
+        });
+      }
+    }
+  }
+  return links;
+}
+
+async function createShortUrl(env, originalUrl, customCode = "", userName = "") {
+  if (!originalUrl || !originalUrl.startsWith("http")) {
+    throw new Error("URL không hợp lệ");
+  }
+
+  let code = customCode;
+  if (!code) code = generateRandomCode();
+
+  const existing = await env.URL_STORAGE.get(code);
+  if (existing) throw new Error("Code đã tồn tại");
+
+  await env.URL_STORAGE.put(code, originalUrl);
+
+  const linkListData = await env.STATS_STORAGE.get("link_list");
+  const linkList = linkListData ? JSON.parse(linkListData) : [];
+  if (!linkList.includes(code)) {
+    linkList.push(code);
+    await env.STATS_STORAGE.put("link_list", JSON.stringify(linkList));
+  }
+
+  const linkOwnersData = await env.STATS_STORAGE.get("link_owners");
+  const linkOwners = linkOwnersData ? JSON.parse(linkOwnersData) : {};
+  linkOwners[code] = userName || "unknown";
+  await env.STATS_STORAGE.put("link_owners", JSON.stringify(linkOwners));
+
+  const statsData = await env.STATS_STORAGE.get("global");
+  const stats = statsData ? JSON.parse(statsData) : {};
+  stats.totalLinks = linkList.length;
+  await env.STATS_STORAGE.put("global", JSON.stringify(stats));
+
+  return { success: true, shortUrl: `https://s.enactusftuhanoi.id.vn/${code}`, code: code };
+}
+
+async function deleteLink(env, code, userName = "") {
+  await env.URL_STORAGE.delete(code);
+
+  const linkListData = await env.STATS_STORAGE.get("link_list");
+  const linkList = linkListData ? JSON.parse(linkListData) : [];
+  const updatedList = linkList.filter(c => c !== code);
+  await env.STATS_STORAGE.put("link_list", JSON.stringify(updatedList));
+
+  const linkOwnersData = await env.STATS_STORAGE.get("link_owners");
+  const linkOwners = linkOwnersData ? JSON.parse(linkOwnersData) : {};
+  delete linkOwners[code];
+  await env.STATS_STORAGE.put("link_owners", JSON.stringify(linkOwners));
+
+  const statsData = await env.STATS_STORAGE.get("global");
+  const stats = statsData ? JSON.parse(statsData) : {};
+  if (stats.topLinks && stats.topLinks[code]) delete stats.topLinks[code];
+  stats.totalLinks = updatedList.length;
+  await env.STATS_STORAGE.put("global", JSON.stringify(stats));
+}
+
+async function updateStatsWithUTM(env, code, utm) {
+  let stats = { totalClick: 0, todayClick: 0, lastDay: getToday(), topLinks: {} };
+  const statsData = await env.STATS_STORAGE.get("global");
+  if (statsData) stats = JSON.parse(statsData);
+
+  const today = getToday();
+  if (stats.lastDay !== today) { stats.todayClick = 0; stats.lastDay = today; }
+
+  stats.totalClick = (stats.totalClick || 0) + 1;
+  stats.todayClick = (stats.todayClick || 0) + 1;
+  if (!stats.topLinks[code]) stats.topLinks[code] = 0;
+  stats.topLinks[code]++;
+  await env.STATS_STORAGE.put("global", JSON.stringify(stats));
+
+  const dayStatsData = await env.STATS_STORAGE.get(`day_${today}`);
+  const dayStats = dayStatsData ? JSON.parse(dayStatsData) : { clicks: 0 };
+  dayStats.clicks++;
+  await env.STATS_STORAGE.put(`day_${today}`, JSON.stringify(dayStats));
+
+  let linkUTMStats = {};
+  const linkUTMStatsData = await env.STATS_STORAGE.get("link_utm_stats");
+  if (linkUTMStatsData) linkUTMStats = JSON.parse(linkUTMStatsData);
+  if (!linkUTMStats[code]) linkUTMStats[code] = {};
+  if (!linkUTMStats[code][utm]) linkUTMStats[code][utm] = 0;
+  linkUTMStats[code][utm]++;
+  await env.STATS_STORAGE.put("link_utm_stats", JSON.stringify(linkUTMStats));
+}
+
+async function getLinkUTMStats(env) {
+  const data = await env.STATS_STORAGE.get("link_utm_stats");
+  return data ? JSON.parse(data) : {};
+}
+
+async function getDailyClicks(env) {
+  const dailyData = [];
+  const today = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const dateStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const dayStats = await env.STATS_STORAGE.get(`day_${dateStr}`);
+    const clicks = dayStats ? JSON.parse(dayStats).clicks : 0;
+    dailyData.push({ date: dateStr, clicks: clicks });
+  }
+  return dailyData;
+}
+
+async function addClickLog(env, ip, userName, code, utm, target) {
+  const now = new Date();
+  const logEntry = {
+    id: Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+    time: now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+    timestamp: now.getTime(),
+    ip: ip,
+    user: userName || 'unknown',
+    code: code,
+    utm: utm === 'direct' ? 'Trực tiếp' : utm,
+    target: target
+  };
+
+  let clickLogs = [];
+  const existing = await env.LOG_STORAGE.get("click_logs");
+  if (existing) clickLogs = JSON.parse(existing);
+  clickLogs.unshift(logEntry);
+  if (clickLogs.length > 2000) clickLogs = clickLogs.slice(0, 2000);
+  await env.LOG_STORAGE.put("click_logs", JSON.stringify(clickLogs));
+}
+
+async function addActionLog(env, ip, userName, action, details = {}) {
+  const now = new Date();
+  const logEntry = {
+    id: Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+    time: now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+    timestamp: now.getTime(),
+    ip: ip,
+    user: userName || 'unknown',
+    action: action,
+    details: details
+  };
+
+  let actionLogs = [];
+  const existing = await env.LOG_STORAGE.get("action_logs");
+  if (existing) actionLogs = JSON.parse(existing);
+  actionLogs.unshift(logEntry);
+  if (actionLogs.length > 500) actionLogs = actionLogs.slice(0, 500);
+  await env.LOG_STORAGE.put("action_logs", JSON.stringify(actionLogs));
+}
