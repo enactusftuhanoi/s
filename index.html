@@ -808,37 +808,29 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
           <div className="empty-state"><Icon name="link" size={36} color="var(--gray-300)" /><p>Không có link nào{search ? ` khớp với "${search}"` : ''}</p></div>
         ) : (
           <div className="table-wrap">
-            <table className="w-full">
+            <table>
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-500 font-semibold">
-                  <th className="px-6 py-4">Code</th>
-                  <th className="px-6 py-4">Short URL</th>
-                  <th className="px-6 py-4">Destination</th>
-                  <th className="px-6 py-4 text-center cursor-pointer" onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Clicks {sortBy === 'clicks' ? (sortDir === 'desc' ? '↓' : '↑') : ''}</th>
-                  <th className="px-6 py-4">Người tạo</th>
-                  <th className="px-6 py-4 text-center">Public</th>
-                  <th className="px-6 py-4 text-center">Hành động</th>
-                </tr>
+                <tr><th>Code</th><th>Short URL</th><th>Destination</th><th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Clicks</th><th>Người tạo</th><th>Public</th><th>Hành động</th><tr>
               </thead>
-              <tbody className="text-sm divide-y divide-gray-100">
+              <tbody>
                 {filtered.map(link => (
-                  <tr key={link.code} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4"><span className="code-chip">{link.code}</span></td>
-                    <td className="px-6 py-4"><a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" className="text-primary hover:underline text-sm font-mono flex items-center gap-1">{YOUR_DOMAIN}/{link.code} <Icon name="external" size={12} /></a></td>
-                    <td className="px-6 py-4 max-w-xs truncate text-gray-600" title={link.original_url}>{link.original_url.substring(0, 50)}{link.original_url.length > 50 ? '...' : ''}</td>
-                    <td className="px-6 py-4 text-center"><span className="badge badge-gray"><Icon name="analytics" size={11} /> {link.clicks || 0}</span></td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{link.created_by || 'unknown'}</td>
-                    <td className="px-6 py-4 text-center">
+                  <tr key={link.code}>
+                    <td><span className="code-chip">{link.code}</span></td>
+                    <td><a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{ color: 'var(--yellow-dark)', fontFamily: 'DM Mono, monospace', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>{YOUR_DOMAIN}/{link.code} <Icon name="external" size={12} /></a></td>
+                    <td><div style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5, color: 'var(--gray-500)' }} title={link.original_url}>{link.original_url}</div></td>
+                    <td><span className="badge badge-gray"><Icon name="analytics" size={11} />{link.clicks || 0}</span></td>
+                    <td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{link.created_by || 'unknown'}</td>
+                    <td>
                       {canManagePublic ? (
-                        <button className="btn-icon" onClick={() => toggleLinkPublic(link.code, link.is_public)} title={link.is_public ? 'Đang public - Click để private' : 'Đang private - Click để public'}>
+                        <button className={`btn-icon ${link.is_public ? 'text-green' : 'text-gray'}`} onClick={() => toggleLinkPublic(link.code, link.is_public)} title={link.is_public ? 'Đang public - Click để private' : 'Đang private - Click để public'}>
                           <Icon name={link.is_public ? 'globe' : 'lock'} size={16} color={link.is_public ? '#10B981' : '#6B7280'} />
                         </button>
                       ) : (
                         <span className="badge badge-gray">{link.is_public ? 'Public' : 'Private'}</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                    <td>
+                      <div style={{ display: 'flex', gap: 4 }}>
                         <button className="btn-icon" onClick={() => { copyText(`https://${YOUR_DOMAIN}/${link.code}`); toast('Đã sao chép!'); }}><Icon name="copy" size={15} /></button>
                         <button className="btn-icon" onClick={() => setQrCode(link.code)} style={{ color: 'var(--purple)' }}><Icon name="qr" size={15} /></button>
                         <button className="btn-icon" onClick={() => setUtmCode(link.code)} style={{ color: 'var(--blue)' }}><Icon name="tag" size={15} /></button>
@@ -850,7 +842,7 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </div>
           </div>
         )}
       </div>
@@ -925,70 +917,9 @@ const AnalyticsView = () => {
           <div className="card"><div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--green)" />Vị trí địa lý</div></div><div className="card-body">{geoStats.length === 0 ? <div className="empty-state">Không có dữ liệu</div> : geoStats.map(([country, count], i) => { const total = geoStats.reduce((s, [, c]) => s + c, 0); const pct = total > 0 ? Math.round((count / total) * 100) : 0; return (<div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}><span style={{ width: 100, fontWeight: 500 }}>{country}</span><div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: 'var(--green)' }} /></div></div><span style={{ width: 36, textAlign: 'right', color: 'var(--gray-500)' }}>{count}</span></div>); })}</div></div>
         </div>
       ) : tab === 'clicks' ? (
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div>
-            <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Đích đến</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(logs.clickLogs || []).length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr>
-                ) : (logs.clickLogs || []).map((l, i) => (
-                  <tr key={i}>
-                    <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td>
-                    <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td>
-                    <td>{l.user || 'unknown'}</td>
-                    <td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip">/{l.code}</a></td>
-                    <td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td>
-                    <td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <div className="card"><div className="card-header"><div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Đích đến</th></tr></thead><tbody>{(logs.clickLogs || []).length === 0 ? <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.clickLogs || []).map((l, i) => (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip">/{l.code}</a></td><td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td></tr>))}</tbody>}</div></div>
       ) : (
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div>
-            <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(logs.actionLogs || []).length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr>
-                ) : (logs.actionLogs || []).map((l, i) => {
-                  let detail = '';
-                  if (l.details?.code) detail = `/${l.details.code}`;
-                  if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`;
-                  if (l.details?.name) detail = `"${l.details.name}"`;
-                  return (
-                    <tr key={i}>
-                      <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td>
-                      <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td>
-                      <td>{l.user || 'unknown'}</td>
-                      <td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td>
-                      <td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{detail || '-'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <div className="card"><div className="card-header"><div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead><tbody>{(logs.actionLogs || []).length === 0 ? <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.actionLogs || []).map((l, i) => { let detail = ''; if (l.details?.code) detail = `/${l.details.code}`; if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`; if (l.details?.name) detail = `"${l.details.name}"`; return (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{detail || '-'}</td></tr>); })}</tbody>}</div></div>
       )}
     </div>
   );
