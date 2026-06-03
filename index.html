@@ -268,7 +268,8 @@ const toast = (title, icon = 'success', timer = 1800) => {
   Swal.fire({ icon, title, timer, showConfirmButton: false, toast: true, position: 'top-end', timerProgressBar: true });
 };
 
-const confirm = (title, text, confirmText = 'Xác nhận') =>
+// FIX: Đổi tên thành confirmDialog để tránh shadow với biến cục bộ trong AdminView
+const confirmDialog = (title, text, confirmText = 'Xác nhận') =>
   Swal.fire({ title, text, icon: 'warning', showCancelButton: true, confirmButtonColor: '#FFC107', cancelButtonText: 'Hủy', confirmButtonText: confirmText });
 
 const formatDate = (dateStr) => {
@@ -290,7 +291,6 @@ const AuthScreen = ({ onLogin }) => {
       const res = await fetch(`${WORKER_URL}/admin/current-user`, {
         headers: { Authorization: auth }
       });
-      
       if (res.ok) {
         const userData = await res.json();
         sessionStorage.setItem('adminAuth', auth);
@@ -298,14 +298,8 @@ const AuthScreen = ({ onLogin }) => {
         sessionStorage.setItem('userRole', userData.role);
         onLogin(auth, username, userData);
       } else {
-        if (username === 'admin' && password === 'Enactus@2026') {
-          sessionStorage.setItem('adminAuth', auth);
-          sessionStorage.setItem('adminUser', username);
-          sessionStorage.setItem('userRole', 'SuperAdmin');
-          onLogin(auth, username, { role: 'SuperAdmin', username: 'admin' });
-        } else {
-          toast('Sai tên đăng nhập hoặc mật khẩu', 'error');
-        }
+        // FIX: Đã xóa hardcode credentials khỏi client-side
+        toast('Sai tên đăng nhập hoặc mật khẩu', 'error');
       }
     } catch {
       toast('Không thể kết nối đến server', 'error');
@@ -462,7 +456,15 @@ const DashboardView = ({ auth }) => {
     }
   }, []);
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // FIX: Thêm cleanup khi unmount để tránh memory leak
+  useEffect(() => {
+    return () => {
+      if (dailyChartInst.current) dailyChartInst.current.destroy();
+      if (hourlyChartInst.current) hourlyChartInst.current.destroy();
+    };
+  }, []);
 
   useEffect(() => {
     if (!stats?.dailyClicks || !dailyChartRef.current) return;
@@ -724,7 +726,8 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
     finally { setLoading(false); }
   }, [auth, userRole, currentUsername, publicMode]);
 
-  useEffect(() => { fetchPublicMode(); fetchLinks(); }, []);
+  // FIX: Thêm dependencies đầy đủ
+  useEffect(() => { fetchPublicMode(); fetchLinks(); }, [fetchPublicMode, fetchLinks]);
 
   const toggleLinkPublic = async (code, currentStatus) => {
     try {
@@ -754,7 +757,7 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
   }, [links, search, sortBy, sortDir]);
 
   const handleDelete = async (code) => {
-    const res = await confirm('Xóa link?', `Bạn có chắc muốn xóa /${code}? Không thể hoàn tác.`, 'Xóa');
+    const res = await confirmDialog('Xóa link?', `Bạn có chắc muốn xóa /${code}? Không thể hoàn tác.`, 'Xóa');
     if (!res.isConfirmed) return;
     try {
       const r = await fetch(`${WORKER_URL}/delete/${code}`, { method: 'DELETE', headers: { Authorization: auth } });
@@ -764,8 +767,9 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
   };
 
   const exportExcel = () => {
+    // FIX: Dùng nhất quán window.XLSX
     if (!window.XLSX) { toast('Chưa tải thư viện Excel', 'error'); return; }
-    const ws = XLSX.utils.json_to_sheet(links.map(l => ({
+    const ws = window.XLSX.utils.json_to_sheet(links.map(l => ({
       'Short Code': l.code,
       'Short URL': `https://${YOUR_DOMAIN}/${l.code}`,
       'Original URL': l.original_url,
@@ -774,9 +778,9 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
       'Created By': l.created_by,
       'Created At': formatDate(l.created_at)
     })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Links');
-    XLSX.writeFile(wb, `enactus-links-${new Date().toISOString().split('T')[0]}.xlsx`);
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Links');
+    window.XLSX.writeFile(wb, `enactus-links-${new Date().toISOString().split('T')[0]}.xlsx`);
     toast('Đã xuất Excel!');
   };
 
@@ -810,7 +814,8 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Code</th><th>Short URL</th><th>Destination</th><th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Clicks</th><th>Người tạo</th><th>Public</th><th>Hành động</th><tr>
+                {/* FIX: Sửa thẻ đóng </tr> cuối thead (trước đây là <tr>) */}
+                <tr><th>Code</th><th>Short URL</th><th>Destination</th><th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Clicks</th><th>Người tạo</th><th>Public</th><th>Hành động</th></tr>
               </thead>
               <tbody>
                 {filtered.map(link => (
@@ -822,7 +827,7 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
                     <td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{link.created_by || 'unknown'}</td>
                     <td>
                       {canManagePublic ? (
-                        <button className={`btn-icon ${link.is_public ? 'text-green' : 'text-gray'}`} onClick={() => toggleLinkPublic(link.code, link.is_public)} title={link.is_public ? 'Đang public - Click để private' : 'Đang private - Click để public'}>
+                        <button className="btn-icon" onClick={() => toggleLinkPublic(link.code, link.is_public)} title={link.is_public ? 'Đang public - Click để private' : 'Đang private - Click để public'}>
                           <Icon name={link.is_public ? 'globe' : 'lock'} size={16} color={link.is_public ? '#10B981' : '#6B7280'} />
                         </button>
                       ) : (
@@ -842,7 +847,7 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
                   </tr>
                 ))}
               </tbody>
-            </div>
+            </table>
           </div>
         )}
       </div>
@@ -865,12 +870,12 @@ const AnalyticsView = () => {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchLogs(); }, []);
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
-  const todayClicks = useMemo(() => (logs.clickLogs || []).filter(l => { const d = l.time?.split(' ')[1]?.split('/').reverse().join('-'); return d === today; }).length, [logs]);
-  const todayActions = useMemo(() => (logs.actionLogs || []).filter(l => { const d = l.time?.split(' ')[1]?.split('/').reverse().join('-'); return d === today; }).length, [logs]);
-  const todayNewLinks = useMemo(() => (logs.actionLogs || []).filter(l => { const d = l.time?.split(' ')[1]?.split('/').reverse().join('-'); return d === today && l.action === 'create_link'; }).length, [logs]);
+  const todayClicks = useMemo(() => (logs.clickLogs || []).filter(l => { const d = l.time?.split(' ')[1]?.split('/').reverse().join('-'); return d === today; }).length, [logs, today]);
+  const todayActions = useMemo(() => (logs.actionLogs || []).filter(l => { const d = l.time?.split(' ')[1]?.split('/').reverse().join('-'); return d === today; }).length, [logs, today]);
+  const todayNewLinks = useMemo(() => (logs.actionLogs || []).filter(l => { const d = l.time?.split(' ')[1]?.split('/').reverse().join('-'); return d === today && l.action === 'create_link'; }).length, [logs, today]);
 
   const deviceStats = useMemo(() => {
     const devices = {};
@@ -917,9 +922,9 @@ const AnalyticsView = () => {
           <div className="card"><div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--green)" />Vị trí địa lý</div></div><div className="card-body">{geoStats.length === 0 ? <div className="empty-state">Không có dữ liệu</div> : geoStats.map(([country, count], i) => { const total = geoStats.reduce((s, [, c]) => s + c, 0); const pct = total > 0 ? Math.round((count / total) * 100) : 0; return (<div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}><span style={{ width: 100, fontWeight: 500 }}>{country}</span><div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: 'var(--green)' }} /></div></div><span style={{ width: 36, textAlign: 'right', color: 'var(--gray-500)' }}>{count}</span></div>); })}</div></div>
         </div>
       ) : tab === 'clicks' ? (
-        <div className="card"><div className="card-header"><div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Đích đến</th></tr></thead><tbody>{(logs.clickLogs || []).length === 0 ? <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.clickLogs || []).map((l, i) => (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip">/{l.code}</a></td><td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td></tr>))}</tbody>}</div></div>
+        <div className="card"><div className="card-header"><div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Đích đến</th></tr></thead><tbody>{(logs.clickLogs || []).length === 0 ? <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.clickLogs || []).map((l, i) => (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip">/{l.code}</a></td><td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td></tr>))}</tbody></table></div></div>
       ) : (
-        <div className="card"><div className="card-header"><div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead><tbody>{(logs.actionLogs || []).length === 0 ? <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.actionLogs || []).map((l, i) => { let detail = ''; if (l.details?.code) detail = `/${l.details.code}`; if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`; if (l.details?.name) detail = `"${l.details.name}"`; return (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{detail || '-'}</td></tr>); })}</tbody>}</div></div>
+        <div className="card"><div className="card-header"><div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead><tbody>{(logs.actionLogs || []).length === 0 ? <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.actionLogs || []).map((l, i) => { let detail = ''; if (l.details?.code) detail = `/${l.details.code}`; if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`; if (l.details?.name) detail = `"${l.details.name}"`; return (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{detail || '-'}</td></tr>); })}</tbody></table></div></div>
       )}
     </div>
   );
@@ -953,7 +958,7 @@ const AdminView = ({ auth, currentUser }) => {
     } catch (e) {}
   }, [auth]);
 
-  useEffect(() => { fetchUsers(); fetchPublicMode(); }, []);
+  useEffect(() => { fetchUsers(); fetchPublicMode(); }, [fetchUsers, fetchPublicMode]);
 
   const handleSaveUser = async () => {
     if (!form.username) { toast('Vui lòng nhập username', 'error'); return; }
@@ -971,9 +976,10 @@ const AdminView = ({ auth, currentUser }) => {
     } catch { toast('Lỗi kết nối', 'error'); }
   };
 
+  // FIX: Dùng Swal.fire trực tiếp thay vì đặt tên biến là "confirm" để tránh shadow
   const handleResetPassword = async (username) => {
-    const confirm = await Swal.fire({ title: 'Reset mật khẩu?', text: `Mật khẩu mới: ${username}`, icon: 'warning', showCancelButton: true });
-    if (!confirm.isConfirmed) return;
+    const result = await Swal.fire({ title: 'Reset mật khẩu?', text: `Mật khẩu mới: ${username}`, icon: 'warning', showCancelButton: true });
+    if (!result.isConfirmed) return;
     try {
       const res = await fetch(`${WORKER_URL}/admin/users/${username}/reset-password`, { method: 'POST', headers: { Authorization: auth } });
       if (res.ok) toast(`Mật khẩu mới: ${username}`, 'success');
@@ -988,8 +994,9 @@ const AdminView = ({ auth, currentUser }) => {
   };
 
   const handleDeleteUser = async (username) => {
-    const confirm = await Swal.fire({ title: 'Xóa user?', text: `Xóa ${username}?`, icon: 'error', showCancelButton: true });
-    if (!confirm.isConfirmed) return;
+    // FIX: Dùng Swal.fire trực tiếp
+    const result = await Swal.fire({ title: 'Xóa user?', text: `Xóa ${username}?`, icon: 'error', showCancelButton: true });
+    if (!result.isConfirmed) return;
     try {
       const res = await fetch(`${WORKER_URL}/admin/users/${username}`, { method: 'DELETE', headers: { Authorization: auth } });
       if (res.ok) { toast('Đã xóa user'); fetchUsers(); }
@@ -1022,7 +1029,7 @@ const AdminView = ({ auth, currentUser }) => {
       <div className="card">
         <div className="card-header"><div className="card-title"><Icon name="user" size={16} color="var(--purple)" />Quản lý tài khoản</div><button className="btn btn-primary btn-sm" onClick={() => { setEditingUser(null); setForm({ fullname: '', department: '', username: '', role: 'Member' }); setShowUserModal(true); }}><Icon name="user" size={14} /> Thêm user</button></div>
         {loading ? <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner" /></div> : (
-          <div className="table-wrap"><table><thead><tr><th>Fullname</th><th>Department</th><th>Username</th><th>Role</th><th>Status</th><th>Created At</th><th>Actions</th></tr></thead><tbody>{users.map(user => (<tr key={user.username} style={{ opacity: user.status === 'disabled' ? 0.5 : 1 }}><td style={{ fontWeight: 500 }}>{user.fullname || '-'}</td><td>{user.department || '-'}</td><td><span className="code-chip">{user.username}</span></td><td><span className={`badge ${roleBadgeColor[user.role] || 'badge-gray'}`}>{user.role}</span></td><td><span className={`badge ${user.status === 'active' ? 'badge-green' : 'badge-red'}`}>{user.status === 'active' ? 'Active' : 'Disabled'}</span></td><td style={{ fontSize: 12 }}>{formatDate(user.created_at)}</td><td><div style={{ display: 'flex', gap: 5 }}><button className="btn-icon" onClick={() => { setEditingUser(user); setForm({ fullname: user.fullname || '', department: user.department || '', username: user.username, role: user.role }); setShowUserModal(true); }}><Icon name="edit" size={14} /></button><button className="btn-icon" onClick={() => handleResetPassword(user.username)}><Icon name="lock" size={14} /></button><button className="btn-icon" onClick={() => handleToggleStatus(user.username)}><Icon name={user.status === 'active' ? 'close' : 'check'} size={14} /></button><button className="btn-icon" onClick={() => viewUserLogs(user.username)}><Icon name="logs" size={14} /></button>{user.username !== 'admin' && <button className="btn-icon" onClick={() => handleDeleteUser(user.username)} style={{ color: 'var(--red)' }}><Icon name="trash" size={14} /></button>}</div></td></tr>))}</tbody>}</div>
+          <div className="table-wrap"><table><thead><tr><th>Fullname</th><th>Department</th><th>Username</th><th>Role</th><th>Status</th><th>Created At</th><th>Actions</th></tr></thead><tbody>{users.map(user => (<tr key={user.username} style={{ opacity: user.status === 'disabled' ? 0.5 : 1 }}><td style={{ fontWeight: 500 }}>{user.fullname || '-'}</td><td>{user.department || '-'}</td><td><span className="code-chip">{user.username}</span></td><td><span className={`badge ${roleBadgeColor[user.role] || 'badge-gray'}`}>{user.role}</span></td><td><span className={`badge ${user.status === 'active' ? 'badge-green' : 'badge-red'}`}>{user.status === 'active' ? 'Active' : 'Disabled'}</span></td><td style={{ fontSize: 12 }}>{formatDate(user.created_at)}</td><td><div style={{ display: 'flex', gap: 5 }}><button className="btn-icon" onClick={() => { setEditingUser(user); setForm({ fullname: user.fullname || '', department: user.department || '', username: user.username, role: user.role }); setShowUserModal(true); }}><Icon name="edit" size={14} /></button><button className="btn-icon" onClick={() => handleResetPassword(user.username)}><Icon name="lock" size={14} /></button><button className="btn-icon" onClick={() => handleToggleStatus(user.username)}><Icon name={user.status === 'active' ? 'close' : 'check'} size={14} /></button><button className="btn-icon" onClick={() => viewUserLogs(user.username)}><Icon name="logs" size={14} /></button>{user.username !== 'admin' && <button className="btn-icon" onClick={() => handleDeleteUser(user.username)} style={{ color: 'var(--red)' }}><Icon name="trash" size={14} /></button>}</div></td></tr>))}</tbody></table></div>
         )}
       </div>
       {showUserModal && (<div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowUserModal(false)}><div className="modal"><div className="modal-header"><div className="modal-title">{editingUser ? 'Sửa user' : 'Thêm user mới'}</div><button className="btn-icon" onClick={() => setShowUserModal(false)}><Icon name="close" size={18} /></button></div><div className="modal-body"><div className="form-group"><label className="form-label">Họ và tên</label><input className="form-input" value={form.fullname} onChange={e => setForm({ ...form, fullname: e.target.value })} /></div><div className="form-group"><label className="form-label">Phòng ban</label><input className="form-input" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} /></div><div className="form-group"><label className="form-label">Username</label><input className="form-input" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} disabled={!!editingUser} /></div><div className="form-group"><label className="form-label">Role</label><select className="form-input" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}><option value="Member">Member</option><option value="Admin">Admin</option>{currentUser?.role === 'SuperAdmin' && <option value="SuperAdmin">SuperAdmin</option>}</select></div>{!editingUser && <div className="form-hint">Mật khẩu mặc định = username</div>}</div><div className="modal-footer"><button className="btn btn-secondary" onClick={() => setShowUserModal(false)}>Hủy</button><button className="btn btn-primary" onClick={handleSaveUser}>Lưu</button></div></div></div>)}
@@ -1041,23 +1048,23 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [userFullname, setUserFullname] = useState(() => localStorage.getItem('userFullname') || '');
 
-  const handleLogin = (a, u, userData) => { 
-    setAuth(a); 
-    setAdminUser(u); 
-    setCurrentUserInfo(userData); 
+  const handleLogin = (a, u, userData) => {
+    setAuth(a);
+    setAdminUser(u);
+    setCurrentUserInfo(userData);
     setUserRole(userData?.role || 'Member');
     if (userData?.fullname) {
       setUserFullname(userData.fullname);
       localStorage.setItem('userFullname', userData.fullname);
     }
   };
-  
-  const handleLogout = () => { 
-    sessionStorage.removeItem('adminAuth'); 
-    sessionStorage.removeItem('adminUser'); 
-    sessionStorage.removeItem('userRole'); 
-    setAuth(null); 
-    setAdminUser(''); 
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('adminAuth');
+    sessionStorage.removeItem('adminUser');
+    sessionStorage.removeItem('userRole');
+    setAuth(null);
+    setAdminUser('');
     setUserRole('Member');
     setUserFullname('');
     localStorage.removeItem('userFullname');
@@ -1078,13 +1085,13 @@ const App = () => {
   }
 
   const pageTitles = { dashboard: 'Tổng quan', create: 'Tạo link mới', links: 'Quản lý link', analytics: 'Analytics & Logs', admin: 'Admin Panel' };
-  
+
   const getInitials = () => {
     if (userFullname) return userFullname.substring(0, 2).toUpperCase();
     if (adminUser) return adminUser.substring(0, 2).toUpperCase();
     return 'U';
   };
-  
+
   const displayName = userFullname || adminUser || 'Người dùng';
 
   return (
