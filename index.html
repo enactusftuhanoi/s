@@ -15,6 +15,7 @@
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
+/* GIỮ NGUYÊN CSS CŨ CỦA BẠN */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --yellow:#FFC107;--yellow-dark:#F59E0B;--yellow-light:#FFFBEB;--yellow-mid:#FEF3C7;
@@ -276,46 +277,19 @@ const ForceChangePasswordScreen = ({ auth, username, onSuccess }) => {
     <div className="force-pw-screen">
       <div className="force-pw-card fade-in">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--yellow-mid)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="shield" size={22} color="var(--yellow-dark)" />
-          </div>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--gray-900)' }}>Đặt mật khẩu mới</div>
-            <div style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 2 }}>URL Shortener · Enactus FTU Hanoi</div>
-          </div>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--yellow-mid)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="shield" size={22} color="var(--yellow-dark)" /></div>
+          <div><div style={{ fontSize: 18, fontWeight: 700, color: 'var(--gray-900)' }}>Đặt mật khẩu mới</div><div style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 2 }}>URL Shortener · Enactus FTU Hanoi</div></div>
         </div>
         <div className="force-pw-banner">
           <div className="force-pw-banner-icon">🔐</div>
-          <div className="force-pw-banner-text">
-            <strong>Yêu cầu đổi mật khẩu</strong>
-            Tài khoản <b>{username}</b> đang dùng mật khẩu mặc định hoặc vừa được reset. Vui lòng đặt mật khẩu mới trước khi tiếp tục.
-          </div>
+          <div className="force-pw-banner-text"><strong>Yêu cầu đổi mật khẩu</strong>Tài khoản <b>{username}</b> đang dùng mật khẩu mặc định hoặc vừa được reset. Vui lòng đặt mật khẩu mới trước khi tiếp tục.</div>
         </div>
-        <div className="auth-form-group">
-          <label className="auth-label">Mật khẩu hiện tại</label>
-          <input className="auth-input" type="password" placeholder="Nhập mật khẩu hiện tại" value={currentPw} onChange={e => setCurrentPw(e.target.value)} />
-        </div>
-        <div className="auth-form-group">
-          <label className="auth-label">Mật khẩu mới</label>
-          <input className="auth-input" type="password" placeholder="Ít nhất 6 ký tự" value={newPw} onChange={e => setNewPw(e.target.value)} />
-          {newPw && <>
-            <div className="pw-strength" style={{ background: `linear-gradient(to right, ${strength.color} ${strength.pct}%, var(--gray-200) ${strength.pct}%)` }} />
-            <div className="pw-strength-text" style={{ color: strength.color }}>{strength.label}</div>
-          </>}
-        </div>
-        <div className="auth-form-group">
-          <label className="auth-label">Xác nhận mật khẩu mới</label>
-          <input className="auth-input" type="password" placeholder="Nhập lại mật khẩu mới" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
-          {confirmPw && newPw && (
-            <div style={{ fontSize: 12, marginTop: 5, color: confirmPw === newPw ? '#10B981' : '#EF4444', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Icon name={confirmPw === newPw ? 'check' : 'close'} size={13} color={confirmPw === newPw ? '#10B981' : '#EF4444'} />
-              {confirmPw === newPw ? 'Mật khẩu khớp' : 'Mật khẩu chưa khớp'}
-            </div>
-          )}
-        </div>
-        <button className="auth-btn" onClick={handleSubmit} disabled={loading}>
-          {loading ? 'Đang lưu...' : '🔒 Xác nhận & Vào ứng dụng'}
-        </button>
+        <div className="auth-form-group"><label className="auth-label">Mật khẩu hiện tại</label><input className="auth-input" type="password" placeholder="Nhập mật khẩu hiện tại" value={currentPw} onChange={e => setCurrentPw(e.target.value)} /></div>
+        <div className="auth-form-group"><label className="auth-label">Mật khẩu mới</label><input className="auth-input" type="password" placeholder="Ít nhất 6 ký tự" value={newPw} onChange={e => setNewPw(e.target.value)} />
+          {newPw && <><div className="pw-strength" style={{ background: `linear-gradient(to right, ${strength.color} ${strength.pct}%, var(--gray-200) ${strength.pct}%)` }} /><div className="pw-strength-text" style={{ color: strength.color }}>{strength.label}</div></>}</div>
+        <div className="auth-form-group"><label className="auth-label">Xác nhận mật khẩu mới</label><input className="auth-input" type="password" placeholder="Nhập lại mật khẩu mới" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+          {confirmPw && newPw && (<div style={{ fontSize: 12, marginTop: 5, color: confirmPw === newPw ? '#10B981' : '#EF4444', display: 'flex', alignItems: 'center', gap: 4 }}><Icon name={confirmPw === newPw ? 'check' : 'close'} size={13} color={confirmPw === newPw ? '#10B981' : '#EF4444'} />{confirmPw === newPw ? 'Mật khẩu khớp' : 'Mật khẩu chưa khớp'}</div>)}</div>
+        <button className="auth-btn" onClick={handleSubmit} disabled={loading}>{loading ? 'Đang lưu...' : '🔒 Xác nhận & Vào ứng dụng'}</button>
       </div>
     </div>
   );
@@ -339,9 +313,7 @@ const AuthScreen = ({ onLogin }) => {
         sessionStorage.setItem('adminUser', username);
         sessionStorage.setItem('userRole', userData.role || 'Member');
         onLogin(auth, username, userData);
-      } else {
-        toast('Sai tên đăng nhập hoặc mật khẩu', 'error');
-      }
+      } else { toast('Sai tên đăng nhập hoặc mật khẩu', 'error'); }
     } catch { toast('Không thể kết nối đến server', 'error'); }
     finally { setLoading(false); }
   };
@@ -349,18 +321,9 @@ const AuthScreen = ({ onLogin }) => {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <div className="auth-logo">
-          <img src="/icon.png" alt="Enactus" onError={e => e.target.style.display='none'} />
-          <div><div className="auth-title">URL Shortener</div><div className="auth-subtitle">Enactus FTU Hanoi</div></div>
-        </div>
-        <div className="auth-form-group">
-          <label className="auth-label">Tên đăng nhập</label>
-          <input className="auth-input" type="text" placeholder="username" value={username} onChange={e => setUsername(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
-        </div>
-        <div className="auth-form-group">
-          <label className="auth-label">Mật khẩu</label>
-          <input className="auth-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
-        </div>
+        <div className="auth-logo"><img src="/icon.png" alt="Enactus" onError={e => e.target.style.display='none'} /><div><div className="auth-title">URL Shortener</div><div className="auth-subtitle">Enactus FTU Hanoi</div></div></div>
+        <div className="auth-form-group"><label className="auth-label">Tên đăng nhập</label><input className="auth-input" type="text" placeholder="username" value={username} onChange={e => setUsername(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} /></div>
+        <div className="auth-form-group"><label className="auth-label">Mật khẩu</label><input className="auth-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} /></div>
         <button className="auth-btn" onClick={handleLogin} disabled={loading}>{loading ? 'Đang đăng nhập...' : 'Đăng nhập →'}</button>
       </div>
     </div>
@@ -371,34 +334,14 @@ const AuthScreen = ({ onLogin }) => {
 const QRModal = ({ code, onClose }) => {
   const qrRef = useRef(null);
   const url = `https://${YOUR_DOMAIN}/${code}`;
-  useEffect(() => {
-    if (qrRef.current) {
-      qrRef.current.innerHTML = '';
-      new QRCode(qrRef.current, { text: url, width: 200, height: 200, colorDark: '#1F2937', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
-    }
-  }, [code]);
-  const downloadQR = () => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (!canvas) return;
-    const link = document.createElement('a'); link.download = `qr-${code}.png`; link.href = canvas.toDataURL(); link.click();
-  };
+  useEffect(() => { if (qrRef.current) { qrRef.current.innerHTML = ''; new QRCode(qrRef.current, { text: url, width: 200, height: 200, colorDark: '#1F2937', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H }); } }, [code]);
+  const downloadQR = () => { const canvas = qrRef.current?.querySelector('canvas'); if (!canvas) return; const link = document.createElement('a'); link.download = `qr-${code}.png`; link.href = canvas.toDataURL(); link.click(); };
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header"><div className="modal-title">QR Code — /{code}</div><button className="btn-icon" onClick={onClose}><Icon name="close" size={18} /></button></div>
-        <div className="modal-body">
-          <div className="qr-container">
-            <div ref={qrRef} style={{ padding: 16, background: 'white', borderRadius: 12, border: '1px solid #E5E7EB' }} />
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 13, color: 'var(--gray-500)', marginBottom: 4 }}>Link rút gọn</div>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--gray-700)', background: 'var(--gray-50)', padding: '6px 12px', borderRadius: 8 }}>{url}</div>
-            </div>
-          </div>
-        </div>
-        <div className="modal-footer">
-          <button className="btn btn-secondary btn-sm" onClick={() => { copyText(url); toast('Đã sao chép link!'); }}><Icon name="copy" size={14} /> Sao chép link</button>
-          <button className="btn btn-primary btn-sm" onClick={downloadQR}><Icon name="download" size={14} /> Tải QR</button>
-        </div>
+        <div className="modal-body"><div className="qr-container"><div ref={qrRef} style={{ padding: 16, background: 'white', borderRadius: 12, border: '1px solid #E5E7EB' }} /><div style={{ textAlign: 'center' }}><div style={{ fontSize: 13, color: 'var(--gray-500)', marginBottom: 4 }}>Link rút gọn</div><div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--gray-700)', background: 'var(--gray-50)', padding: '6px 12px', borderRadius: 8 }}>{url}</div></div></div></div>
+        <div className="modal-footer"><button className="btn btn-secondary btn-sm" onClick={() => { copyText(url); toast('Đã sao chép link!'); }}><Icon name="copy" size={14} /> Sao chép link</button><button className="btn btn-primary btn-sm" onClick={downloadQR}><Icon name="download" size={14} /> Tải QR</button></div>
       </div>
     </div>
   );
@@ -412,18 +355,8 @@ const UTMModal = ({ code, onClose }) => {
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header"><div className="modal-title">Copy link với UTM</div><button className="btn-icon" onClick={onClose}><Icon name="close" size={18} /></button></div>
-        <div className="modal-body">
-          <div className="form-group">
-            <label className="form-label">UTM source</label>
-            <input className="form-input" placeholder="facebook, google, newsletter..." value={utm} onChange={e => setUtm(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ''))} />
-            <div className="form-hint">Chỉ dùng chữ, số, dấu gạch ngang và gạch dưới</div>
-          </div>
-          {generatedUrl && <><div className="form-label" style={{ marginBottom: 6 }}>Link đã tạo</div><div className="utm-result">{generatedUrl}</div></>}
-        </div>
-        <div className="modal-footer">
-          <button className="btn btn-secondary btn-sm" onClick={onClose}>Hủy</button>
-          <button className="btn btn-primary btn-sm" disabled={!generatedUrl} onClick={() => { copyText(generatedUrl); toast('Đã sao chép link UTM!'); onClose(); }}><Icon name="copy" size={14} /> Sao chép</button>
-        </div>
+        <div className="modal-body"><div className="form-group"><label className="form-label">UTM source</label><input className="form-input" placeholder="facebook, google, newsletter..." value={utm} onChange={e => setUtm(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ''))} /><div className="form-hint">Chỉ dùng chữ, số, dấu gạch ngang và gạch dưới</div></div>{generatedUrl && <><div className="form-label" style={{ marginBottom: 6 }}>Link đã tạo</div><div className="utm-result">{generatedUrl}</div></>}</div>
+        <div className="modal-footer"><button className="btn btn-secondary btn-sm" onClick={onClose}>Hủy</button><button className="btn btn-primary btn-sm" disabled={!generatedUrl} onClick={() => { copyText(generatedUrl); toast('Đã sao chép link UTM!'); onClose(); }}><Icon name="copy" size={14} /> Sao chép</button></div>
       </div>
     </div>
   );
@@ -455,49 +388,12 @@ const ChangePasswordModal = ({ auth, onClose }) => {
         <div className="modal-header"><div className="modal-title"><Icon name="key" size={16} style={{ verticalAlign: -2, marginRight: 6 }} />Đổi mật khẩu</div><button className="btn-icon" onClick={onClose}><Icon name="close" size={18} /></button></div>
         <div className="modal-body">
           <div className="form-group"><label className="form-label">Mật khẩu hiện tại</label><input className="form-input" type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} /></div>
-          <div className="form-group">
-            <label className="form-label">Mật khẩu mới</label>
-            <input className="form-input" type="password" placeholder="Ít nhất 6 ký tự" value={newPw} onChange={e => setNewPw(e.target.value)} />
-            {newPw && <><div className="pw-strength" style={{ background: `linear-gradient(to right, ${strength.color} ${strength.pct}%, var(--gray-200) ${strength.pct}%)` }} /><div className="pw-strength-text" style={{ color: strength.color }}>{strength.label}</div></>}
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Xác nhận mật khẩu mới</label>
-            <input className="form-input" type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
-            {confirmPw && newPw && <div style={{ fontSize: 12, marginTop: 5, color: confirmPw === newPw ? '#10B981' : '#EF4444', display: 'flex', alignItems: 'center', gap: 4 }}><Icon name={confirmPw === newPw ? 'check' : 'close'} size={13} color={confirmPw === newPw ? '#10B981' : '#EF4444'} />{confirmPw === newPw ? 'Mật khẩu khớp' : 'Mật khẩu chưa khớp'}</div>}
-          </div>
+          <div className="form-group"><label className="form-label">Mật khẩu mới</label><input className="form-input" type="password" placeholder="Ít nhất 6 ký tự" value={newPw} onChange={e => setNewPw(e.target.value)} />
+            {newPw && <><div className="pw-strength" style={{ background: `linear-gradient(to right, ${strength.color} ${strength.pct}%, var(--gray-200) ${strength.pct}%)` }} /><div className="pw-strength-text" style={{ color: strength.color }}>{strength.label}</div></>}</div>
+          <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Xác nhận mật khẩu mới</label><input className="form-input" type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+            {confirmPw && newPw && <div style={{ fontSize: 12, marginTop: 5, color: confirmPw === newPw ? '#10B981' : '#EF4444', display: 'flex', alignItems: 'center', gap: 4 }}><Icon name={confirmPw === newPw ? 'check' : 'close'} size={13} color={confirmPw === newPw ? '#10B981' : '#EF4444'} />{confirmPw === newPw ? 'Mật khẩu khớp' : 'Mật khẩu chưa khớp'}</div>}</div>
         </div>
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>Hủy</button>
-          <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>{loading ? 'Đang lưu...' : <><Icon name="check" size={14} />Xác nhận</>}</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ==================== NAME MODAL ====================
-const NameModal = ({ auth, onDone }) => {
-  const [name, setName] = useState('');
-  const save = async () => {
-    if (!name.trim()) { toast('Vui lòng nhập tên', 'error'); return; }
-    try {
-      await fetch(`${WORKER_URL}/set-name`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim() }) });
-      localStorage.setItem('userName', name.trim());
-      onDone(name.trim());
-    } catch { toast('Lỗi lưu tên', 'error'); }
-  };
-  return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <div className="modal-header"><div className="modal-title">Chào mừng! 👋</div></div>
-        <div className="modal-body">
-          <p style={{ fontSize: 13.5, color: 'var(--gray-500)', marginBottom: 16 }}>Đặt tên hiển thị của bạn trong logs hệ thống.</p>
-          <div className="form-group">
-            <label className="form-label">Tên của bạn</label>
-            <input className="form-input" placeholder="Nguyễn Văn A" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && save()} autoFocus />
-          </div>
-        </div>
-        <div className="modal-footer"><button className="btn btn-primary" onClick={save}><Icon name="check" size={15} />Xác nhận</button></div>
+        <div className="modal-footer"><button className="btn btn-secondary" onClick={onClose}>Hủy</button><button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>{loading ? 'Đang lưu...' : <><Icon name="check" size={14} />Xác nhận</>}</button></div>
       </div>
     </div>
   );
@@ -585,55 +481,53 @@ const DashboardView = ({ auth }) => {
           <div className="card">
             <div className="card-header"><div className="card-title"><Icon name="tag" size={16} color="var(--purple)" />Top nguồn truy cập</div></div>
             <div className="card-body" style={{ padding: '16px 20px' }}>
-              {topUTM.length === 0
-                ? <div className="empty-state" style={{ padding: '24px 0' }}><p style={{ fontSize: 13 }}>Chưa có dữ liệu UTM</p></div>
-                : topUTM.map((item, i) => {
-                  const total = item.totalClicks || 0;
-                  return (
-                    <div key={i} style={{ marginBottom: i < topUTM.length - 1 ? 16 : 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gray-800)' }}>{i + 1}</span>
-                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--yellow-dark)', fontWeight: 600 }}>/{item.link}</span>
-                        </div>
-                        <span className="badge badge-gray">{total} clicks</span>
+              {topUTM.length === 0 ? <div className="empty-state" style={{ padding: '24px 0' }}><p style={{ fontSize: 13 }}>Chưa có dữ liệu UTM</p></div>
+              : topUTM.map((item, i) => {
+                const total = item.totalClicks || 0;
+                return (
+                  <div key={i} style={{ marginBottom: i < topUTM.length - 1 ? 16 : 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gray-800)' }}>{i + 1}</span>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--yellow-dark)', fontWeight: 600 }}>/{item.link}</span>
                       </div>
-                      {item.utms.slice(0, 3).map(([utm, clicks], j) => {
-                        const pct = total > 0 ? Math.round((clicks / total) * 100) : 0;
-                        return (
-                          <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 12 }}>
-                            <span style={{ width: 70, color: 'var(--gray-500)', fontFamily: 'DM Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{utm || 'Direct'}</span>
-                            <div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%` }} /></div></div>
-                            <span style={{ width: 28, textAlign: 'right', color: 'var(--gray-600)', fontWeight: 600 }}>{pct}%</span>
-                          </div>
-                        );
-                      })}
+                      <span className="badge badge-gray">{total} clicks</span>
                     </div>
-                  );
-                })}
+                    {item.utms.slice(0, 3).map(([utm, clicks], j) => {
+                      const pct = total > 0 ? Math.round((clicks / total) * 100) : 0;
+                      return (
+                        <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 12 }}>
+                          <span style={{ width: 70, color: 'var(--gray-500)', fontFamily: 'DM Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{utm || 'Direct'}</span>
+                          <div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%` }} /></div></div>
+                          <span style={{ width: 28, textAlign: 'right', color: 'var(--gray-600)', fontWeight: 600 }}>{pct}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
           </div>
           <div className="card">
             <div className="card-header"><div className="card-title"><Icon name="star" size={16} color="var(--yellow-dark)" />Top 5 link phổ biến</div></div>
             <div className="card-body" style={{ padding: '16px 20px' }}>
-              {!stats?.topLinks?.length
-                ? <div className="empty-state" style={{ padding: '24px 0' }}><p style={{ fontSize: 13 }}>Chưa có dữ liệu</p></div>
-                : stats.topLinks.map((link, i) => {
-                  const maxClicks = stats.topLinks[0]?.clicks || 1;
-                  const pct = Math.round((link.clicks / maxClicks) * 100);
-                  return (
-                    <div key={i} style={{ marginBottom: i < stats.topLinks.length - 1 ? 14 : 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? 'var(--yellow)' : 'var(--gray-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i === 0 ? 'var(--gray-800)' : 'var(--gray-500)' }}>{i + 1}</span>
-                          <a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--yellow-dark)', textDecoration: 'none', fontWeight: 600 }}>/{link.code}</a>
-                        </div>
-                        <span className="badge badge-gray">{link.clicks} clicks</span>
+              {!stats?.topLinks?.length ? <div className="empty-state" style={{ padding: '24px 0' }}><p style={{ fontSize: 13 }}>Chưa có dữ liệu</p></div>
+              : stats.topLinks.map((link, i) => {
+                const maxClicks = stats.topLinks[0]?.clicks || 1;
+                const pct = Math.round((link.clicks / maxClicks) * 100);
+                return (
+                  <div key={i} style={{ marginBottom: i < stats.topLinks.length - 1 ? 14 : 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? 'var(--yellow)' : 'var(--gray-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i === 0 ? 'var(--gray-800)' : 'var(--gray-500)' }}>{i + 1}</span>
+                        <a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--yellow-dark)', textDecoration: 'none', fontWeight: 600 }}>/{link.code}</a>
                       </div>
-                      <div style={{ paddingLeft: 30 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%` }} /></div></div>
+                      <span className="badge badge-gray">{link.clicks} clicks</span>
                     </div>
-                  );
-                })}
+                    <div style={{ paddingLeft: 30 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%` }} /></div></div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -675,48 +569,21 @@ const CreateLinkView = ({ auth }) => {
         <div className="card">
           <div className="card-header"><div className="card-title"><Icon name="link" size={16} color="var(--yellow-dark)" />Rút gọn URL mới</div></div>
           <div className="card-body">
-            <div className="form-group">
-              <label className="form-label">URL cần rút gọn *</label>
-              <input className="form-input" type="url" placeholder="https://example.com/long-url..." value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Alias tùy chỉnh</label>
-              <div className="input-group">
-                <div className="form-prefix">{YOUR_DOMAIN}/</div>
-                <input className="form-input" placeholder="my-custom-link" maxLength={20} value={alias} onChange={e => setAlias(e.target.value)} />
-              </div>
-              <div className="form-hint">Không bắt buộc — chỉ chữ, số, gạch ngang. Tối đa 20 ký tự</div>
-            </div>
-            <button onClick={() => setShowAdvanced(!showAdvanced)} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--gray-500)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginBottom: 16, fontFamily: 'DM Sans, sans-serif' }}>
-              <Icon name={showAdvanced ? 'close' : 'lock'} size={14} />
-              {showAdvanced ? 'Ẩn tùy chọn nâng cao' : 'Tùy chọn nâng cao (ngày hết hạn, mật khẩu)'}
-            </button>
+            <div className="form-group"><label className="form-label">URL cần rút gọn *</label><input className="form-input" type="url" placeholder="https://example.com/long-url..." value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} /></div>
+            <div className="form-group"><label className="form-label">Alias tùy chỉnh</label><div className="input-group"><div className="form-prefix">{YOUR_DOMAIN}/</div><input className="form-input" placeholder="my-custom-link" maxLength={20} value={alias} onChange={e => setAlias(e.target.value)} /></div><div className="form-hint">Không bắt buộc — chỉ chữ, số, gạch ngang. Tối đa 20 ký tự</div></div>
+            <button onClick={() => setShowAdvanced(!showAdvanced)} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--gray-500)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginBottom: 16, fontFamily: 'DM Sans, sans-serif' }}><Icon name={showAdvanced ? 'close' : 'lock'} size={14} />{showAdvanced ? 'Ẩn tùy chọn nâng cao' : 'Tùy chọn nâng cao (ngày hết hạn, mật khẩu)'}</button>
             {showAdvanced && (
               <div style={{ background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 10, padding: 16, marginBottom: 18 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label"><Icon name="clock" size={13} style={{ verticalAlign: -2, marginRight: 4 }} />Ngày hết hạn</label>
-                    <input className="form-input" type="date" value={expiry} min={new Date().toISOString().split('T')[0]} onChange={e => setExpiry(e.target.value)} />
-                    <div className="form-hint">Để trống = không hết hạn</div>
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label"><Icon name="lock" size={13} style={{ verticalAlign: -2, marginRight: 4 }} />Mật khẩu bảo vệ</label>
-                    <input className="form-input" type="password" placeholder="Để trống = không cần mật khẩu" value={password} onChange={e => setPassword(e.target.value)} />
-                    <div className="form-hint">Người truy cập phải nhập đúng mật khẩu</div>
-                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label"><Icon name="clock" size={13} style={{ verticalAlign: -2, marginRight: 4 }} />Ngày hết hạn</label><input className="form-input" type="date" value={expiry} min={new Date().toISOString().split('T')[0]} onChange={e => setExpiry(e.target.value)} /><div className="form-hint">Để trống = không hết hạn</div></div>
+                  <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label"><Icon name="lock" size={13} style={{ verticalAlign: -2, marginRight: 4 }} />Mật khẩu bảo vệ</label><input className="form-input" type="password" placeholder="Để trống = không cần mật khẩu" value={password} onChange={e => setPassword(e.target.value)} /><div className="form-hint">Người truy cập phải nhập đúng mật khẩu</div></div>
                 </div>
               </div>
             )}
-            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: 14, fontSize: 15 }} onClick={handleSubmit} disabled={loading}>
-              {loading ? <><div className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />Đang tạo...</> : <><Icon name="link" size={16} />Rút gọn ngay</>}
-            </button>
+            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: 14, fontSize: 15 }} onClick={handleSubmit} disabled={loading}>{loading ? <><div className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />Đang tạo...</> : <><Icon name="link" size={16} />Rút gọn ngay</>}</button>
             {result && (
-              <div className="result-box">
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#92400E' }}><Icon name="check" size={14} style={{ verticalAlign: -2 }} /> Link đã tạo thành công</span>
-                <div className="result-url">
-                  <input readOnly value={result} style={{ flex: 1, padding: '9px 13px', background: 'white', border: '1.5px solid var(--gray-200)', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', color: 'var(--gray-800)', outline: 'none' }} />
-                  <button className="btn btn-primary btn-sm" onClick={() => { copyText(result); toast('Đã sao chép!'); }}><Icon name="copy" size={14} /> Copy</button>
-                </div>
+              <div className="result-box"><span style={{ fontSize: 13, fontWeight: 600, color: '#92400E' }}><Icon name="check" size={14} style={{ verticalAlign: -2 }} /> Link đã tạo thành công</span>
+                <div className="result-url"><input readOnly value={result} style={{ flex: 1, padding: '9px 13px', background: 'white', border: '1.5px solid var(--gray-200)', borderRadius: 8, fontSize: 13, fontFamily: 'DM Mono, monospace', color: 'var(--gray-800)', outline: 'none' }} /><button className="btn btn-primary btn-sm" onClick={() => { copyText(result); toast('Đã sao chép!'); }}><Icon name="copy" size={14} /> Copy</button></div>
               </div>
             )}
           </div>
@@ -789,18 +656,11 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
 
   const getStatusBadges = (link) => {
     const badges = [];
-    if (isExpired(link.expiry_date)) {
-      badges.push(<span key="expired" className="badge badge-red"><Icon name="clock" size={10} />Hết hạn</span>);
-    } else {
+    if (isExpired(link.expiry_date)) { badges.push(<span key="expired" className="badge badge-red"><Icon name="clock" size={10} />Hết hạn</span>); }
+    else {
       const days = daysUntilExpiry(link.expiry_date);
-      if (days !== null && days <= 7) {
-        badges.push(<span key="expiring" className="badge badge-orange"><Icon name="clock" size={10} />{days}d</span>);
-      } else {
-        badges.push(<span key="active" className="badge badge-green">Active</span>);
-        if (days !== null && days > 7) {
-          badges.push(<span key="days" className="badge badge-gray" style={{ fontSize: 10 }}>{days}d</span>);
-        }
-      }
+      if (days !== null && days <= 7) { badges.push(<span key="expiring" className="badge badge-orange"><Icon name="clock" size={10} />{days}d</span>); }
+      else { badges.push(<span key="active" className="badge badge-green">Active</span>); if (days !== null && days > 7) { badges.push(<span key="days" className="badge badge-gray" style={{ fontSize: 10 }}>{days}d</span>); } }
     }
     if (link.has_password) badges.push(<span key="pw" className="badge badge-blue"><Icon name="lock" size={10} />Có mật khẩu</span>);
     return badges;
@@ -816,57 +676,38 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
       <div className="card">
         <div className="card-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
-            <div style={{ position: 'relative', width: 280 }}>
-              <Icon name="search" size={15} color="var(--gray-400)" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }} />
-              <input className="form-input" style={{ paddingLeft: 36, marginBottom: 0 }} placeholder="Tìm kiếm link..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
+            <div style={{ position: 'relative', width: 280 }}><Icon name="search" size={15} color="var(--gray-400)" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }} /><input className="form-input" style={{ paddingLeft: 36, marginBottom: 0 }} placeholder="Tìm kiếm link..." value={search} onChange={e => setSearch(e.target.value)} /></div>
             <span className="badge badge-gray">{filtered.length} link</span>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-ghost btn-sm" onClick={exportExcel}><Icon name="download" size={14} />Excel</button>
-            <button className="refresh-btn" onClick={fetchLinks}><Icon name="refresh" size={13} />Làm mới</button>
-          </div>
+          <div style={{ display: 'flex', gap: 8 }}><button className="btn btn-ghost btn-sm" onClick={exportExcel}><Icon name="download" size={14} />Excel</button><button className="refresh-btn" onClick={fetchLinks}><Icon name="refresh" size={13} />Làm mới</button></div>
         </div>
-        {loading
-          ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}><div className="spinner" /></div>
-          : filtered.length === 0
-            ? <div className="empty-state"><Icon name="link" size={36} color="var(--gray-300)" /><p>Không có link nào{search ? ` khớp với "${search}"` : ''}</p></div>
-            : <div className="table-wrap"><table>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Short URL</th>
-                  <th>Destination</th>
-                  <th style={thStyle} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Clicks{sortIndicator('clicks')}</th>
-                  <th>Trạng thái</th>
-                  <th style={thStyle} onClick={() => { setSortBy('created_at'); setSortDir(sortBy === 'created_at' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Tạo ngày{sortIndicator('created_at')}</th>
-                  <th style={{ textAlign: 'center' }}>Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(link => (
-                  <tr key={link.code}>
-                    <td><span className="code-chip">{link.code}</span></td>
-                    <td><a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{ color: 'var(--yellow-dark)', fontFamily: 'DM Mono, monospace', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>{YOUR_DOMAIN}/{link.code} <Icon name="external" size={12} /></a></td>
-                    <td><div style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5, color: 'var(--gray-500)' }} title={link.original_url}>{link.original_url}</div></td>
-                    <td><span className="badge badge-gray"><Icon name="analytics" size={11} />{link.clicks || 0}</span></td>
-                    <td><div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{getStatusBadges(link)}</div></td>
-                    <td style={{ fontSize: 12.5, color: 'var(--gray-500)' }}>{formatDate(link.created_at)}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                        <button className="btn-icon" title="Copy link" onClick={() => { copyText(`https://${YOUR_DOMAIN}/${link.code}`); toast('Đã sao chép!'); }}><Icon name="copy" size={15} /></button>
-                        <button className="btn-icon" title="QR Code" onClick={() => setQrCode(link.code)} style={{ color: 'var(--purple)' }}><Icon name="qr" size={15} /></button>
-                        <button className="btn-icon" title="UTM" onClick={() => setUtmCode(link.code)} style={{ color: 'var(--blue)' }}><Icon name="tag" size={15} /></button>
-                        {(!currentUsername || link.created_by === currentUsername || userRole === 'Admin' || userRole === 'SuperAdmin') && (
-                          <button className="btn-icon" title="Xóa" onClick={() => handleDelete(link.code)} style={{ color: 'var(--red)' }}><Icon name="trash" size={15} /></button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table></div>
-        }
+        {loading ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}><div className="spinner" /></div>
+        : filtered.length === 0 ? <div className="empty-state"><Icon name="link" size={36} color="var(--gray-300)" /><p>Không có link nào{search ? ` khớp với "${search}"` : ''}</p></div>
+        : <div className="table-wrap"><table>
+          <thead>
+            <tr><th>Code</th><th>Short URL</th><th>Destination</th><th style={thStyle} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Clicks{sortIndicator('clicks')}</th><th>Trạng thái</th><th style={thStyle} onClick={() => { setSortBy('created_at'); setSortDir(sortBy === 'created_at' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Tạo ngày{sortIndicator('created_at')}</th><th style={{ textAlign: 'center' }}>Hành động</th></tr>
+          </thead>
+          <tbody>
+            {filtered.map(link => (
+              <tr key={link.code}>
+                <td><span className="code-chip">{link.code}</span></td>
+                <td><a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{ color: 'var(--yellow-dark)', fontFamily: 'DM Mono, monospace', fontSize: 12.5, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>{YOUR_DOMAIN}/{link.code} <Icon name="external" size={12} /></a></td>
+                <td><div style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5, color: 'var(--gray-500)' }} title={link.original_url}>{link.original_url}</div></td>
+                <td><span className="badge badge-gray"><Icon name="analytics" size={11} />{link.clicks || 0}</span></td>
+                <td><div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{getStatusBadges(link)}</div></td>
+                <td style={{ fontSize: 12.5, color: 'var(--gray-500)' }}>{formatDate(link.created_at)}</td>
+                <td><div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                  <button className="btn-icon" title="Copy link" onClick={() => { copyText(`https://${YOUR_DOMAIN}/${link.code}`); toast('Đã sao chép!'); }}><Icon name="copy" size={15} /></button>
+                  <button className="btn-icon" title="QR Code" onClick={() => setQrCode(link.code)} style={{ color: 'var(--purple)' }}><Icon name="qr" size={15} /></button>
+                  <button className="btn-icon" title="UTM" onClick={() => setUtmCode(link.code)} style={{ color: 'var(--blue)' }}><Icon name="tag" size={15} /></button>
+                  {(link.created_by === currentUsername || userRole === 'Admin' || userRole === 'SuperAdmin') && (
+                    <button className="btn-icon" title="Xóa" onClick={() => handleDelete(link.code)} style={{ color: 'var(--red)' }}><Icon name="trash" size={15} /></button>
+                  )}
+                </div></td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div>}
       </div>
     </div>
   );
@@ -896,9 +737,7 @@ const AnalyticsView = ({ auth, userRole }) => {
     const devices = {};
     (logs.clickLogs || []).forEach(l => {
       const ua = (l.ua || l.userAgent || '').toLowerCase();
-      let d = ua.includes('mobile') || ua.includes('android') || ua.includes('iphone') ? 'Mobile'
-        : ua.includes('tablet') || ua.includes('ipad') ? 'Tablet'
-        : ua.length > 0 ? 'Desktop' : 'Unknown';
+      let d = ua.includes('mobile') || ua.includes('android') || ua.includes('iphone') ? 'Mobile' : ua.includes('tablet') || ua.includes('ipad') ? 'Tablet' : ua.length > 0 ? 'Desktop' : 'Unknown';
       devices[d] = (devices[d] || 0) + 1;
     });
     return Object.entries(devices).sort((a, b) => b[1] - a[1]);
@@ -906,16 +745,11 @@ const AnalyticsView = ({ auth, userRole }) => {
 
   const geoStats = useMemo(() => {
     const countries = {};
-    (logs.clickLogs || []).forEach(l => {
-      const c = l.country || l.cf_country || 'Unknown';
-      countries[c] = (countries[c] || 0) + 1;
-    });
+    (logs.clickLogs || []).forEach(l => { const c = l.country || l.cf_country || 'Unknown'; countries[c] = (countries[c] || 0) + 1; });
     return Object.entries(countries).sort((a, b) => b[1] - a[1]).slice(0, 8);
   }, [logs]);
 
-  // FIX: Tổng người dùng = admin users count từ API, không phải log users
   const adminUsersCount = logs.adminUsersCount || 0;
-
   const actionLabel = { create_link: 'Tạo link', delete_link: 'Xóa link', change_password: 'Đổi mật khẩu', reset_password: 'Reset mật khẩu', create_user: 'Tạo user', delete_user: 'Xóa user', toggle_status: 'Thay đổi trạng thái' };
   const actionColor = { create_link: 'badge-green', delete_link: 'badge-red', change_password: 'badge-blue', reset_password: 'badge-orange', create_user: 'badge-purple', delete_user: 'badge-red', toggle_status: 'badge-gray' };
 
@@ -927,102 +761,44 @@ const AnalyticsView = ({ auth, userRole }) => {
         <div className="card" style={{ padding: 18 }}><div style={{ fontSize: 12, color: 'var(--gray-500)', marginBottom: 6 }}>Hành động hôm nay</div><div style={{ fontSize: 28, fontWeight: 700, color: 'var(--green)' }}>{todayActions}</div></div>
         <div className="card" style={{ padding: 18 }}><div style={{ fontSize: 12, color: 'var(--gray-500)', marginBottom: 6 }}>Tổng tài khoản</div><div style={{ fontSize: 28, fontWeight: 700, color: 'var(--purple)' }}>{adminUsersCount}</div></div>
       </div>
-      <div style={{ marginBottom: 16 }}>
-        <div className="tab-group">
-          {[['overview', 'Tổng quan'], ['clicks', 'Click logs'], ['actions', 'Action logs']].map(([key, label]) => (
-            <button key={key} className={`tab-btn ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>{label}</button>
-          ))}
-        </div>
-      </div>
+      <div style={{ marginBottom: 16 }}><div className="tab-group">
+        {[['overview', 'Tổng quan'], ['clicks', 'Click logs'], ['actions', 'Action logs']].map(([key, label]) => (<button key={key} className={`tab-btn ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>{label}</button>))}
+      </div></div>
       {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
       : tab === 'overview' ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div className="card">
-            <div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--blue)" />Thiết bị truy cập</div></div>
-            <div className="card-body">
-              {deviceStats.length === 0
-                ? <div className="empty-state" style={{ padding: '24px 0' }}><p style={{ fontSize: 13 }}>Chưa có dữ liệu<br /><span style={{ fontSize: 11, color: 'var(--gray-400)' }}>Sẽ hiển thị sau khi có click đầu tiên</span></p></div>
-                : deviceStats.map(([device, count], i) => {
-                  const total = deviceStats.reduce((s, [, c]) => s + c, 0);
-                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-                  const colors = ['var(--yellow)', 'var(--blue)', 'var(--green)', 'var(--purple)'];
-                  return (<div key={i} style={{ marginBottom: 14 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 5 }}><span style={{ fontWeight: 500 }}>{device}</span><span style={{ color: 'var(--gray-500)' }}>{count} ({pct}%)</span></div>
-                    <div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: colors[i % colors.length] }} /></div>
-                  </div>);
-                })}
-            </div>
-          </div>
-          <div className="card">
-            <div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--green)" />Vị trí địa lý</div></div>
-            <div className="card-body">
-              {geoStats.length === 0
-                ? <div className="empty-state" style={{ padding: '24px 0' }}><p style={{ fontSize: 13 }}>Chưa có dữ liệu<br /><span style={{ fontSize: 11, color: 'var(--gray-400)' }}>Worker cần được deploy để log country</span></p></div>
-                : geoStats.map(([country, count], i) => {
-                  const total = geoStats.reduce((s, [, c]) => s + c, 0);
-                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-                  return (<div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}>
-                    <span style={{ width: 100, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{country}</span>
-                    <div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: 'var(--green)' }} /></div></div>
-                    <span style={{ width: 36, textAlign: 'right', color: 'var(--gray-500)' }}>{count}</span>
-                  </div>);
-                })}
-            </div>
-          </div>
+          <div className="card"><div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--blue)" />Thiết bị truy cập</div></div><div className="card-body">
+            {deviceStats.length === 0 ? <div className="empty-state"><p style={{ fontSize: 13 }}>Chưa có dữ liệu</p></div>
+            : deviceStats.map(([device, count], i) => {
+              const total = deviceStats.reduce((s, [, c]) => s + c, 0);
+              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+              const colors = ['var(--yellow)', 'var(--blue)', 'var(--green)', 'var(--purple)'];
+              return (<div key={i} style={{ marginBottom: 14 }}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 5 }}><span style={{ fontWeight: 500 }}>{device}</span><span style={{ color: 'var(--gray-500)' }}>{count} ({pct}%)</span></div><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: colors[i % colors.length] }} /></div></div>);
+            })}
+          </div></div>
+          <div className="card"><div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--green)" />Vị trí địa lý</div></div><div className="card-body">
+            {geoStats.length === 0 ? <div className="empty-state"><p style={{ fontSize: 13 }}>Chưa có dữ liệu</p></div>
+            : geoStats.map(([country, count], i) => {
+              const total = geoStats.reduce((s, [, c]) => s + c, 0);
+              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+              return (<div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}><span style={{ width: 100, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{country}</span><div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: 'var(--green)' }} /></div></div><span style={{ width: 36, textAlign: 'right', color: 'var(--gray-500)' }}>{count}</span></div>);
+            })}
+          </div></div>
         </div>
       ) : tab === 'clicks' ? (
         <div className="card">
-          <div className="card-header">
-            <div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div>
-            <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button>
-          </div>
+          <div className="card-header"><div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div>
           <div className="table-wrap"><table>
             <thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Country</th><th>Đích đến</th></tr></thead>
-            <tbody>
-              {(logs.clickLogs || []).length === 0
-                ? <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--gray-400)' }}>Chưa có log nào</td></tr>
-                : (logs.clickLogs || []).map((l, i) => (
-                  <tr key={i}>
-                    <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>{l.time}</td>
-                    <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td>
-                    <td style={{ fontSize: 13 }}>{l.user || <span style={{ color: 'var(--gray-400)' }}>unknown</span>}</td>
-                    <td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip" style={{ textDecoration: 'none' }}>/{l.code}</a></td>
-                    <td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td>
-                    <td style={{ fontSize: 12 }}>{l.country || '-'}</td>
-                    <td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td>
-                  </tr>
-                ))}
-            </tbody>
+            <tbody>{(logs.clickLogs || []).length === 0 ? <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--gray-400)' }}>Chưa có log nào</td></tr> : (logs.clickLogs || []).map((l, i) => (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || <span style={{ color: 'var(--gray-400)' }}>unknown</span>}</td><td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip" style={{ textDecoration: 'none' }}>/{l.code}</a></td><td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td><td>{l.country || '-'}</td><td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td></tr>))}</tbody>
           </table></div>
         </div>
       ) : (
         <div className="card">
-          <div className="card-header">
-            <div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div>
-            <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button>
-          </div>
-          <div className="table-wrap"><table>
+          <div className="card-header"><div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div>
+          <div className="table-wrap"><tr>
             <thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
-            <tbody>
-              {(logs.actionLogs || []).length === 0
-                ? <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--gray-400)' }}>Chưa có log nào</td></tr>
-                : (logs.actionLogs || []).map((l, i) => {
-                  let detail = '';
-                  if (l.details?.code) detail = `/${l.details.code}`;
-                  if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`;
-                  if (l.details?.name) detail = `"${l.details.name}"`;
-                  if (l.details?.username) detail = l.details.username;
-                  return (
-                    <tr key={i}>
-                      <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>{l.time}</td>
-                      <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td>
-                      <td>{l.user || <span style={{ color: 'var(--gray-400)', fontSize: 13 }}>unknown</span>}</td>
-                      <td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td>
-                      <td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{detail || '-'}</td>
-                    </tr>
-                  );
-                })}
-            </tbody>
+            <tbody>{(logs.actionLogs || []).length === 0 ? <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--gray-400)' }}>Chưa có log nào</td></tr> : (logs.actionLogs || []).map((l, i) => { let detail = ''; if (l.details?.code) detail = `/${l.details.code}`; if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`; if (l.details?.name) detail = `"${l.details.name}"`; if (l.details?.username) detail = l.details.username; return (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || <span style={{ color: 'var(--gray-400)' }}>unknown</span>}</td><td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{detail || '-'}</td></tr>); })}</tbody>
           </table></div>
         </div>
       )}
@@ -1112,46 +888,34 @@ const AdminView = ({ auth, currentUser }) => {
   return (
     <div className="view-section fade-in">
       <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-header">
-          <div className="card-title"><Icon name="globe" size={16} color="var(--yellow-dark)" />Chế độ xem link</div>
-          <button className={`btn ${publicMode ? 'btn-primary' : 'btn-secondary'}`} onClick={togglePublicMode}>
-            <Icon name={publicMode ? 'check' : 'lock'} size={14} />{publicMode ? '🔓 Public Mode' : '🔒 Private Mode'}
-          </button>
-        </div>
+        <div className="card-header"><div className="card-title"><Icon name="globe" size={16} color="var(--yellow-dark)" />Chế độ xem link</div><button className={`btn ${publicMode ? 'btn-primary' : 'btn-secondary'}`} onClick={togglePublicMode}><Icon name={publicMode ? 'check' : 'lock'} size={14} />{publicMode ? '🔓 Public Mode' : '🔒 Private Mode'}</button></div>
         <div className="card-body"><div style={{ fontSize: 13, color: 'var(--gray-500)' }}>{publicMode ? 'Tất cả thành viên đều xem được toàn bộ link đã được đánh dấu public.' : 'Mỗi thành viên chỉ xem được link mình tạo.'}</div></div>
       </div>
       <div className="card">
-        <div className="card-header">
-          <div className="card-title"><Icon name="user" size={16} color="var(--purple)" />Quản lý tài khoản</div>
-          <button className="btn btn-primary btn-sm" onClick={() => { setEditingUser(null); setForm({ fullname: '', department: '', username: '', role: 'Member' }); setShowUserModal(true); }}><Icon name="user" size={14} /> Thêm user</button>
-        </div>
-        {loading ? <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner" /></div> : (
-          <div className="table-wrap"><table>
-            <thead><tr><th>Họ và tên</th><th>Phòng ban</th><th>Username</th><th>Role</th><th>Status</th><th>Mật khẩu</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
-            <tbody>{users.map(user => (
-              <tr key={user.username} style={{ opacity: user.status === 'disabled' ? 0.5 : 1 }}>
-                <td style={{ fontWeight: 500 }}>{user.fullname || '-'}</td>
-                <td style={{ fontSize: 12.5, color: 'var(--gray-500)' }}>{user.department || '-'}</td>
-                <td><span className="code-chip">{user.username}</span></td>
-                <td><span className={`badge ${roleBadgeColor[user.role] || 'badge-gray'}`}>{user.role}</span></td>
-                <td><span className={`badge ${user.status === 'active' ? 'badge-green' : 'badge-red'}`}>{user.status === 'active' ? 'Active' : 'Disabled'}</span></td>
-                <td>{user.must_change_password ? <span className="badge badge-orange"><Icon name="lock" size={11} />Cần đổi</span> : <span className="badge badge-green"><Icon name="check" size={11} />OK</span>}</td>
-                <td style={{ fontSize: 12 }}>{formatDate(user.created_at)}</td>
-                <td>
-                  <div style={{ display: 'flex', gap: 5 }}>
-                    <button className="btn-icon" title="Sửa thông tin" onClick={() => { setEditingUser(user); setForm({ fullname: user.fullname || '', department: user.department || '', username: user.username, role: user.role }); setShowUserModal(true); }}><Icon name="edit" size={14} /></button>
-                    <button className="btn-icon" title="Reset mật khẩu" onClick={() => handleResetPassword(user.username)}><Icon name="key" size={14} /></button>
-                    <button className="btn-icon" title={user.status === 'active' ? 'Disable user' : 'Enable user'} onClick={() => handleToggleStatus(user.username)}><Icon name={user.status === 'active' ? 'close' : 'check'} size={14} /></button>
-                    <button className="btn-icon" title="Xem logs" onClick={() => viewUserLogs(user.username)}><Icon name="logs" size={14} /></button>
-                    {user.username !== 'admin' && user.username !== 'superadmin' && <button className="btn-icon" title="Xóa user" onClick={() => handleDeleteUser(user.username)} style={{ color: 'var(--red)' }}><Icon name="trash" size={14} /></button>}
-                  </div>
-                </td>
-              </tr>
-            ))}</tbody>
-          </table></div>
-        )}
+        <div className="card-header"><div className="card-title"><Icon name="user" size={16} color="var(--purple)" />Quản lý tài khoản</div><button className="btn btn-primary btn-sm" onClick={() => { setEditingUser(null); setForm({ fullname: '', department: '', username: '', role: 'Member' }); setShowUserModal(true); }}><Icon name="user" size={14} /> Thêm user</button></div>
+        {loading ? <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner" /></div>
+        : <div className="table-wrap"></table>
+          <thead><tr><th>Họ và tên</th><th>Phòng ban</th><th>Username</th><th>Role</th><th>Status</th><th>Mật khẩu</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+          <tbody>{users.map(user => (
+            <tr key={user.username} style={{ opacity: user.status === 'disabled' ? 0.5 : 1 }}>
+              <td style={{ fontWeight: 500 }}>{user.fullname || '-'}</td>
+              <td style={{ fontSize: 12.5, color: 'var(--gray-500)' }}>{user.department || '-'}</td>
+              <td><span className="code-chip">{user.username}</span></td>
+              <td><span className={`badge ${roleBadgeColor[user.role] || 'badge-gray'}`}>{user.role}</span></td>
+              <td><span className={`badge ${user.status === 'active' ? 'badge-green' : 'badge-red'}`}>{user.status === 'active' ? 'Active' : 'Disabled'}</span></td>
+              <td>{user.must_change_password ? <span className="badge badge-orange"><Icon name="lock" size={11} />Cần đổi</span> : <span className="badge badge-green"><Icon name="check" size={11} />OK</span>}</td>
+              <td style={{ fontSize: 12 }}>{formatDate(user.created_at)}</td>
+              <td><div style={{ display: 'flex', gap: 5 }}>
+                <button className="btn-icon" title="Sửa thông tin" onClick={() => { setEditingUser(user); setForm({ fullname: user.fullname || '', department: user.department || '', username: user.username, role: user.role }); setShowUserModal(true); }}><Icon name="edit" size={14} /></button>
+                <button className="btn-icon" title="Reset mật khẩu" onClick={() => handleResetPassword(user.username)}><Icon name="key" size={14} /></button>
+                <button className="btn-icon" title={user.status === 'active' ? 'Disable user' : 'Enable user'} onClick={() => handleToggleStatus(user.username)}><Icon name={user.status === 'active' ? 'close' : 'check'} size={14} /></button>
+                <button className="btn-icon" title="Xem logs" onClick={() => viewUserLogs(user.username)}><Icon name="logs" size={14} /></button>
+                {user.username !== 'admin' && user.username !== 'superadmin' && <button className="btn-icon" title="Xóa user" onClick={() => handleDeleteUser(user.username)} style={{ color: 'var(--red)' }}><Icon name="trash" size={14} /></button>}
+              </div></td>
+            </tr>
+          ))}</tbody>
+        </table></div>}
       </div>
-
       {showUserModal && (
         <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowUserModal(false)}>
           <div className="modal">
@@ -1173,22 +937,13 @@ const AdminView = ({ auth, currentUser }) => {
           </div>
         </div>
       )}
-
       {selectedUserLogs && (
         <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setSelectedUserLogs(null)}>
           <div className="modal" style={{ maxWidth: 600 }}>
             <div className="modal-header"><div className="modal-title">Logs của {selectedUserLogs.username}</div><button className="btn-icon" onClick={() => setSelectedUserLogs(null)}><Icon name="close" size={18} /></button></div>
             <div className="modal-body">
-              {selectedUserLogs.logs.length === 0
-                ? <div className="empty-state"><p>Chưa có logs</p></div>
-                : <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-                  {selectedUserLogs.logs.map((log, i) => (
-                    <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid var(--gray-100)', fontSize: 12 }}>
-                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--gray-500)' }}>{log.time}</div>
-                      <div><span className="badge badge-gray">{log.action}</span>{log.details?.code && ` /${log.details.code}`}{log.details?.username && ` ${log.details.username}`}</div>
-                    </div>
-                  ))}
-                </div>}
+              {selectedUserLogs.logs.length === 0 ? <div className="empty-state"><p>Chưa có logs</p></div>
+              : <div style={{ maxHeight: 400, overflowY: 'auto' }}>{selectedUserLogs.logs.map((log, i) => (<div key={i} style={{ padding: '8px 0', borderBottom: '1px solid var(--gray-100)', fontSize: 12 }}><div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--gray-500)' }}>{log.time}</div><div><span className="badge badge-gray">{log.action}</span>{log.details?.code && ` /${log.details.code}`}{log.details?.username && ` ${log.details.username}`}</div></div>))}</div>}
             </div>
           </div>
         </div>
@@ -1205,8 +960,6 @@ const App = () => {
   const [currentUserInfo, setCurrentUserInfo] = useState(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [tab, setTab] = useState('dashboard');
-  const [userName, setUserName] = useState(() => localStorage.getItem('userName'));
-  const [showNameModal, setShowNameModal] = useState(false);
   const [showChangePwModal, setShowChangePwModal] = useState(false);
   const [userFullname, setUserFullname] = useState(() => localStorage.getItem('userFullname') || '');
 
@@ -1232,15 +985,6 @@ const App = () => {
     setTimeout(() => handleLogout(), 2000);
   };
 
-  useEffect(() => {
-    if (auth && !userName) {
-      fetch(`${WORKER_URL}/get-name`)
-        .then(r => r.json())
-        .then(d => { if (d.name) { setUserName(d.name); localStorage.setItem('userName', d.name); } else if (!localStorage.getItem('userName')) setShowNameModal(true); })
-        .catch(() => { if (!localStorage.getItem('userName')) setShowNameModal(true); });
-    }
-  }, [auth]);
-
   if (!auth) return <AuthScreen onLogin={handleLogin} />;
   if (mustChangePassword) return <ForceChangePasswordScreen auth={auth} username={adminUser} onSuccess={handlePasswordChanged} />;
 
@@ -1253,47 +997,25 @@ const App = () => {
   if (userRole === 'SuperAdmin') navItems.push({ key: 'admin', label: 'Admin Panel', icon: 'user' });
 
   const pageTitles = { dashboard: 'Tổng quan', create: 'Tạo link mới', links: 'Quản lý link', analytics: 'Analytics & Logs', admin: 'Admin Panel' };
-
-  const displayName = userFullname || userName || adminUser || 'Người dùng';
+  const displayName = userFullname || adminUser || 'Người dùng';
   const initials = displayName.substring(0, 2).toUpperCase();
 
   return (
     <>
-      {showNameModal && <NameModal auth={auth} onDone={n => { setUserName(n); setShowNameModal(false); }} />}
       {showChangePwModal && <ChangePasswordModal auth={auth} onClose={() => setShowChangePwModal(false)} />}
       <aside className="sidebar">
-        <div className="sidebar-logo">
-          <img src="/icon.png" alt="Enactus" onError={e => e.target.style.display='none'} />
-          <div className="sidebar-logo-text"><h1>URL Shortener</h1><p>Enactus FTU Hanoi</p></div>
-        </div>
+        <div className="sidebar-logo"><img src="/icon.png" alt="Enactus" onError={e => e.target.style.display='none'} /><div className="sidebar-logo-text"><h1>URL Shortener</h1><p>Enactus FTU Hanoi</p></div></div>
         <nav className="sidebar-nav">
           <div className="nav-section-label">Menu</div>
-          {navItems.map(item => (
-            <a key={item.key} className={`nav-item ${tab === item.key ? 'active' : ''}`} onClick={() => setTab(item.key)} href="#">
-              <Icon name={item.icon} size={17} />{item.label}
-            </a>
-          ))}
+          {navItems.map(item => (<a key={item.key} className={`nav-item ${tab === item.key ? 'active' : ''}`} onClick={() => setTab(item.key)} href="#"><Icon name={item.icon} size={17} />{item.label}</a>))}
           <div className="nav-spacer" />
           <div className="nav-section-label">Tài khoản</div>
-          <a className="nav-item" href="#" onClick={e => { e.preventDefault(); setShowChangePwModal(true); }}>
-            <Icon name="key" size={17} />Đổi mật khẩu
-          </a>
+          <a className="nav-item" href="#" onClick={e => { e.preventDefault(); setShowChangePwModal(true); }}><Icon name="key" size={17} />Đổi mật khẩu</a>
         </nav>
-        <div className="sidebar-footer">
-          <div className="sidebar-user" onClick={() => { if (window.confirm('Đăng xuất?')) handleLogout(); }}>
-            <div className="sidebar-avatar">{initials}</div>
-            <div className="sidebar-user-info"><p>{displayName}</p><span>{userRole || 'Member'} · Nhấn để đăng xuất</span></div>
-          </div>
-        </div>
+        <div className="sidebar-footer"><div className="sidebar-user" onClick={() => { if (window.confirm('Đăng xuất?')) handleLogout(); }}><div className="sidebar-avatar">{initials}</div><div className="sidebar-user-info"><p>{displayName}</p><span>{userRole || 'Member'} · Nhấn để đăng xuất</span></div></div></div>
       </aside>
       <main className="main">
-        <header className="topbar">
-          <div className="topbar-title">{pageTitles[tab]}</div>
-          <div className="topbar-meta">
-            <div className="topbar-badge"><span className="dot" /><span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{YOUR_DOMAIN}</span></div>
-            <div style={{ fontSize: 13, color: 'var(--gray-500)' }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-          </div>
-        </header>
+        <header className="topbar"><div className="topbar-title">{pageTitles[tab]}</div><div className="topbar-meta"><div className="topbar-badge"><span className="dot" /><span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{YOUR_DOMAIN}</span></div><div style={{ fontSize: 13, color: 'var(--gray-500)' }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}</div></div></header>
         <div className="content" style={{ position: 'relative' }}>
           {tab === 'dashboard' && <DashboardView auth={auth} />}
           {tab === 'create' && <CreateLinkView auth={auth} />}
