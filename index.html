@@ -712,7 +712,6 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
     try {
       const res = await fetch(`${WORKER_URL}/links`, { headers: { Authorization: auth } });
       const data = await res.json();
-      // Lọc theo quyền: nếu ko phải Admin và ko public mode thì chỉ thấy link mình tạo hoặc link được public
       const userCanSeeAll = userRole === 'Admin' || userRole === 'SuperAdmin';
       let filteredData = data;
       if (!userCanSeeAll && !publicMode) {
@@ -811,7 +810,7 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Code</th><th>Short URL</th><th>Destination</th><th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Clicks</th><th>Người tạo</th><th>Public</th><th>Hành động</th></tr>
+                <tr><th>Code</th><th>Short URL</th><th>Destination</th><th style={{ cursor: 'pointer' }} onClick={() => { setSortBy('clicks'); setSortDir(sortBy === 'clicks' && sortDir === 'desc' ? 'asc' : 'desc'); }}>Clicks</th><th>Người tạo</th><th>Public</th><th>Hành động</th><tr>
               </thead>
               <tbody>
                 {filtered.map(link => (
@@ -843,13 +842,14 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 };
+
 // ==================== ANALYTICS VIEW ====================
 const AnalyticsView = () => {
   const [logs, setLogs] = useState({ clickLogs: [], actionLogs: [], users: {} });
@@ -917,9 +917,9 @@ const AnalyticsView = () => {
           <div className="card"><div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--green)" />Vị trí địa lý</div></div><div className="card-body">{geoStats.length === 0 ? <div className="empty-state">Không có dữ liệu</div> : geoStats.map(([country, count], i) => { const total = geoStats.reduce((s, [, c]) => s + c, 0); const pct = total > 0 ? Math.round((count / total) * 100) : 0; return (<div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}><span style={{ width: 100, fontWeight: 500 }}>{country}</span><div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: 'var(--green)' }} /></div></div><span style={{ width: 36, textAlign: 'right', color: 'var(--gray-500)' }}>{count}</span></div>); })}</div></div>
         </div>
       ) : tab === 'clicks' ? (
-        <div className="card"><div className="card-header"><div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Đích đến</th></tr></thead><tbody>{(logs.clickLogs || []).length === 0 ? <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.clickLogs || []).map((l, i) => (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip">/{l.code}</a></td><td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td></tr>))}</tbody></table></div></div>
+        <div className="card"><div className="card-header"><div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Đích đến</th></tr></thead><tbody>{(logs.clickLogs || []).length === 0 ? <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.clickLogs || []).map((l, i) => (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip">/{l.code}</a></td><td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td></tr>))}</tbody>}</div></div>
       ) : (
-        <div className="card"><div className="card-header"><div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead><tbody>{(logs.actionLogs || []).length === 0 ? <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.actionLogs || []).map((l, i) => { let detail = ''; if (l.details?.code) detail = `/${l.details.code}`; if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`; if (l.details?.name) detail = `"${l.details.name}"`; return (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{detail || '-'}</td></tr>); })}</tbody></table></div></div>
+        <div className="card"><div className="card-header"><div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead><tbody>{(logs.actionLogs || []).length === 0 ? <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.actionLogs || []).map((l, i) => { let detail = ''; if (l.details?.code) detail = `/${l.details.code}`; if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`; if (l.details?.name) detail = `"${l.details.name}"`; return (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{detail || '-'}</td></tr>); })}</tbody>}</div></div>
       )}
     </div>
   );
@@ -1022,30 +1022,13 @@ const AdminView = ({ auth, currentUser }) => {
       <div className="card">
         <div className="card-header"><div className="card-title"><Icon name="user" size={16} color="var(--purple)" />Quản lý tài khoản</div><button className="btn btn-primary btn-sm" onClick={() => { setEditingUser(null); setForm({ fullname: '', department: '', username: '', role: 'Member' }); setShowUserModal(true); }}><Icon name="user" size={14} /> Thêm user</button></div>
         {loading ? <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner" /></div> : (
-          <div className="table-wrap"><table><thead><tr><th>Fullname</th><th>Department</th><th>Username</th><th>Role</th><th>Status</th><th>Created At</th><th>Actions</th></tr></thead><tbody>{users.map(user => (<tr key={user.username} style={{ opacity: user.status === 'disabled' ? 0.5 : 1 }}><td style={{ fontWeight: 500 }}>{user.fullname || '-'}</td><td>{user.department || '-'}</td><td><span className="code-chip">{user.username}</span></td><td><span className={`badge ${roleBadgeColor[user.role] || 'badge-gray'}`}>{user.role}</span></td><td><span className={`badge ${user.status === 'active' ? 'badge-green' : 'badge-red'}`}>{user.status === 'active' ? 'Active' : 'Disabled'}</span></td><td style={{ fontSize: 12 }}>{formatDate(user.created_at)}</td><td><div style={{ display: 'flex', gap: 5 }}><button className="btn-icon" onClick={() => { setEditingUser(user); setForm({ fullname: user.fullname || '', department: user.department || '', username: user.username, role: user.role }); setShowUserModal(true); }}><Icon name="edit" size={14} /></button><button className="btn-icon" onClick={() => handleResetPassword(user.username)}><Icon name="lock" size={14} /></button><button className="btn-icon" onClick={() => handleToggleStatus(user.username)}><Icon name={user.status === 'active' ? 'close' : 'check'} size={14} /></button><button className="btn-icon" onClick={() => viewUserLogs(user.username)}><Icon name="logs" size={14} /></button>{user.username !== 'admin' && <button className="btn-icon" onClick={() => handleDeleteUser(user.username)} style={{ color: 'var(--red)' }}><Icon name="trash" size={14} /></button>}</div></td></tr>))}</tbody></table></div>
+          <div className="table-wrap"><table><thead><tr><th>Fullname</th><th>Department</th><th>Username</th><th>Role</th><th>Status</th><th>Created At</th><th>Actions</th></tr></thead><tbody>{users.map(user => (<tr key={user.username} style={{ opacity: user.status === 'disabled' ? 0.5 : 1 }}><td style={{ fontWeight: 500 }}>{user.fullname || '-'}</td><td>{user.department || '-'}</td><td><span className="code-chip">{user.username}</span></td><td><span className={`badge ${roleBadgeColor[user.role] || 'badge-gray'}`}>{user.role}</span></td><td><span className={`badge ${user.status === 'active' ? 'badge-green' : 'badge-red'}`}>{user.status === 'active' ? 'Active' : 'Disabled'}</span></td><td style={{ fontSize: 12 }}>{formatDate(user.created_at)}</td><td><div style={{ display: 'flex', gap: 5 }}><button className="btn-icon" onClick={() => { setEditingUser(user); setForm({ fullname: user.fullname || '', department: user.department || '', username: user.username, role: user.role }); setShowUserModal(true); }}><Icon name="edit" size={14} /></button><button className="btn-icon" onClick={() => handleResetPassword(user.username)}><Icon name="lock" size={14} /></button><button className="btn-icon" onClick={() => handleToggleStatus(user.username)}><Icon name={user.status === 'active' ? 'close' : 'check'} size={14} /></button><button className="btn-icon" onClick={() => viewUserLogs(user.username)}><Icon name="logs" size={14} /></button>{user.username !== 'admin' && <button className="btn-icon" onClick={() => handleDeleteUser(user.username)} style={{ color: 'var(--red)' }}><Icon name="trash" size={14} /></button>}</div></td></tr>))}</tbody>}</div>
         )}
       </div>
       {showUserModal && (<div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowUserModal(false)}><div className="modal"><div className="modal-header"><div className="modal-title">{editingUser ? 'Sửa user' : 'Thêm user mới'}</div><button className="btn-icon" onClick={() => setShowUserModal(false)}><Icon name="close" size={18} /></button></div><div className="modal-body"><div className="form-group"><label className="form-label">Họ và tên</label><input className="form-input" value={form.fullname} onChange={e => setForm({ ...form, fullname: e.target.value })} /></div><div className="form-group"><label className="form-label">Phòng ban</label><input className="form-input" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} /></div><div className="form-group"><label className="form-label">Username</label><input className="form-input" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} disabled={!!editingUser} /></div><div className="form-group"><label className="form-label">Role</label><select className="form-input" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}><option value="Member">Member</option><option value="Admin">Admin</option>{currentUser?.role === 'SuperAdmin' && <option value="SuperAdmin">SuperAdmin</option>}</select></div>{!editingUser && <div className="form-hint">Mật khẩu mặc định = username</div>}</div><div className="modal-footer"><button className="btn btn-secondary" onClick={() => setShowUserModal(false)}>Hủy</button><button className="btn btn-primary" onClick={handleSaveUser}>Lưu</button></div></div></div>)}
       {selectedUserLogs && (<div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setSelectedUserLogs(null)}><div className="modal" style={{ maxWidth: 600 }}><div className="modal-header"><div className="modal-title">Logs của {selectedUserLogs.username}</div><button className="btn-icon" onClick={() => setSelectedUserLogs(null)}><Icon name="close" size={18} /></button></div><div className="modal-body">{selectedUserLogs.logs.length === 0 ? <div className="empty-state">Chưa có logs</div> : <div style={{ maxHeight: 400, overflowY: 'auto' }}>{selectedUserLogs.logs.map((log, i) => (<div key={i} style={{ padding: '8px 0', borderBottom: '1px solid var(--gray-100)', fontSize: 12 }}><div style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--gray-500)' }}>{log.time}</div><div><span className="badge badge-gray">{log.action}</span> {log.details?.code && `/${log.details.code}`}</div></div>))}</div>}</div></div></div>)}
     </div>
   );
-};
-
-// ==================== NAME MODAL ====================
-const NameModal = ({ auth, onDone }) => {
-  const [name, setName] = useState('');
-  const deviceId = useMemo(() => { let id = localStorage.getItem('deviceId'); if (!id) { id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8); localStorage.setItem('deviceId', id); } return id; }, []);
-
-  const save = async () => {
-    if (!name.trim()) { toast('Vui lòng nhập tên', 'error'); return; }
-    try {
-      await fetch(`${WORKER_URL}/set-name`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), device: deviceId }) });
-      localStorage.setItem('userName', name.trim());
-      onDone(name.trim());
-    } catch { toast('Lỗi lưu tên', 'error'); }
-  };
-
-  return (<div className="modal-backdrop"><div className="modal"><div className="modal-header"><div className="modal-title">Chào mừng!</div></div><div className="modal-body"><p style={{ fontSize: 13.5, color: 'var(--gray-500)', marginBottom: 16 }}>Đặt tên để hiển thị trong logs hệ thống.</p><div className="form-group"><label className="form-label">Tên của bạn</label><input className="form-input" placeholder="Nguyễn Văn A" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && save()} autoFocus /></div></div><div className="modal-footer"><button className="btn btn-primary" onClick={save}><Icon name="check" size={15} />Xác nhận</button></div></div></div>);
 };
 
 // ==================== MAIN APP ====================
@@ -1056,28 +1039,29 @@ const App = () => {
   const [currentUserInfo, setCurrentUserInfo] = useState(null);
   const [tab, setTab] = useState('dashboard');
   const [loading, setLoading] = useState(false);
-  const [userName, setUserName] = useState(() => localStorage.getItem('userName'));
-  const [showNameModal, setShowNameModal] = useState(false);
   const [userFullname, setUserFullname] = useState(() => localStorage.getItem('userFullname') || '');
 
-const handleLogin = (a, u, userData) => { 
-  setAuth(a); 
-  setAdminUser(u); 
-  setCurrentUserInfo(userData); 
-  setUserRole(userData?.role || 'Member');
-  if (userData?.fullname) {
-    setUserFullname(userData.fullname);
-    localStorage.setItem('userFullname', userData.fullname);
-  }
-};  const handleLogout = () => { sessionStorage.removeItem('adminAuth'); sessionStorage.removeItem('adminUser'); sessionStorage.removeItem('userRole'); setAuth(null); setAdminUser(''); setUserRole('Member'); };
-
-  useEffect(() => { if (auth && !userName) setShowNameModal(true); }, [auth, userName]);
-
-  useEffect(() => {
-    if (!auth) return;
-    const deviceId = localStorage.getItem('deviceId') || ('device_' + Date.now());
-    fetch(`${WORKER_URL}/get-name?device=${deviceId}`).then(r => r.json()).then(d => { if (d.name) { setUserName(d.name); localStorage.setItem('userName', d.name); } else if (!localStorage.getItem('userName')) setShowNameModal(true); }).catch(() => { if (!localStorage.getItem('userName')) setShowNameModal(true); });
-  }, [auth]);
+  const handleLogin = (a, u, userData) => { 
+    setAuth(a); 
+    setAdminUser(u); 
+    setCurrentUserInfo(userData); 
+    setUserRole(userData?.role || 'Member');
+    if (userData?.fullname) {
+      setUserFullname(userData.fullname);
+      localStorage.setItem('userFullname', userData.fullname);
+    }
+  };
+  
+  const handleLogout = () => { 
+    sessionStorage.removeItem('adminAuth'); 
+    sessionStorage.removeItem('adminUser'); 
+    sessionStorage.removeItem('userRole'); 
+    setAuth(null); 
+    setAdminUser(''); 
+    setUserRole('Member');
+    setUserFullname('');
+    localStorage.removeItem('userFullname');
+  };
 
   if (!auth) return <AuthScreen onLogin={handleLogin} />;
 
@@ -1094,23 +1078,27 @@ const handleLogin = (a, u, userData) => {
   }
 
   const pageTitles = { dashboard: 'Tổng quan', create: 'Tạo link mới', links: 'Quản lý link', analytics: 'Analytics & Logs', admin: 'Admin Panel' };
-  const initials = (adminUser || userName || 'U').substring(0, 2).toUpperCase();
+  
+  const getInitials = () => {
+    if (userFullname) return userFullname.substring(0, 2).toUpperCase();
+    if (adminUser) return adminUser.substring(0, 2).toUpperCase();
+    return 'U';
+  };
+  
+  const displayName = userFullname || adminUser || 'Người dùng';
 
   return (
     <>
-      {showNameModal && <NameModal auth={auth} onDone={n => { setUserName(n); setShowNameModal(false); }} />}
       <aside className="sidebar">
         <div className="sidebar-logo"><img src="/icon.png" alt="Enactus" onError={e => e.target.style.display='none'} /><div className="sidebar-logo-text"><h1>URL Shortener</h1><p>Enactus FTU Hanoi</p></div></div>
         <nav className="sidebar-nav"><div className="nav-section-label">Menu</div>{navItems.map(item => (<a key={item.key} className={`nav-item ${tab === item.key ? 'active' : ''}`} onClick={() => setTab(item.key)} href="#"><Icon name={item.icon} size={17} />{item.label}</a>))}</nav>
         <div className="sidebar-footer"><div className="sidebar-user" onClick={() => { if (window.confirm('Đăng xuất?')) handleLogout(); }}>
-  <div className="sidebar-avatar">
-    {(userFullname ? userFullname.substring(0,2).toUpperCase() : (userName ? userName.substring(0,2).toUpperCase() : (adminUser ? adminUser.substring(0,2).toUpperCase() : 'U')))}
-  </div>
-  <div className="sidebar-user-info">
-    <p>{userFullname || userName || adminUser || 'Người dùng'}</p>
-    <span>{userRole || 'Member'}</span>
-  </div>
-</div></div>
+          <div className="sidebar-avatar">{getInitials()}</div>
+          <div className="sidebar-user-info">
+            <p>{displayName}</p>
+            <span>{userRole || 'Member'}</span>
+          </div>
+        </div></div>
       </aside>
       <main className="main">
         <header className="topbar"><div className="topbar-title">{pageTitles[tab]}</div><div className="topbar-meta"><div className="topbar-badge"><span className="dot" /><span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12 }}>{YOUR_DOMAIN}</span></div><div style={{ fontSize: 13, color: 'var(--gray-500)' }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}</div></div></header>
