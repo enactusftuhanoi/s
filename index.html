@@ -808,7 +808,7 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
           <div className="empty-state"><Icon name="link" size={36} color="var(--gray-300)" /><p>Không có link nào{search ? ` khớp với "${search}"` : ''}</p></div>
         ) : (
           <div className="table-wrap">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-500 font-semibold">
                   <th className="px-6 py-4">Code</th>
