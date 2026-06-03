@@ -925,9 +925,70 @@ const AnalyticsView = () => {
           <div className="card"><div className="card-header"><div className="card-title"><Icon name="globe" size={15} color="var(--green)" />Vị trí địa lý</div></div><div className="card-body">{geoStats.length === 0 ? <div className="empty-state">Không có dữ liệu</div> : geoStats.map(([country, count], i) => { const total = geoStats.reduce((s, [, c]) => s + c, 0); const pct = total > 0 ? Math.round((count / total) * 100) : 0; return (<div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}><span style={{ width: 100, fontWeight: 500 }}>{country}</span><div style={{ flex: 1 }}><div className="progress-wrap"><div className="progress-bar" style={{ width: `${pct}%`, background: 'var(--green)' }} /></div></div><span style={{ width: 36, textAlign: 'right', color: 'var(--gray-500)' }}>{count}</span></div>); })}</div></div>
         </div>
       ) : tab === 'clicks' ? (
-        <div className="card"><div className="card-header"><div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Đích đến</th></tr></thead><tbody>{(logs.clickLogs || []).length === 0 ? <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.clickLogs || []).map((l, i) => (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip">/{l.code}</a></td><td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td></tr>))}</tbody>}</div></div>
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)" />Click logs ({(logs.clickLogs || []).length} bản ghi)</div>
+            <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Link</th><th>UTM</th><th>Đích đến</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(logs.clickLogs || []).length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr>
+                ) : (logs.clickLogs || []).map((l, i) => (
+                  <tr key={i}>
+                    <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td>
+                    <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td>
+                    <td>{l.user || 'unknown'}</td>
+                    <td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip">/{l.code}</a></td>
+                    <td><span className="badge badge-yellow">{l.utm || 'Direct'}</span></td>
+                    <td style={{ fontSize: 12, color: 'var(--gray-500)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.target}>{l.target}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
-        <div className="card"><div className="card-header"><div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button></div><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead><tbody>{(logs.actionLogs || []).length === 0 ? <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr> : (logs.actionLogs || []).map((l, i) => { let detail = ''; if (l.details?.code) detail = `/${l.details.code}`; if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`; if (l.details?.name) detail = `"${l.details.name}"`; return (<tr key={i}><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td><td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td><td>{l.user || 'unknown'}</td><td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td><td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{detail || '-'}</td></tr>); })}</tbody>}</div></div>
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title"><Icon name="logs" size={15} color="var(--purple)" />Action logs ({(logs.actionLogs || []).length} bản ghi)</div>
+            <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13} />Làm mới</button>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(logs.actionLogs || []).length === 0 ? (
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32 }}>Chưa có log nào</td></tr>
+                ) : (logs.actionLogs || []).map((l, i) => {
+                  let detail = '';
+                  if (l.details?.code) detail = `/${l.details.code}`;
+                  if (l.details?.url) detail += ` → ${l.details.url.substring(0, 40)}...`;
+                  if (l.details?.name) detail = `"${l.details.name}"`;
+                  return (
+                    <tr key={i}>
+                      <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.time}</td>
+                      <td style={{ fontSize: 12, fontFamily: 'DM Mono, monospace' }}>{l.ip}</td>
+                      <td>{l.user || 'unknown'}</td>
+                      <td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{actionLabel[l.action] || l.action}</span></td>
+                      <td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{detail || '-'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );
