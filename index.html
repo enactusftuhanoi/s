@@ -764,9 +764,22 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
               <td style={{fontSize:12.5,color:'var(--gray-500)',whiteSpace:'nowrap'}}>{formatDate(link.created_at)}</td>
               <td style={{fontSize:12,color:'var(--gray-500)'}}>{link.created_by||'unknown'}</td>
               <td style={{textAlign:'center'}}>
-                {link.is_public 
-                  ? <span className="badge badge-green"><Icon name="globe" size={12}/> Public</span>
-                  : <span className="badge badge-gray"><Icon name="lock" size={12}/> Private</span>}
+                {(userRole === 'Admin' || userRole === 'SuperAdmin') ? (
+                  <span 
+                    className={`badge ${link.is_public ? 'badge-green' : 'badge-gray'}`}
+                    onClick={() => toggleLinkPublic(link.code, link.is_public)}
+                    style={{ cursor: 'pointer' }}
+                    title={link.is_public ? 'Nhấn để chuyển sang Private' : 'Nhấn để chuyển sang Public'}
+                  >
+                    <Icon name={link.is_public ? 'globe' : 'lock'} size={12}/>
+                    {link.is_public ? ' Public' : ' Private'}
+                  </span>
+                ) : (
+                  <span className={`badge ${link.is_public ? 'badge-green' : 'badge-gray'}`}>
+                    <Icon name={link.is_public ? 'globe' : 'lock'} size={12}/>
+                    {link.is_public ? ' Public' : ' Private'}
+                  </span>
+                )}
               </td>
               <td>
                 <div style={{display:'flex',gap:4,justifyContent:'center'}}>
