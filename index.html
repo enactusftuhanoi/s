@@ -223,7 +223,7 @@ const LinkStatusBadges = ({ link }) => {
   } else {
     const days = daysUntil(link.expiry_date);
     if (days !== null && days <= 7) {
-      badges.push(<span key="w" className="badge badge-orange" style={{fontSize:11}}><Icon name="clock" size={10}/>{days}days</span>);
+      badges.push(<span key="w" className="badge badge-orange" style={{fontSize:11}}><Icon name="clock" size={10}/>{days} days</span>);
     } else {
       badges.push(<span key="a" className="badge badge-green" style={{fontSize:11}}>Active</span>);
     }
@@ -1149,14 +1149,14 @@ const App = () => {
           ))}
           <div className="nav-spacer"/>
           <div className="nav-section-label">Tài khoản</div>
-          <a className="nav-item" href="#" onClick={e => { e.preventDefault(); setShowChangePw(true); }}>
-            <Icon name="key" size={17}/>Đổi mật khẩu
-          </a>
           {userRole === 'SuperAdmin' && (
             <a className="nav-item" onClick={() => setTab('admin')} href="#">
               <Icon name="user" size={17}/>Admin Panel
             </a>
           )}
+          <a className="nav-item" href="#" onClick={e => { e.preventDefault(); setShowChangePw(true); }}>
+            <Icon name="key" size={17}/>Đổi mật khẩu
+          </a>
         </nav>
         <div className="sidebar-footer">
           <div className="sidebar-user" onClick={()=>{if(window.confirm('Đăng xuất?'))handleLogout();}}>
