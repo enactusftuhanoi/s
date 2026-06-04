@@ -219,16 +219,16 @@ const getPasswordStrength = (pw) => {
 const LinkStatusBadges = ({ link }) => {
   const badges = [];
   if (isExpired(link.expiry_date)) {
-    badges.push(<span key="e" className="badge badge-red" style={{fontSize:11}}><Icon name="clock" size={10}/>Hết hạn</span>);
+    badges.push(<span key="e" className="badge badge-red" style={{fontSize:11}}><Icon name="clock" size={10}/>Expired</span>);
   } else {
     const days = daysUntil(link.expiry_date);
     if (days !== null && days <= 7) {
-      badges.push(<span key="w" className="badge badge-orange" style={{fontSize:11}}><Icon name="clock" size={10}/>{days}d</span>);
+      badges.push(<span key="w" className="badge badge-orange" style={{fontSize:11}}><Icon name="clock" size={10}/>{days}days</span>);
     } else {
       badges.push(<span key="a" className="badge badge-green" style={{fontSize:11}}>Active</span>);
     }
   }
-  if (link.has_password) badges.push(<span key="p" className="badge badge-blue" style={{fontSize:11}}><Icon name="lock" size={10}/>Mật khẩu</span>);
+  if (link.has_password) badges.push(<span key="p" className="badge badge-blue" style={{fontSize:11}}><Icon name="lock" size={10}/>Password</span>);
   return <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>{badges}</div>;
 };
 
@@ -764,11 +764,11 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
             <th>Short URL</th>
             <th>Destination</th>
             <th style={{cursor:'pointer'}} onClick={()=>sortClick('clicks')}>Clicks{sortInd('clicks')}</th>
-            <th>Trạng thái</th>
-            <th style={{cursor:'pointer'}} onClick={()=>sortClick('created_at')}>Tạo ngày{sortInd('created_at')}</th>
-            <th>Người tạo</th>
-            <th style={{ textAlign:'center' }}>Public</th>
-            <th style={{ textAlign:'center' }}>Hành động</th>
+            <th>Status</th>
+            <th style={{cursor:'pointer'}} onClick={()=>sortClick('created_at')}>Created at{sortInd('created_at')}</th>
+            <th>Owner</th>
+            <th style={{ textAlign:'center' }}>View</th>
+            <th style={{ textAlign:'center' }}>Actions</th>
           </tr></thead>
           <tbody>{filtered.map(link=>(
             <tr key={link.code} style={{opacity:isExpired(link.expiry_date)?0.7:1}}>
@@ -1030,7 +1030,7 @@ const AdminView = ({ auth, currentUser }) => {
         <div className="card-header"><div className="card-title"><Icon name="user" size={16} color="var(--purple)"/>Quản lý tài khoản</div><button className="btn btn-primary btn-sm" onClick={()=>{setEditingUser(null);setForm({fullname:'',department:'',username:'',role:'Member'});setShowModal(true);}}><Icon name="user" size={14}/> Thêm user</button></div>
         {loading?<div style={{padding:40,textAlign:'center'}}><div className="spinner"/></div>
         :<div className="table-wrap"><table>
-          <thead><tr><th>Họ tên</th><th>Phòng ban</th><th>Username</th><th>Role</th><th>Status</th><th>Mật khẩu</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+          <thead><tr><th>Full Name</th><th>Department</th><th>Username</th><th>Role</th><th>Status</th><th>Password</th><th>Created at</th><th>Actions</th></tr></thead>
           <tbody>{users.map(u=>(
             <tr key={u.username} style={{opacity:u.status==='disabled'?.5:1}}>
               <td style={{fontWeight:500}}>{u.fullname||'-'}</td>
@@ -1057,8 +1057,8 @@ const AdminView = ({ auth, currentUser }) => {
           <div className="modal">
             <div className="modal-header"><div className="modal-title">{editingUser?'Sửa user':'Thêm user mới'}</div><button className="btn-icon" onClick={()=>setShowModal(false)}><Icon name="close" size={18}/></button></div>
             <div className="modal-body">
-              <div className="form-group"><label className="form-label">Họ và tên</label><input className="form-input" value={form.fullname} onChange={e=>setForm({...form,fullname:e.target.value})}/></div>
-              <div className="form-group"><label className="form-label">Phòng ban</label><input className="form-input" value={form.department} onChange={e=>setForm({...form,department:e.target.value})}/></div>
+              <div className="form-group"><label className="form-label">Full Name</label><input className="form-input" value={form.fullname} onChange={e=>setForm({...form,fullname:e.target.value})}/></div>
+              <div className="form-group"><label className="form-label">Department</label><input className="form-input" value={form.department} onChange={e=>setForm({...form,department:e.target.value})}/></div>
               <div className="form-group"><label className="form-label">Username</label><input className="form-input" value={form.username} onChange={e=>setForm({...form,username:e.target.value})} disabled={!!editingUser}/></div>
               <div className="form-group"><label className="form-label">Role</label><select className="form-input" value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option value="Member">Member</option><option value="Admin">Admin</option>{currentUser?.role==='SuperAdmin'&&<option value="SuperAdmin">SuperAdmin</option>}</select></div>
               {!editingUser&&<div style={{background:'var(--yellow-light)',border:'1px solid var(--yellow-mid)',borderRadius:8,padding:'10px 14px',fontSize:12.5,color:'#92400E'}}>🔐 Mật khẩu mặc định = username. User phải đổi khi đăng nhập lần đầu.</div>}
@@ -1125,9 +1125,7 @@ const App = () => {
     {key:'dashboard',label:'Dashboard',icon:'dashboard'},
     {key:'create',label:'Tạo link mới',icon:'link'},
     {key:'links',label:'Quản lý link',icon:'list'},
-    {key:'analytics',label:'Analytics & Logs',icon:'analytics'},
   ];
-  if (userRole==='SuperAdmin') navItems.push({key:'admin',label:'Admin Panel',icon:'user'});
   if (userRole === 'Admin' || userRole === 'SuperAdmin') navItems.push({ key: 'analytics', label: 'Analytics & Logs', icon: 'analytics' });
 
   const titles={dashboard:'Tổng quan',create:'Tạo link mới',links:'Quản lý link',analytics:'Analytics & Logs',admin:'Admin Panel'};
@@ -1144,16 +1142,21 @@ const App = () => {
         </div>
         <nav className="sidebar-nav">
           <div className="nav-section-label">Menu</div>
-          {navItems.map(item=>(
-            <a key={item.key} className={`nav-item ${tab===item.key?'active':''}`} onClick={()=>setTab(item.key)} href="#">
+          {navItems.map(item => (
+            <a key={item.key} className={`nav-item ${tab === item.key ? 'active' : ''}`} onClick={() => setTab(item.key)} href="#">
               <Icon name={item.icon} size={17}/>{item.label}
             </a>
           ))}
           <div className="nav-spacer"/>
           <div className="nav-section-label">Tài khoản</div>
-          <a className="nav-item" href="#" onClick={e=>{e.preventDefault();setShowChangePw(true);}}>
+          <a className="nav-item" href="#" onClick={e => { e.preventDefault(); setShowChangePw(true); }}>
             <Icon name="key" size={17}/>Đổi mật khẩu
           </a>
+          {userRole === 'SuperAdmin' && (
+            <a className="nav-item" onClick={() => setTab('admin')} href="#">
+              <Icon name="user" size={17}/>Admin Panel
+            </a>
+          )}
         </nav>
         <div className="sidebar-footer">
           <div className="sidebar-user" onClick={()=>{if(window.confirm('Đăng xuất?'))handleLogout();}}>
