@@ -1023,7 +1023,7 @@ const AdminView = ({ auth, currentUser }) => {
   return (
     <div className="view-section fade-in">
       <div className="card" style={{marginBottom:20}}>
-        <div className="card-header"><div className="card-title"><Icon name="globe" size={16} color="var(--yellow-dark)"/>Chế độ xem link</div><button className={`btn ${publicMode?'btn-primary':'btn-secondary'}`} onClick={togglePM}><Icon name={publicMode?'check':'lock'} size={14}/>{publicMode?'🔓 Public Mode':'🔒 Private Mode'}</button></div>
+        <div className="card-header"><div className="card-title"><Icon name="globe" size={16} color="var(--yellow-dark)"/>Chế độ xem link</div><button className={`btn ${publicMode?'btn-primary':'btn-secondary'}`} onClick={togglePM}><Icon name={publicMode?'check':'lock'} size={14}/>{publicMode?'Public Mode':'Private Mode'}</button></div>
         <div className="card-body"><div style={{fontSize:13,color:'var(--gray-500)'}}>{publicMode?'Tất cả thành viên xem được link được đánh dấu public.':'Mỗi thành viên chỉ xem link mình tạo.'}</div></div>
       </div>
       <div className="card">
@@ -1128,6 +1128,7 @@ const App = () => {
     {key:'analytics',label:'Analytics & Logs',icon:'analytics'},
   ];
   if (userRole==='SuperAdmin') navItems.push({key:'admin',label:'Admin Panel',icon:'user'});
+  if (userRole === 'Admin' || userRole === 'SuperAdmin') navItems.push({ key: 'analytics', label: 'Analytics & Logs', icon: 'analytics' });
 
   const titles={dashboard:'Tổng quan',create:'Tạo link mới',links:'Quản lý link',analytics:'Analytics & Logs',admin:'Admin Panel'};
   const displayName=userFullname||adminUser||'Người dùng';
