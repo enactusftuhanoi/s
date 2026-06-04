@@ -751,7 +751,8 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
             <th>Trạng thái</th>
             <th style={{cursor:'pointer'}} onClick={()=>sortClick('created_at')}>Tạo ngày{sortInd('created_at')}</th>
             <th>Người tạo</th>
-            <th style={{textAlign:'center'}}>Hành động</th>
+            <th style={{ textAlign:'center' }}>Public</th>
+            <th style={{ textAlign:'center' }}>Hành động</th>
           </tr></thead>
           <tbody>{filtered.map(link=>(
             <tr key={link.code} style={{opacity:isExpired(link.expiry_date)?0.7:1}}>
@@ -762,6 +763,11 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
               <td><LinkStatusBadges link={link}/></td>
               <td style={{fontSize:12.5,color:'var(--gray-500)',whiteSpace:'nowrap'}}>{formatDate(link.created_at)}</td>
               <td style={{fontSize:12,color:'var(--gray-500)'}}>{link.created_by||'unknown'}</td>
+              <td style={{textAlign:'center'}}>
+                {link.is_public 
+                  ? <span className="badge badge-green"><Icon name="globe" size={12}/> Public</span>
+                  : <span className="badge badge-gray"><Icon name="lock" size={12}/> Private</span>}
+              </td>
               <td>
                 <div style={{display:'flex',gap:4,justifyContent:'center'}}>
                   <button className="btn-icon" title="Copy" onClick={()=>{copyText(`https://${YOUR_DOMAIN}/${link.code}`);toast('Đã sao chép!')}}><Icon name="copy" size={15}/></button>
