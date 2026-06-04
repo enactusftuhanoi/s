@@ -718,6 +718,22 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
     toast('Đã xuất Excel!');
   };
 
+  const toggleLinkPublic = async (code, currentStatus) => {
+    try {
+      const res = await fetch(`${WORKER_URL}/link/${code}/toggle-public`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: auth },
+        body: JSON.stringify({ is_public: !currentStatus })
+      });
+      if (res.ok) {
+        toast(!currentStatus ? 'Đã chuyển sang Public' : 'Đã chuyển sang Private');
+        fetchLinks();
+      } else {
+        toast('Không có quyền', 'error');
+      }
+    } catch { toast('Lỗi kết nối', 'error'); }
+  };
+
   const sortClick=(col)=>{setSortBy(col);setSortDir(sortBy===col&&sortDir==='desc'?'asc':'desc');};
   const sortInd=(col)=>sortBy===col?(sortDir==='desc'?' ↓':' ↑'):'';
 
