@@ -697,13 +697,55 @@ if (
         const originalUrl = parsed.url || rawData;
         const expiryDate = parsed.expiry_date;
         const linkPassword = parsed.password;
+        const seoConfigId = parsed.seoConfigId;
 
-        // Kiểm tra hết hạn
+        // 1. Kiểm tra hết hạn
         if (expiryDate && new Date(expiryDate) < new Date()) {
           return new Response(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Link hết hạn</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#F3F4F6;margin:0}.box{background:white;padding:40px;border-radius:16px;text-align:center}h2{color:#EF4444;margin-bottom:8px}p{color:#6B7280;font-size:14px}</style></head><body><div class="box"><h2>🔒 Link đã hết hạn</h2><p>Link này đã hết hạn và không còn hoạt động.</p></div></body></html>`, { status: 410, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
         }
 
-        // Kiểm tra password
+        // 2. Xử lý hiển thị SEO Meta Tags cho Bot mạng xã hội (Facebook, Zalo, Telegram,...)
+        const botRegex = /facebookexternalhit|Facebot|facebookplatform|MessengerBot|ZaloBot|Twitterbot|TelegramBot|LinkedInBot|Slackbot/i;
+        if (seoConfigId && botRegex.test(userAgent)) {
+          const seoConfig = await getSEOConfigById(env, seoConfigId);
+          if (seoConfig) {
+            const html = `<!DOCTYPE html>
+            <html lang="vi">
+            <head>
+                <meta charset="UTF-8">
+                <title>${seoConfig.title || 'Enactus FTU Hanoi'}</title>
+                <meta name="description" content="${seoConfig.description || ''}">
+                <meta name="keywords" content="${seoConfig.keywords || ''}">
+                
+                <!-- Open Graph / Facebook / Zalo -->
+                <meta property="og:type" content="website">
+                <meta property="og:url" content="${request.url}">
+                <meta property="og:title" content="${seoConfig.title || ''}">
+                <meta property="og:description" content="${seoConfig.description || ''}">
+                <meta property="og:image" content="${seoConfig.ogImage || ''}">
+                
+                <!-- Twitter -->
+                <meta property="twitter:card" content="${seoConfig.twitterCard || 'summary_large_image'}">
+                <meta property="twitter:url" content="${request.url}">
+                <meta property="twitter:title" content="${seoConfig.title || ''}">
+                <meta property="twitter:description" content="${seoConfig.description || ''}">
+                <meta property="twitter:image" content="${seoConfig.ogImage || ''}">
+                
+                <!-- Dự phòng tự động chuyển hướng nếu bot chạy được JS -->
+                <meta http-equiv="refresh" content="0;url=${originalUrl}">
+            </head>
+            <body>
+                <p>Đang chuyển hướng đến <a href="${originalUrl}">${originalUrl}</a>...</p>
+                <script>window.location.href = "${originalUrl}";</script>
+            </body>
+            </html>`;
+            return new Response(html, {
+              headers: { 'Content-Type': 'text/html;charset=UTF-8' }
+            });
+          }
+        }
+
+        // 3. Kiểm tra mật khẩu (Người dùng thật mới cần nhập)
         if (linkPassword) {
           const provided = url.searchParams.get('pw');
           if (provided !== linkPassword) {
@@ -712,11 +754,11 @@ if (
           }
         }
 
+        // 4. Ghi nhận logs và Redirect đối với người dùng bình thường
         const utm = url.searchParams.get('utm') || 'direct';
         const logUsers = await env.LOG_STORAGE.get("users").then(d => d ? JSON.parse(d) : {});
         const userName = logUsers[clientIP]?.name || null;
         await updateStatsWithUTM(env, path, utm);
-        // FIX: Lưu country + userAgent đúng
         await addClickLog(env, clientIP, userName, path, utm, originalUrl, cfCountry, userAgent);
         return Response.redirect(originalUrl, 302);
       }
