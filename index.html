@@ -1134,7 +1134,7 @@ const App = () => {
   ];
   if (userRole === 'Admin' || userRole === 'SuperAdmin') navItems.push({ key: 'analytics', label: 'Analytics & Logs', icon: 'analytics' });
 
-  const titles={dashboard:'Tổng quan',create:'Tạo link mới',links:'Quản lý link',analytics:'Analytics & Logs',admin:'Admin Panel'};
+  const titles={dashboard:'Tổng quan',create:'Tạo link mới',links:'Quản lý link',analytics:'Analytics & Logs',admin:'Admin Panel',seo:'SEO Configs'};
   const displayName=userFullname||adminUser||'Người dùng';
   const initials=displayName.substring(0,2).toUpperCase();
 
@@ -1158,6 +1158,11 @@ const App = () => {
           {userRole === 'SuperAdmin' && (
             <a className="nav-item" onClick={() => setTab('admin')} href="#">
               <Icon name="user" size={17}/>Admin Panel
+            </a>
+          )}
+          {userRole === 'SuperAdmin' || userRole === 'Admin' && (
+            <a className="nav-item" onClick={() => setTab('admin')} href="#">
+              <Icon name="tag" size={17}/>SEO
             </a>
           )}
           <a className="nav-item" href="#" onClick={e => { e.preventDefault(); setShowChangePw(true); }}>
@@ -1185,6 +1190,7 @@ const App = () => {
           {tab==='links'&&<LinksView auth={auth} userRole={userRole} currentUsername={adminUser}/>}
           {tab==='analytics'&&<AnalyticsView/>}
           {tab==='admin'&&<AdminView auth={auth} currentUser={currentUserInfo}/>}
+          {tab==='seo'&&(<SEOView auth={auth}/>)}
         </div>
       </main>
     </>
