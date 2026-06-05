@@ -479,7 +479,6 @@ const DashboardView = ({ auth }) => {
   const [stats, setStats] = useState(null);
   const [hourly, setHourly] = useState([]);
   const [topUTM, setTopUTM] = useState([]);
-  const [seoConfigs, setSeoConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const dailyRef = useRef(null); const hourlyRef = useRef(null);
   const dailyInst = useRef(null); const hourlyInst = useRef(null);
@@ -712,16 +711,6 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
   },[auth]);
 
   useEffect(()=>{fetchLinks();},[fetchLinks]);
-
-  useEffect(() => {
-    const fetchSeoConfigs = async () => {
-      try {
-        const res = await fetch(`${WORKER_URL}/admin/seo-configs`, { headers: { Authorization: auth } });
-        if (res.ok) setSeoConfigs(await res.json());
-      } catch(e) { console.error(e); }
-    };
-    fetchSeoConfigs();
-  }, [auth]);
 
   const filtered = useMemo(()=>{
     let arr=links.filter(l=>!search||l.code.toLowerCase().includes(search.toLowerCase())||l.original_url.toLowerCase().includes(search.toLowerCase()));
@@ -1312,19 +1301,19 @@ const App = () => {
         <nav className="sidebar-nav">
           <div className="nav-section-label">Menu</div>
           {navItems.map(item => (
-            <a key={item.key} className={`nav-item ${tab === item.key ? 'active' : ''}`} onClick={() => setTab(item.key)} href="#">
+            <a key={item.key} className={`nav-item ${tab === item.key ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setTab(item.key); }} href="#">
               <Icon name={item.icon} size={17}/>{item.label}
             </a>
           ))}
           <div className="nav-spacer"/>
           <div className="nav-section-label">Tài khoản</div>
           {userRole === 'SuperAdmin' && (
-            <a className="nav-item" onClick={() => setTab('admin')} href="#">
+            <a className="nav-item" onClick={(e) => { e.preventDefault(); setTab('admin'); }} href="#">
               <Icon name="user" size={17}/>Admin Panel
             </a>
           )}
           {(userRole === 'SuperAdmin' || userRole === 'Admin') && (
-            <a className="nav-item" onClick={() => setTab('seo')} href="#">
+            <a className="nav-item" onClick={(e) => { e.preventDefault(); setTab('seo'); }} href="#">
               <Icon name="tag" size={17}/>SEO Configs
             </a>
           )}
