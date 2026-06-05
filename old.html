@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>URL Shortener | Enactus FTU Hanoi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --yellow:#FFC107;--yellow-dark:#F59E0B;--yellow-light:#FFFBEB;--yellow-mid:#FEF3C7;
+  --gray-50:#F9FAFB;--gray-100:#F3F4F6;--gray-200:#E5E7EB;--gray-300:#D1D5DB;
+  --gray-400:#9CA3AF;--gray-500:#6B7280;--gray-600:#4B5563;--gray-700:#374151;
+  --gray-800:#1F2937;--gray-900:#111827;
+  --blue:#3B82F6;--green:#10B981;--red:#EF4444;--purple:#8B5CF6;--orange:#F97316;
+  --black-border:#111827;
+}
+
+/* CUSTOM BÔI ĐEN MÀU VÀNG CHỮ ĐEN ĐÚNG Ý M */
+::-webkit-selection { background: var(--yellow); color: var(--gray-900); }
+::-moz-selection { background: var(--yellow); color: var(--gray-900); }
+::selection { background: var(--yellow); color: var(--gray-900); }
+
+body{background:#F3F4F6;font-family:'Space Grotesk',sans-serif;color:var(--gray-800);height:100vh;overflow:hidden}
+#root{height:100vh;display:flex;overflow:hidden}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--gray-900);border:1px solid #fff}
+input,textarea,select{font-family:'Space Grotesk',sans-serif}
+
+/* Auth Screen phong cách Neo-Brutalism */
+.auth-screen{width:100%;height:100vh;display:flex;align-items:center;justify-content:center;background:#F3F4F6;position:relative}
+.auth-card{background:white;padding:48px;width:420px;border:2.5px solid var(--black-border);box-shadow:8px 8px 0px var(--black-border);animation:fadeIn .3s ease}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;justify-content:center}
+.auth-logo img{width:48px;height:48px;object-fit:contain;transform:rotate(-6deg)}
+.auth-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--gray-900)}
+.auth-subtitle{font-size:13px;color:var(--gray-500);margin-top:4px;text-align:center}
+.auth-label{font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:0.02em}
+.auth-input{width:100%;padding:12px 16px;border:2px solid var(--black-border);border-radius:0px;font-size:14px;outline:none;background:var(--gray-50);color:var(--gray-900);transition:all .15s}
+.auth-input:focus{background:white;box-shadow:4px 4px 0px var(--black-border)}
+.auth-btn{width:100%;padding:14px;background:var(--yellow);border:2px solid var(--black-border);font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--gray-900);text-transform:uppercase;letter-spacing:0.05em;box-shadow:4px 4px 0px var(--black-border)}
+.auth-btn:hover{background:var(--yellow-dark);transform:translate(-2px,-2px);box-shadow:6px 6px 0px var(--black-border)}
+.auth-btn:active{transform:translate(0,0);box-shadow:4px 4px 0px var(--black-border)}
+.auth-form-group{margin-bottom:20px}
+
+.force-pw-screen{width:100%;height:100vh;display:flex;align-items:center;justify-content:center;background:#F3F4F6}
+.force-pw-card{background:white;padding:48px;width:460px;border:2.5px solid var(--black-border);box-shadow:8px 8px 0px var(--black-border)}
+.force-pw-banner{background:var(--yellow-mid);border:2px solid var(--black-border);padding:16px 20px;margin-bottom:28px;display:flex;align-items:flex-start;gap:12px;box-shadow:4px 4px 0px var(--black-border)}
+.force-pw-banner-text{font-size:13px;color:var(--gray-900);line-height:1.6}
+.force-pw-banner-text strong{display:block;font-family:'Playfair Display',serif;font-size:16px;margin-bottom:3px}
+.pw-strength{height:6px;border:1.5px solid var(--black-border);margin-top:6px}
+.pw-strength-text{font-size:11px;font-weight:700;margin-top:4px}
+
+/* Layout Sidebar & Main vững chãi */
+.sidebar{width:250px;background:white;border-right:2.5px solid var(--black-border);display:flex;flex-direction:column;flex-shrink:0;z-index:10}
+.sidebar-logo{height:72px;display:flex;align-items:center;padding:0 20px;border-bottom:2.5px solid var(--black-border);gap:10px;flex-shrink:0}
+.sidebar-logo img{width:36px;height:36px;object-fit:contain;transform:rotate(-6deg)}
+.sidebar-logo-text h1{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;line-height:1.2;color:var(--gray-900)}
+.sidebar-logo-text p{font-size:11px;color:var(--gray-500);font-weight:500}
+.sidebar-nav{flex:1;padding:16px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.nav-section-label{font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.08em;padding:0 12px;margin:12px 0 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:0px;cursor:pointer;transition:all .15s;font-size:13.5px;font-weight:600;color:var(--gray-700);text-decoration:none;border:1.5px solid transparent}
+.nav-item:hover{background:var(--gray-50);color:var(--gray-900);border-color:var(--black-border)}
+.nav-item.active{background:var(--yellow);color:var(--gray-900);font-weight:700;border-color:var(--black-border);box-shadow:3px 3px 0px var(--black-border)}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;stroke:var(--black-border);stroke-width:2.5}
+.sidebar-footer{padding:12px;border-top:2.5px solid var(--black-border);background:var(--gray-50)}
+.sidebar-user{display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(--black-border);background:white;cursor:pointer;transition:all .15s;box-shadow:2px 2px 0px var(--black-border)}
+.sidebar-user:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0px var(--black-border)}
+.sidebar-avatar{width:32px;height:32px;border:1.5px solid var(--black-border);background:var(--yellow);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--gray-900);flex-shrink:0}
+.sidebar-user-info p{font-size:13px;font-weight:700;line-height:1.3;overflow:hidden;text-overflow:ellipsis;whiteSpace:nowrap}
+.sidebar-user-info span{font-size:10px;color:var(--gray-500);font-weight:500}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:72px;background:white;border-bottom:2.5px solid var(--black-border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0}
+.topbar-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--gray-900)}
+.topbar-meta{display:flex;align-items:center;gap:16px}
+.topbar-badge{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--gray-900);background:white;padding:6px 14px;border:2px solid var(--black-border);box-shadow:2px 2px 0px var(--black-border)}
+.topbar-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--green);border:1px solid var(--black-border)}
+
+.content{flex:1;overflow-y:auto;padding:28px}
+.card{background:white;border:2.5px solid var(--black-border);box-shadow:6px 6px 0px var(--black-border);margin-bottom:24px}
+.card-header{padding:20px 24px;border-bottom:2.5px solid var(--black-border);display:flex;align-items:center;justify-content:space-between;background:var(--gray-50)}
+.card-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--gray-900);display:flex;align-items:center;gap:8px}
+.card-title svg{stroke-width:2.5}
+.card-body{padding:24px;position:relative}
+
+/* Grid & Stat Card */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:white;border:2.5px solid var(--black-border);padding:20px;box-shadow:4px 4px 0px var(--black-border);position:relative;overflow:hidden;transition:all .15s}
+.stat-card:hover{transform:translateY(-2px);box-shadow:6px 6px 0px var(--black-border)}
+.stat-card .stat-bg{position:absolute;right:-12px;top:-12px;width:64px;height:64px;border-radius:50%;opacity:.08}
+.stat-card .stat-icon{width:38px;height:38px;border:2px solid var(--black-border);display:flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:2px 2px 0px var(--black-border)}
+.stat-card .stat-label{font-size:12px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.02em;margin-bottom:6px}
+.stat-card .stat-value{font-size:26px;font-weight:700;color:var(--gray-900);line-height:1}
+
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:2px solid var(--black-border);border-radius:0px;font-size:13.5px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;box-shadow:3px 3px 0px var(--black-border)}
+.btn-primary{background:var(--yellow);color:var(--gray-900)}.btn-primary:hover{background:var(--yellow-dark);transform:translate(-1px,-1px);box-shadow:4px 4px 0px var(--black-border)}
+.btn-secondary{background:var(--gray-100);color:var(--gray-700)}.btn-secondary:hover{background:var(--gray-200);transform:translate(-1px,-1px);box-shadow:4px 4px 0px var(--black-border)}
+.btn-ghost{background:transparent;color:var(--gray-700)}.btn-ghost:hover{background:var(--gray-50);transform:translate(-1px,-1px);box-shadow:4px 4px 0px var(--black-border)}
+.btn-primary:active, .btn-secondary:active, .btn-ghost:active{transform:translate(0,0);box-shadow:3px 3px 0px var(--black-border)}
+.btn-sm{padding:6px 12px;font-size:12.5px}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none !important;box-shadow:3px 3px 0px var(--black-border) !important}
+
+.btn-icon{padding:8px;border:2px solid transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--gray-700);transition:all .15s;background:transparent}
+.btn-icon:hover{background:var(--yellow-mid);border-color:var(--black-border);color:var(--gray-900);box-shadow:2px 2px 0px var(--black-border)}
+
+.form-group{margin-bottom:20px}
+.form-label{font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:8px;display:block;text-transform:uppercase;letter-spacing:0.02em}
+.form-input{width:100%;padding:11px 14px;border:2px solid var(--black-border);border-radius:0px;font-size:14px;outline:none;transition:all .15s;background:var(--gray-50);color:var(--gray-800)}
+.form-input:focus{background:white;box-shadow:4px 4px 0px var(--black-border)}
+.form-hint{font-size:12px;color:var(--gray-500);margin-top:6px;font-weight:500}
+.form-prefix{display:flex;align-items:center;background:var(--gray-100);border:2px solid var(--black-border);border-right:none;padding:11px 14px;font-size:13px;color:var(--gray-800);font-family:'DM Mono',monospace;font-weight:600}
+.form-prefix+.form-input{border-left:none}
+.input-group{display:flex}
+
+/* Table Style cứng cáp sắc nét */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{padding:12px 16px;font-size:11.5px;font-weight:700;color:var(--gray-900);text-transform:uppercase;letter-spacing:.06em;background:var(--gray-100);border-bottom:2.5px solid var(--black-border);white-space:nowrap;text-align:left}
+tbody tr{border-bottom:2px solid var(--black-border);transition:background .1s}
+tbody tr:hover{background:var(--yellow-light)}
+tbody td{padding:14px 16px;font-size:13.5px;color:var(--gray-900);font-weight:500}
+
+/* Badge vuông vắn bọc viền mỏng kịch tính */
+.badge{display:inline-flex;align-items:center;padding:4px 10px;border:1.5px solid var(--black-border);font-size:11.5px;font-weight:700;gap:4px;border-radius:0px;box-shadow:2px 2px 0px var(--black-border)}
+.badge-yellow{background:var(--yellow-mid);color:#92400E}
+.badge-green{background:#D1FAE5;color:#065F46}
+.badge-red{background:#FEE2E2;color:#991B1B}
+.badge-blue{background:#DBEAFE;color:#1E40AF}
+.badge-gray{background:var(--gray-100);color:var(--gray-700)}
+.badge-purple{background:#EDE9FE;color:#5B21B6}
+.badge-orange{background:#FFF7ED;color:#C2410C}
+
+.progress-wrap{background:var(--gray-200);border:1.5px solid var(--black-border);height:10px;overflow:hidden}
+.progress-bar{height:100%;background:var(--yellow)}
+.code-chip{display:inline-flex;align-items:center;gap:5px;background:var(--yellow-mid);color:var(--gray-900);padding:4px 8px;border:1.5px solid var(--black-border);font-size:12px;font-family:'DM Mono',monospace;font-weight:700;box-shadow:2px 2px 0px var(--black-border)}
+
+.spinner{width:28px;height:28px;border:3px solid var(--gray-300);border-top-color:var(--black-border);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fade-in{animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.result-box{background:var(--yellow-light);border:2px solid var(--black-border);padding:20px;margin-top:20px;box-shadow:4px 4px 0px var(--black-border)}
+.result-url{display:flex;gap:10px;align-items:center;margin-top:12px}
+
+/* Modal Neo-Brutalism */
+.modal-backdrop{position:fixed;inset:0;background:rgba(17,24,39,0.4);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(1px)}
+.modal{background:white;border:2.5px solid var(--black-border);box-shadow:10px 10px 0px var(--black-border);max-width:520px;width:100%;max-height:90vh;overflow-y:auto}
+.modal-header{padding:24px 24px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--black-border);background:var(--gray-50)}
+.modal-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--gray-900)}
+.modal-body{padding:24px}
+.modal-footer{padding:0 24px 24px;display:flex;gap:12px;justify-content:flex-end}
+.qr-container{display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px}
+
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 20px;color:var(--gray-400);text-align:center}
+.empty-state p{font-size:14px;font-weight:600;color:var(--gray-500)}
+
+.tab-group{display:flex;gap:4px;background:var(--gray-200);padding:4px;border:2px solid var(--black-border);width:fit-content}
+.tab-btn{padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:all .1s;border:none;font-family:'Space Grotesk',sans-serif;background:transparent;color:var(--gray-600)}
+.tab-btn.active{background:var(--yellow);color:var(--gray-900);border:2px solid var(--black-border);box-shadow:2px 2px 0px var(--black-border)}
+
+.refresh-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer;border:2px solid var(--black-border);background:white;color:var(--gray-800);font-family:'Space Grotesk',sans-serif;transition:all .15s;box-shadow:2px 2px 0px var(--black-border)}
+.refresh-btn:hover{background:var(--gray-50);transform:translate(-1px,-1px);box-shadow:3px 3px 0px var(--black-border)}
+.refresh-btn:active{transform:translate(0,0);box-shadow:2px 2px 0px var(--black-border)}
+
+.utm-result{background:var(--gray-50);border:2px solid var(--black-border);padding:12px;font-family:'DM Mono',monospace;font-size:12px;word-break:break-all;color:var(--gray-900);margin-top:10px;box-shadow:2px 2px 0px var(--black-border)}
+.view-section{animation:fadeIn .25s ease}
+.nav-spacer{flex:1}
+.pending-badge{background:#FEF3C7;color:#92400E;border:2.5px solid var(--black-border);font-size:11px;padding:2px 8px;font-weight:700;box-shadow:1px 1px 0px var(--black-border)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
+const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
+
+// ==================== ICONS (Đẩy nét vẽ dày dặn lên strokeWidth="2.5") ====================
+const Icon = ({ name, size=18, color='var(--gray-900)', style={} }) => {
+  const icons = {
+    dashboard:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+    link:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
+    list:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+    logs:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+    analytics:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    copy:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
+    trash:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+    qr:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3" fill="none"/><rect x="16" y="5" width="3" height="3" fill="none"/><rect x="16" y="16" width="3" height="3" fill="none"/><rect x="5" y="16" width="3" height="3" fill="none"/></svg>,
+    tag:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+    external:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
+    refresh:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>,
+    download:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+    lock:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+    clock:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+    chart:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    close:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+    check:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><polyline points="20 6 9 17 4 12"/></svg>,
+    star:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+    user:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    globe:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+    fire:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,
+    search:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+    edit:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+    key:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>,
+    shield:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  };
+  return icons[name] || null;
+};
+
+// ==================== UTILS ====================
+const copyText = async (text) => {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); return true; }
+};
+const toast = (title, icon='success', timer=1800) =>
+  Swal.fire({ icon, title, timer, showConfirmButton:false, toast:true, position:'top-end', timerProgressBar:true });
+const confirmDialog = (title, text, confirmText='Xác nhận') =>
+  Swal.fire({ title, text, icon:'warning', showCancelButton:true, confirmButtonColor:'#FFC107', cancelButtonText:'Hủy', confirmButtonText:confirmText });
+const formatDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'}) : '-';
+
+const isExpired = (expiry) => expiry && new Date(expiry) < new Date();
+const daysUntil = (expiry) => {
+  if (!expiry) return null;
+  return Math.ceil((new Date(expiry) - new Date()) / 86400000);
+};
+
+const getPasswordStrength = (pw) => {
+  if (!pw) return { score:0, label:'', color:'var(--gray-200)', pct:0 };
+  let s=0;
+  if (pw.length>=6) s++; if (pw.length>=10) s++;
+  if (/[A-Z]/.test(pw)) s++; if (/[0-9]/.test(pw)) s++; if (/[^A-Za-z0-9]/.test(pw)) s++;
+  if (s<=1) return { score:s, label:'Rất yếu', color:'#EF4444', pct:20 };
+  if (s===2) return { score:s, label:'Yếu', color:'#F97316', pct:40 };
+  if (s===3) return { score:s, label:'Trung bình', color:'#FFC107', pct:60 };
+  if (s===4) return { score:s, label:'Mạnh', color:'#10B981', pct:80 };
+  return { score:s, label:'Rất mạnh', color:'#059669', pct:100 };
+};
+
+// ==================== STATUS BADGE ====================
+const LinkStatusBadges = ({ link }) => {
+  const badges = [];
+  if (isExpired(link.expiry_date)) {
+    badges.push(<span key="e" className="badge badge-red" style={{fontSize:11}}><Icon name="clock" size={10}/>Expired</span>);
+  } else {
+    const days = daysUntil(link.expiry_date);
+    if (days !== null && days <= 7) {
+      badges.push(<span key="w" className="badge badge-orange" style={{fontSize:11}}><Icon name="clock" size={10}/>{days} days</span>);
+    } else {
+      badges.push(<span key="a" className="badge badge-green" style={{fontSize:11}}>Active</span>);
+    }
+  }
+  if (link.has_password) badges.push(<span key="p" className="badge badge-blue" style={{fontSize:11}}><Icon name="lock" size={10}/>Password</span>);
+  return <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>{badges}</div>;
+};
+
+// ==================== FORCE CHANGE PW ====================
+const ForceChangePasswordScreen = ({ auth, username, onSuccess }) => {
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [loading, setLoading] = useState(false);
+  const strength = getPasswordStrength(newPw);
+  const handle = async () => {
+    if (!currentPw||!newPw||!confirmPw){toast('Vui lòng điền đầy đủ','error');return;}
+    if (newPw!==confirmPw){toast('Mật khẩu xác nhận không khớp','error');return;}
+    if (newPw.length<6){toast('Tối thiểu 6 ký tự','error');return;}
+    if (strength.score<2){toast('Mật khẩu quá yếu','error');return;}
+    setLoading(true);
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/change-password`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({currentPassword:currentPw,newPassword:newPw})});
+      const data = await res.json();
+      if (res.ok){toast('Đổi mật khẩu thành công!');setTimeout(()=>onSuccess(),800);}
+      else toast(data.error||'Lỗi','error');
+    } catch {toast('Lỗi kết nối','error');}
+    finally {setLoading(false);}
+  };
+  return (
+    <div className="force-pw-screen">
+      <div className="force-pw-card fade-in">
+        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24}}>
+          <div style={{width:44,height:44,border:'2px solid var(--black-border)',background:'var(--yellow-mid)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'2px 2px 0px var(--black-border)'}}>
+            <Icon name="shield" size={22} color="var(--gray-900)"/>
+          </div>
+          <div><div style={{fontFamily:'Playfair Display',fontSize:20,fontWeight:700}}>Đặt mật khẩu mới</div><div style={{fontSize:12,color:'var(--gray-500)',marginTop:2}}>URL Shortener · Enactus FTU Hanoi</div></div>
+        </div>
+        <div className="force-pw-banner">
+          <span style={{fontSize:22,flexShrink:0}}>🔐</span>
+          <div className="force-pw-banner-text"><strong>Yêu cầu đổi mật khẩu</strong>Tài khoản <b>{username}</b> đang dùng mật khẩu mặc định hoặc vừa được reset.</div>
+        </div>
+        <div className="auth-form-group">
+          <label className="auth-label">Mật khẩu hiện tại</label>
+          <input className="auth-input" type="password" value={currentPw} onChange={e=>setCurrentPw(e.target.value)}/>
+        </div>
+        <div className="auth-form-group">
+          <label className="auth-label">Mật khẩu mới</label>
+          <input className="auth-input" type="password" placeholder="Ít nhất 6 ký tự" value={newPw} onChange={e=>setNewPw(e.target.value)}/>
+          {newPw&&<><div className="pw-strength" style={{background:`linear-gradient(to right,${strength.color} ${strength.pct}%,var(--gray-200) ${strength.pct}%)`}}/><div className="pw-strength-text" style={{color:strength.color}}>{strength.label}</div></>}
+        </div>
+        <div className="auth-form-group">
+          <label className="auth-label">Xác nhận mật khẩu mới</label>
+          <input className="auth-input" type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>
+          {confirmPw&&newPw&&<div style={{fontSize:12,marginTop:5,color:confirmPw===newPw?'#10B981':'#EF4444',display:'flex',alignItems:'center',gap:4}}><Icon name={confirmPw===newPw?'check':'close'} size={13} color={confirmPw===newPw?'#10B981':'#EF4444'}/>{confirmPw===newPw?'Khớp':'Chưa khớp'}</div>}
+        </div>
+        <button className="auth-btn" onClick={handle} disabled={loading}>{loading?'Đang lưu...':'Xác nhận & Vào ứng dụng'}</button>
+      </div>
+    </div>
+  );
+};
+
+// ==================== AUTH SCREEN ====================
+const AuthScreen = ({ onLogin }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const handle = async () => {
+    if (!username||!password){toast('Vui lòng nhập đầy đủ','error');return;}
+    setLoading(true);
+    const auth = 'Basic '+btoa(username+':'+password);
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/current-user`,{headers:{Authorization:auth}});
+      if (res.ok){
+        const userData = await res.json();
+        sessionStorage.setItem('adminAuth',auth);
+        sessionStorage.setItem('adminUser',username);
+        sessionStorage.setItem('userRole',userData.role||'Member');
+        onLogin(auth,username,userData);
+      } else toast('Sai tên đăng nhập hoặc mật khẩu','error');
+    } catch {toast('Không thể kết nối server','error');}
+    finally {setLoading(false);}
+  };
+  return (
+    <div className="auth-screen">
+      <div className="auth-card">
+        <div className="auth-logo"><img src="/icon.png" alt="" onError={e=>e.target.style.display='none'}/><div><div className="auth-title">URL Shortener</div><div className="auth-subtitle" style={{fontWeight:600}}>Enactus FTU Hanoi</div></div></div>
+        <div className="auth-form-group"><label className="auth-label">Tên đăng nhập</label><input className="auth-input" type="text" placeholder="username" value={username} onChange={e=>setUsername(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/></div>
+        <div className="auth-form-group"><label className="auth-label">Mật khẩu</label><input className="auth-input" type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/></div>
+        <button className="auth-btn" onClick={handle} disabled={loading}>{loading?'Đang đăng nhập...':'Đăng nhập →'}</button>
+      </div>
+    </div>
+  );
+};
+
+// ==================== QR MODAL ====================
+const QRModal = ({ code, onClose }) => {
+  const qrRef = useRef(null);
+  const url = `https://${YOUR_DOMAIN}/${code}`;
+  useEffect(()=>{
+    if(qrRef.current){qrRef.current.innerHTML='';new QRCode(qrRef.current,{text:url,width:200,height:200,colorDark:'#111827',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});}
+  },[code]);
+  const dl = () => {const c=qrRef.current?.querySelector('canvas');if(!c)return;const a=document.createElement('a');a.download=`qr-${code}.png`;a.href=c.toDataURL();a.click();};
+  return (
+    <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header"><div className="modal-title">QR Code — /{code}</div><button className="btn-icon" onClick={onClose}><Icon name="close" size={18}/></button></div>
+        <div className="modal-body">
+          <div className="qr-container">
+            <div ref={qrRef} style={{padding:16,background:'white',border:'2px solid var(--black-border)',boxShadow:'4px 4px 0px var(--black-border)'}}/>
+            <div style={{textAlign:'center',marginTop:8}}><div style={{fontSize:13,color:'var(--gray-500)',fontWeight:600,marginBottom:4}}>Link rút gọn</div><div style={{fontFamily:'DM Mono,monospace',fontSize:13,color:'var(--gray-900)',background:'var(--gray-50)',padding:'6px 12px',border:'1.5px solid var(--black-border)'}}>{url}</div></div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary btn-sm" onClick={()=>{copyText(url);toast('Đã sao chép!')}}><Icon name="copy" size={14}/> Sao chép</button>
+          <button className="btn btn-primary btn-sm" onClick={dl}><Icon name="download" size={14}/> Tải QR</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== UTM MODAL ====================
+const UTMModal = ({ code, onClose }) => {
+  const [utm, setUtm] = useState('');
+  const gen = utm.trim() ? `https://${YOUR_DOMAIN}/${code}?utm=${utm.trim()}` : '';
+  return (
+    <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header"><div className="modal-title">Copy link với UTM</div><button className="btn-icon" onClick={onClose}><Icon name="close" size={18}/></button></div>
+        <div className="modal-body">
+          <div className="form-group"><label className="form-label">UTM source</label><input className="form-input" placeholder="facebook, google..." value={utm} onChange={e=>setUtm(e.target.value.replace(/[^a-zA-Z0-9_-]/g,''))}/><div className="form-hint">Chỉ chữ, số, gạch ngang/dưới</div></div>
+          {gen&&<><div className="form-label" style={{marginBottom:6}}>Link đã tạo</div><div className="utm-result">{gen}</div></>}
+        </div>
+        <div className="modal-footer"><button className="btn btn-secondary btn-sm" onClick={onClose}>Hủy</button><button className="btn btn-primary btn-sm" disabled={!gen} onClick={()=>{copyText(gen);toast('Đã sao chép UTM!');onClose();}}><Icon name="copy" size={14}/> Sao chép</button></div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== EDIT LINK MODAL ====================
+const EditLinkModal = ({ link, auth, userRole, currentUsername, onClose, onSaved }) => {
+  const [url, setUrl] = useState(link.original_url || '');
+  const [expiry, setExpiry] = useState(link.expiry_date ? link.expiry_date.split('T')[0] : '');
+  const [password, setPassword] = useState('');
+  const [clearPw, setClearPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const canEdit = userRole === 'SuperAdmin' || userRole === 'Admin' || link.created_by === currentUsername;
+
+  const handle = async () => {
+    if (!url) { toast('Vui lòng nhập URL', 'error'); return; }
+    if (!url.startsWith('http')) { toast('URL không hợp lệ', 'error'); return; }
+    setLoading(true);
+    try {
+      const body = { url };
+      body.expiryDate = expiry || null;
+      body.password = clearPw ? null : (password || undefined);
+      if (!clearPw && !password) delete body.password;
+
+      const res = await fetch(`${WORKER_URL}/link/${link.code}/edit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: auth },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) { toast('Đã cập nhật link!'); onSaved(); onClose(); }
+      else toast(data.error || 'Lỗi', 'error');
+    } catch { toast('Lỗi kết nối', 'error'); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title"><Icon name="edit" size={16} style={{verticalAlign:-2,marginRight:6}}/>Chỉnh sửa link <span className="code-chip" style={{marginLeft:4}}>/{link.code}</span></div>
+          <button className="btn-icon" onClick={onClose}><Icon name="close" size={18}/></button>
+        </div>
+        <div className="modal-body">
+          {!canEdit && <div style={{background:'#FEE2E2',border:'2px solid var(--black-border)',padding:'10px 14px',fontSize:13,color:'#991B1B',marginBottom:16,fontWeight:600}}>⚠️ Bạn không có quyền chỉnh sửa link này.</div>}
+          <div className="form-group">
+            <label className="form-label">URL đích *</label>
+            <input className="form-input" type="url" value={url} onChange={e=>setUrl(e.target.value)} disabled={!canEdit}/>
+          </div>
+          <div className="form-group">
+            <label className="form-label"><Icon name="clock" size={13} style={{verticalAlign:-2,marginRight:4}}/>Ngày hết hạn</label>
+            <input className="form-input" type="date" value={expiry} min={new Date().toISOString().split('T')[0]} onChange={e=>setExpiry(e.target.value)} disabled={!canEdit}/>
+            <div className="form-hint">Để trống = không hết hạn</div>
+          </div>
+          <div className="form-group" style={{marginBottom:0}}>
+            <label className="form-label"><Icon name="lock" size={13} style={{verticalAlign:-2,marginRight:4}}/>Mật khẩu mới</label>
+            <input className="form-input" type="password" placeholder={link.has_password ? 'Để trống = giữ nguyên mật khẩu cũ' : 'Để trống = không cần mật khẩu'} value={password} onChange={e=>{setPassword(e.target.value);setClearPw(false);}} disabled={!canEdit||clearPw}/>
+            {link.has_password && canEdit && (
+              <label style={{display:'flex',alignItems:'center',gap:6,marginTop:10,fontSize:13,color:'var(--gray-800)',cursor:'pointer',fontWeight:600}}>
+                <input type="checkbox" style={{accentColor:'var(--yellow)'}} checked={clearPw} onChange={e=>{setClearPw(e.target.checked);if(e.target.checked)setPassword('');}}/>
+                Xóa mật khẩu (link sẽ không cần mật khẩu nữa)
+              </label>
+            )}
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Hủy</button>
+          <button className="btn btn-primary" onClick={handle} disabled={loading||!canEdit}>
+            {loading?'Đang lưu...':<><Icon name="check" size={14}/>Lưu thay đổi</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== CHANGE PW MODAL ====================
+const ChangePasswordModal = ({ auth, onClose }) => {
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [loading, setLoading] = useState(false);
+  const strength = getPasswordStrength(newPw);
+  const handle = async () => {
+    if (!currentPw||!newPw||!confirmPw){toast('Điền đầy đủ','error');return;}
+    if (newPw!==confirmPw){toast('Không khớp','error');return;}
+    if (newPw.length<6){toast('Tối thiểu 6 ký tự','error');return;}
+    setLoading(true);
+    try {
+      const res=await fetch(`${WORKER_URL}/admin/change-password`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({currentPassword:currentPw,newPassword:newPw})});
+      const d=await res.json();
+      if(res.ok){toast('Đổi mật khẩu thành công!');onClose();}
+      else toast(d.error||'Lỗi','error');
+    } catch {toast('Lỗi kết nối','error');}
+    finally {setLoading(false);}
+  };
+  return (
+    <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header"><div className="modal-title"><Icon name="key" size={16} style={{verticalAlign:-2,marginRight:6}}/>Đổi mật khẩu</div><button className="btn-icon" onClick={onClose}><Icon name="close" size={18}/></button></div>
+        <div className="modal-body">
+          <div className="form-group"><label className="form-label">Mật khẩu hiện tại</label><input className="form-input" type="password" value={currentPw} onChange={e=>setCurrentPw(e.target.value)}/></div>
+          <div className="form-group"><label className="form-label">Mật khẩu mới</label><input className="form-input" type="password" placeholder="Ít nhất 6 ký tự" value={newPw} onChange={e=>setNewPw(e.target.value)}/>{newPw&&<><div className="pw-strength" style={{background:`linear-gradient(to right,${strength.color} ${strength.pct}%,var(--gray-200) ${strength.pct}%)`}}/><div className="pw-strength-text" style={{color:strength.color}}>{strength.label}</div></>}</div>
+          <div className="form-group" style={{marginBottom:0}}><label className="form-label">Xác nhận</label><input className="form-input" type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>{confirmPw&&newPw&&<div style={{fontSize:12,marginTop:5,color:confirmPw===newPw?'#10B981':'#EF4444',display:'flex',alignItems:'center',gap:4}}><Icon name={confirmPw===newPw?'check':'close'} size={13} color={confirmPw===newPw?'#10B981':'#EF4444'}/>{confirmPw===newPw?'Khớp':'Chưa khớp'}</div>}</div>
+        </div>
+        <div className="modal-footer"><button className="btn btn-secondary" onClick={onClose}>Hủy</button><button className="btn btn-primary" onClick={handle} disabled={loading}>{loading?'Đang lưu...':<><Icon name="check" size={14}/>Xác nhận</>}</button></div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== DASHBOARD ====================
+const DashboardView = ({ auth }) => {
+  const [stats, setStats] = useState(null);
+  const [hourly, setHourly] = useState([]);
+  const [topUTM, setTopUTM] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const dailyRef = useRef(null); const hourlyRef = useRef(null);
+  const dailyInst = useRef(null); const hourlyInst = useRef(null);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [sr,hr,ur] = await Promise.all([fetch(`${WORKER_URL}/stats`),fetch(`${WORKER_URL}/hourly-stats`),fetch(`${WORKER_URL}/top-utm`)]);
+      const [sd,hd,ud] = await Promise.all([sr.json(),hr.json(),ur.json()]);
+      setStats(sd); setHourly(hd||[]); setTopUTM((ud||[]).filter(i=>i.utms?.length>0).slice(0,5));
+    } catch(e){console.error(e);}
+    finally {setLoading(false);}
+  },[]);
+
+  useEffect(()=>{fetchAll();},[fetchAll]);
+  useEffect(()=>()=>{dailyInst.current?.destroy();hourlyInst.current?.destroy();},[]);
+
+  useEffect(()=>{
+    if(!stats?.dailyClicks||!dailyRef.current)return;
+    if(dailyInst.current)dailyInst.current.destroy();
+    dailyInst.current=new Chart(dailyRef.current.getContext('2d'),{type:'line',data:{labels:stats.dailyClicks.map(d=>d.date),datasets:[{label:'Clicks',data:stats.dailyClicks.map(d=>d.clicks),borderColor:'#111827',borderWidth:3,backgroundColor:'rgba(255,193,7,0.15)',tension:0.1,fill:true,pointBackgroundColor:'#FFC107',pointBorderColor:'#111827',pointBorderWidth:2.5,pointRadius:5,pointHoverRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#E5E7EB'},ticks:{color:'#111827',font:{family:'Space Grotesk',weight:'600'}}},x:{grid:{display:false},ticks:{color:'#111827',font:{family:'Space Grotesk',weight:'600'}}}}}});
+  },[stats]);
+
+  useEffect(()=>{
+    if(!hourly.length||!hourlyRef.current)return;
+    if(hourlyInst.current)hourlyInst.current.destroy();
+    const now=new Date().getHours();
+    const f=hourly.filter(d=>d.hour<=now);
+    hourlyInst.current=new Chart(hourlyRef.current.getContext('2d'),{type:'bar',data:{labels:f.map(d=>`${d.hour}:00`),datasets:[{data:f.map(d=>d.clicks||0),backgroundColor:'#FFC107',borderColor:'#111827',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#E5E7EB'},ticks:{color:'#111827',font:{family:'Space Grotesk',weight:'600'}}},x:{grid:{display:false},ticks:{color:'#111827',font:{family:'Space Grotesk',weight:'600',size:11}}}}}});
+  },[hourly]);
+
+  const cards=[
+    {label:'Tổng số link',value:stats?.totalLinks||0,icon:'link',color:'#FFC107',bg:'#FFFBEB'},
+    {label:'Tổng lượt click',value:stats?.totalClicks||0,icon:'analytics',color:'#3B82F6',bg:'#EFF6FF'},
+    {label:'Hôm nay',value:stats?.todayClicks||0,icon:'clock',color:'#10B981',bg:'#ECFDF5'},
+    {label:'Link hot nhất',value:stats?.topLinks?.[0]?.code?`/${stats.topLinks[0].code}`:'-',icon:'fire',color:'#8B5CF6',bg:'#F5F3FF'},
+  ];
+
+  return (
+    <div className="view-section fade-in">
+      {loading&&<div style={{textAlign:'center',padding:'40px'}}><div className="spinner" style={{margin:'0 auto 12px'}}/><div style={{fontSize:14,color:'var(--gray-500)',fontWeight:600}}>Đang tải...</div></div>}
+      {!loading&&<>
+        <div className="stats-grid">
+          {cards.map((s,i)=>(
+            <div key={i} className="stat-card">
+              <div className="stat-bg" style={{background:s.color}}/>
+              <div className="stat-icon" style={{background:s.bg, borderColor:'var(--black-border)'}}><Icon name={s.icon} size={18} color="var(--gray-900)"/></div>
+              <div className="stat-label">{s.label}</div>
+              <div className="stat-value" style={{fontSize:s.label==='Link hot nhất'?18:26,fontFamily:s.label==='Link hot nhất'?'DM Mono,monospace':undefined, fontWeight:700}}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+        <div className="card" style={{marginBottom:20}}>
+          <div className="card-header"><div className="card-title"><Icon name="chart" size={16}/>Lượt click 7 ngày</div><button className="refresh-btn" onClick={fetchAll}><Icon name="refresh" size={13}/>Làm mới</button></div>
+          <div className="card-body"><div className="chart-wrap" style={{height:240}}><canvas ref={dailyRef}/></div></div>
+        </div>
+        <div className="card" style={{marginBottom:24}}>
+          <div className="card-header"><div className="card-title"><Icon name="clock" size={16}/>Lưu lượng theo giờ hôm nay</div></div>
+          <div className="card-body"><div className="chart-wrap" style={{height:200}}><canvas ref={hourlyRef}/></div></div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
+          <div className="card">
+            <div className="card-header"><div className="card-title"><Icon name="tag" size={16}/>Top nguồn truy cập</div></div>
+            <div className="card-body" style={{padding:'16px 20px'}}>
+              {topUTM.length===0?<div className="empty-state" style={{padding:'24px 0'}}><p style={{fontSize:13}}>Chưa có dữ liệu UTM</p></div>
+              :topUTM.map((item,i)=>{
+                const total=item.totalClicks||0;
+                return <div key={i} style={{marginBottom:i<topUTM.length-1?16:0}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{width:22,height:22,border:'1.5px solid var(--black-border)',background:'var(--yellow)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700}}>{i+1}</span>
+                      <span style={{fontFamily:'DM Mono,monospace',fontSize:13,color:'var(--gray-900)',fontWeight:700}}>/{item.link}</span>
+                    </div>
+                    <span className="badge badge-gray">{total} clicks</span>
+                  </div>
+                  {item.utms.slice(0,3).map(([utm,clicks],j)=>{
+                    const pct=total>0?Math.round((clicks/total)*100):0;
+                    return <div key={j} style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,fontSize:12,fontWeight:500}}>
+                      <span style={{width:70,color:'var(--gray-600)',fontFamily:'DM Mono,monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{utm||'Direct'}</span>
+                      <div style={{flex:1}}><div className="progress-wrap"><div className="progress-bar" style={{width:`${pct}%`}}/></div></div>
+                      <span style={{width:28,textAlign:'right',color:'var(--gray-900)',fontWeight:700}}>{pct}%</span>
+                    </div>;
+                  })}
+                </div>;
+              })}
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-title"><Icon name="star" size={16}/>Top 5 link phổ biến</div></div>
+            <div className="card-body" style={{padding:'16px 20px'}}>
+              {!stats?.topLinks?.length?<div className="empty-state" style={{padding:'24px 0'}}><p style={{fontSize:13}}>Chưa có dữ liệu</p></div>
+              :stats.topLinks.map((link,i)=>{
+                const max=stats.topLinks[0]?.clicks||1;
+                const pct=Math.round((link.clicks/max)*100);
+                return <div key={i} style={{marginBottom:i<stats.topLinks.length-1?14:0}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{width:22,height:22,border:'1.5px solid var(--black-border)',background:i===0?'var(--yellow)':'var(--gray-100)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'var(--gray-900)'}}>{i+1}</span>
+                      <a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{fontFamily:'DM Mono,monospace',fontSize:13,color:'var(--gray-900)',textDecoration:'none',fontWeight:700}}>/{link.code}</a>
+                    </div>
+                    <span className="badge badge-gray">{link.clicks} clicks</span>
+                  </div>
+                  <div style={{paddingLeft:30}}><div className="progress-wrap"><div className="progress-bar" style={{width:`${pct}%`}}/></div></div>
+                </div>;
+              })}
+            </div>
+          </div>
+        </div>
+      </>}
+    </div>
+  );
+};
+
+// ==================== CREATE LINK ====================
+const CreateLinkView = ({ auth }) => {
+  const [url,setUrl]=useState('');
+  const [alias,setAlias]=useState('');
+  const [expiry,setExpiry]=useState('');
+  const [password,setPassword]=useState('');
+  const [result,setResult]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [showAdv,setShowAdv]=useState(false);
+
+  const handle = async () => {
+    if (!url){toast('Vui lòng nhập URL','error');return;}
+    if (alias&&!/^[a-zA-Z0-9-]+$/.test(alias)){toast('Alias chỉ dùng chữ, số, gạch ngang','error');return;}
+    setLoading(true);
+    try {
+      const body={url};
+      if(alias)body.customCode=alias;
+      if(expiry)body.expiryDate=expiry;
+      if(password)body.password=password;
+      const res=await fetch(`${WORKER_URL}/shorten`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify(body)});
+      const data=await res.json();
+      if(res.ok){setResult(data.shortUrl);toast('Tạo link thành công! 🎉');setUrl('');setAlias('');setExpiry('');setPassword('');setShowAdv(false);}
+      else toast(data.error||'Lỗi','error');
+    } catch {toast('Lỗi kết nối','error');}
+    finally {setLoading(false);}
+  };
+
+  return (
+    <div className="view-section fade-in">
+      <div style={{maxWidth:640,margin:'0 auto'}}>
+        <div className="card">
+          <div className="card-header"><div className="card-title"><Icon name="link" size={16}/>Rút gọn URL mới</div></div>
+          <div className="card-body">
+            <div className="form-group"><label className="form-label">URL cần rút gọn *</label><input className="form-input" type="url" placeholder="https://example.com/..." value={url} onChange={e=>setUrl(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/></div>
+            <div className="form-group">
+              <label className="form-label">Alias tùy chỉnh</label>
+              <div className="input-group"><div className="form-prefix">{YOUR_DOMAIN}/</div><input className="form-input" placeholder="my-link" maxLength={20} value={alias} onChange={e=>setAlias(e.target.value)}/></div>
+              <div className="form-hint">Tùy chọn — chữ, số, gạch ngang, tối đa 20 ký tự</div>
+            </div>
+            <button onClick={()=>setShowAdv(!showAdv)} style={{display:'flex',alignItems:'center',gap:6,fontSize:13,fontWeight:700,color:'var(--gray-900)',background:'none',border:'none',cursor:'pointer',padding:'4px 0',marginBottom:16,fontFamily:'Space Grotesk,sans-serif',textDecoration:'underline'}}>
+              <Icon name={showAdv?'close':'lock'} size={14}/>{showAdv?'Ẩn tùy chọn nâng cao':'Tùy chọn nâng cao (hết hạn, mật khẩu)'}
+            </button>
+            {showAdv&&<div style={{background:'var(--gray-50)',border:'2px solid var(--black-border)',padding:16,marginBottom:18,boxShadow:'2px 2px 0px var(--black-border)'}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label className="form-label"><Icon name="clock" size={13} style={{verticalAlign:-2,marginRight:4}}/>Ngày hết hạn</label>
+                  <input className="form-input" type="date" value={expiry} min={new Date().toISOString().split('T')[0]} onChange={e=>setExpiry(e.target.value)}/>
+                  <div className="form-hint">Để trống = không hết hạn</div>
+                </div>
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label className="form-label"><Icon name="lock" size={13} style={{verticalAlign:-2,marginRight:4}}/>Mật khẩu bảo vệ</label>
+                  <input className="form-input" type="password" placeholder="Để trống = không cần" value={password} onChange={e=>setPassword(e.target.value)}/>
+                </div>
+              </div>
+            </div>}
+            <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',padding:14,fontSize:15}} onClick={handle} disabled={loading}>
+              {loading?<><div className="spinner" style={{width:18,height:18,borderWidth:2}}/>Đang tạo...</>:<><Icon name="link" size={16}/>Rút gọn ngay</>}
+            </button>
+            {result&&<div className="result-box">
+              <span style={{fontSize:13,fontWeight:700,color:'var(--gray-900)'}}><Icon name="check" size={14} style={{verticalAlign:-2}}/> Link đã tạo thành công</span>
+              <div className="result-url">
+                <input readOnly value={result} style={{flex:1,padding:'11px 14px',background:'white',border:'2px solid var(--black-border)',fontSize:13,fontFamily:'DM Mono,monospace',color:'var(--gray-900)',outline:'none'}}/>
+                <button className="btn btn-primary btn-sm" onClick={()=>{copyText(result);toast('Đã sao chép!')}}><Icon name="copy" size={14}/> Copy</button>
+              </div>
+            </div>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== LINKS VIEW ====================
+const LinksView = ({ auth, userRole, currentUsername }) => {
+  const [links,setLinks]=useState([]);
+  const [search,setSearch]=useState('');
+  const [loading,setLoading]=useState(true);
+  const [qrCode,setQrCode]=useState(null);
+  const [utmCode,setUtmCode]=useState(null);
+  const [editLink,setEditLink]=useState(null);
+  const [sortBy,setSortBy]=useState('created_at');
+  const [sortDir,setSortDir]=useState('desc');
+
+  const fetchLinks = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res=await fetch(`${WORKER_URL}/links`,{headers:{Authorization:auth}});
+      setLinks(await res.json());
+    } catch {toast('Lỗi tải link','error');}
+    finally {setLoading(false);}
+  },[auth]);
+
+  useEffect(()=>{fetchLinks();},[fetchLinks]);
+
+  const filtered = useMemo(()=>{
+    let arr=links.filter(l=>!search||l.code.toLowerCase().includes(search.toLowerCase())||l.original_url.toLowerCase().includes(search.toLowerCase()));
+    arr=[...arr].sort((a,b)=>{
+      let va=a[sortBy],vb=b[sortBy];
+      if(sortBy==='clicks'){va=va||0;vb=vb||0;}
+      return sortDir==='asc'?(va>vb?1:-1):(va<vb?1:-1);
+    });
+    return arr;
+  },[links,search,sortBy,sortDir]);
+
+  const handleDelete = async (code) => {
+    const res=await confirmDialog('Xóa link?',`Xóa /${code}? Không thể hoàn tác.`,'Xóa');
+    if(!res.isConfirmed)return;
+    try {
+      const r=await fetch(`${WORKER_URL}/delete/${code}`,{method:'DELETE',headers:{Authorization:auth}});
+      if(r.ok){toast(`Đã xóa /${code}`);fetchLinks();}
+      else {const d=await r.json();toast(d.error||'Lỗi','error');}
+    } catch {toast('Lỗi kết nối','error');}
+  };
+
+  const exportExcel = () => {
+    if(!window.XLSX){toast('Chưa tải thư viện Excel','error');return;}
+    const ws=window.XLSX.utils.json_to_sheet(links.map(l=>({
+      'Short Code':l.code,'Short URL':`https://${YOUR_DOMAIN}/${l.code}`,'Original URL':l.original_url,
+      'Clicks':l.clicks||0,'Status':isExpired(l.expiry_date)?'Hết hạn':'Active',
+      'Expiry':l.expiry_date||'-','Has Password':l.has_password?'Yes':'No',
+      'Created By':l.created_by,'Created At':formatDate(l.created_at)
+    })));
+    const wb=window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb,ws,'Links');
+    window.XLSX.writeFile(wb,`links-${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast('Đã xuất Excel!');
+  };
+
+  const toggleLinkPublic = async (code, currentStatus) => {
+    try {
+      const res = await fetch(`${WORKER_URL}/link/${code}/toggle-public`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: auth },
+        body: JSON.stringify({ is_public: !currentStatus })
+      });
+      if (res.ok) {
+        toast(!currentStatus ? 'Đã chuyển sang Public' : 'Đã chuyển sang Private');
+        fetchLinks();
+      } else {
+        toast('Không có quyền', 'error');
+      }
+    } catch { toast('Lỗi kết nối', 'error'); }
+  };
+
+  const sortClick=(col)=>{setSortBy(col);setSortDir(sortBy===col&&sortDir==='desc'?'asc':'desc');};
+  const sortInd=(col)=>sortBy===col?(sortDir==='desc'?' ↓':' ↑'):'';
+
+  return (
+    <div className="view-section fade-in">
+      {qrCode&&<QRModal code={qrCode} onClose={()=>setQrCode(null)}/>}
+      {utmCode&&<UTMModal code={utmCode} onClose={()=>setUtmCode(null)}/>}
+      {editLink&&<EditLinkModal link={editLink} auth={auth} userRole={userRole} currentUsername={currentUsername} onClose={()=>setEditLink(null)} onSaved={fetchLinks}/>}
+      <div className="card">
+        <div className="card-header">
+          <div style={{display:'flex',alignItems:'center',gap:12,flex:1}}>
+            <div style={{position:'relative',width:280}}>
+              <Icon name="search" size={15} color="var(--gray-600)" style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)'}}/>
+              <input className="form-input" style={{paddingLeft:36,marginBottom:0}} placeholder="Tìm kiếm link..." value={search} onChange={e=>setSearch(e.target.value)}/>
+            </div>
+            <span className="badge badge-gray">{filtered.length} link</span>
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            <button className="btn btn-ghost btn-sm" onClick={exportExcel}><Icon name="download" size={14}/>Excel</button>
+            <button className="refresh-btn" onClick={fetchLinks}><Icon name="refresh" size={13}/>Làm mới</button>
+          </div>
+        </div>
+        {loading?<div style={{display:'flex',alignItems:'center',justifyContent:'center',padding:48}}><div className="spinner"/></div>
+        :filtered.length===0?<div className="empty-state"><Icon name="link" size={36} color="var(--gray-400)"/><p>Không có link nào{search?` khớp với "${search}"`:''}​</p></div>
+        :<div className="table-wrap"><table>
+          <thead><tr>
+            <th>Code</th>
+            <th>Short URL</th>
+            <th>Destination</th>
+            <th style={{cursor:'pointer'}} onClick={()=>sortClick('clicks')}>Clicks{sortInd('clicks')}</th>
+            <th>Status</th>
+            <th style={{cursor:'pointer'}} onClick={()=>sortClick('created_at')}>Created at{sortInd('created_at')}</th>
+            <th>Owner</th>
+            <th style={{ textAlign:'center' }}>View</th>
+            <th style={{ textAlign:'center' }}>Actions</th>
+          </tr></thead>
+          <tbody>{filtered.map(link=>(
+            <tr key={link.code} style={{opacity:isExpired(link.expiry_date)?0.6:1}}>
+              <td><span className="code-chip">{link.code}</span></td>
+              <td><a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{color:'var(--gray-900)',fontFamily:'DM Mono,monospace',fontSize:12.5,textDecoration:'none',display:'flex',alignItems:'center',gap:4,fontWeight:700}}>{YOUR_DOMAIN}/{link.code} <Icon name="external" size={12}/></a></td>
+              <td><div style={{maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:12.5,color:'var(--gray-600)',fontWeight:500}} title={link.original_url}>{link.original_url}</div></td>
+              <td><span className="badge badge-gray" style={{boxShadow:'none'}}><Icon name="analytics" size={11}/>{link.clicks||0}</span></td>
+              <td><LinkStatusBadges link={link}/></td>
+              <td style={{fontSize:12.5,color:'var(--gray-600)',whiteSpace:'nowrap',fontWeight:500}}>{formatDate(link.created_at)}</td>
+              <td style={{fontSize:12.5,color:'var(--gray-600)',fontWeight:600}}>{link.created_by||'unknown'}</td>
+              <td style={{textAlign:'center'}}>
+                {(userRole === 'Admin' || userRole === 'SuperAdmin') ? (
+                  <span 
+                    className={`badge ${link.is_public ? 'badge-green' : 'badge-gray'}`}
+                    onClick={() => toggleLinkPublic(link.code, link.is_public)}
+                    style={{ cursor: 'pointer' }}
+                    title={link.is_public ? 'Nhấn để chuyển sang Private' : 'Nhấn để chuyển sang Public'}
+                  >
+                    <Icon name={link.is_public ? 'globe' : 'lock'} size={12}/>
+                    {link.is_public ? ' Public' : ' Private'}
+                  </span>
+                ) : (
+                  <span className={`badge ${link.is_public ? 'badge-green' : 'badge-gray'}`}>
+                    <Icon name={link.is_public ? 'globe' : 'lock'} size={12}/>
+                    {link.is_public ? ' Public' : ' Private'}
+                  </span>
+                )}
+              </td>
+              <td>
+                <div style={{display:'flex',gap:4,justifyContent:'center'}}>
+                  <button className="btn-icon" title="Copy" onClick={()=>{copyText(`https://${YOUR_DOMAIN}/${link.code}`);toast('Đã sao chép!')}}><Icon name="copy" size={15}/></button>
+                  <button className="btn-icon" title="QR" onClick={()=>setQrCode(link.code)} style={{color:'var(--purple)'}}><Icon name="qr" size={15}/></button>
+                  <button className="btn-icon" title="UTM" onClick={()=>setUtmCode(link.code)} style={{color:'var(--blue)'}}><Icon name="tag" size={15}/></button>
+                  {(link.created_by===currentUsername||userRole==='Admin'||userRole==='SuperAdmin')&&(
+                    <button className="btn-icon" title="Chỉnh sửa" onClick={()=>setEditLink(link)} style={{color:'var(--orange)'}}><Icon name="edit" size={15}/></button>
+                  )}
+                  {(link.created_by===currentUsername||userRole==='Admin'||userRole==='SuperAdmin')&&(
+                    <button className="btn-icon" title="Xóa" onClick={()=>handleDelete(link.code)} style={{color:'var(--red)'}}><Icon name="trash" size={15}/></button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}</tbody>
+        </table></div>}
+      </div>
+    </div>
+  );
+};
+
+// ==================== ANALYTICS ====================
+const AnalyticsView = () => {
+  const [logs,setLogs]=useState({
+    clickLogs:[],
+    actionLogs:[],
+    users:{},
+    adminUsersCount:0,
+    todayStats:{clicks:0,actions:0,newLinks:0}
+  });
+  const [loading,setLoading]=useState(true);
+  const [tab,setTab]=useState('overview');
+
+  const fetchLogs = useCallback(async()=>{
+    setLoading(true);
+    try {
+      const res=await fetch(`${WORKER_URL}/logs`);
+      setLogs(await res.json());
+    }
+    catch {toast('Lỗi tải logs','error');}
+    finally {setLoading(false);}
+  },[]);
+
+  useEffect(()=>{fetchLogs();},[fetchLogs]);
+  
+  const todayClicks = logs.todayStats?.clicks || 0;
+  const todayActions = logs.todayStats?.actions || 0;
+  const todayNewLinks = logs.todayStats?.newLinks || 0;
+
+  const deviceStats=useMemo(()=>{
+    const d={};
+    (logs.clickLogs||[]).forEach(l=>{
+      const ua=(l.ua||'').toLowerCase();
+      const dev=ua.includes('mobile')||ua.includes('android')||ua.includes('iphone')?'Mobile':ua.includes('tablet')||ua.includes('ipad')?'Tablet':ua.length>0?'Desktop':'Unknown';
+      d[dev]=(d[dev]||0)+1;
+    });
+    return Object.entries(d).sort((a,b)=>b[1]-a[1]);
+  },[logs]);
+
+  const geoStats=useMemo(()=>{
+    const c={};
+    (logs.clickLogs||[]).forEach(l=>{const co=l.country||'Unknown';c[co]=(c[co]||0)+1;});
+    return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  },[logs]);
+
+  const aLabel={create_link:'Tạo link',delete_link:'Xóa link',edit_link:'Sửa link',change_password:'Đổi mật khẩu',reset_password:'Reset mật khẩu',create_user:'Tạo user',delete_user:'Xóa user',toggle_status:'Thay đổi status',set_public_mode:'Chế độ xem'};
+  const aColor={create_link:'badge-green',delete_link:'badge-red',edit_link:'badge-yellow',change_password:'badge-blue',reset_password:'badge-orange',create_user:'badge-purple',delete_user:'badge-red'};
+
+  return (
+    <div className="view-section fade-in">
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:24}}>
+        {[
+          {label:'Clicks hôm nay',value:todayClicks,color:'var(--gray-900)'},
+          {label:'Link tạo hôm nay',value:todayNewLinks,color:'var(--blue)'},
+          {label:'Hành động hôm nay',value:todayActions,color:'var(--green)'},
+          {label:'Tổng tài khoản',value:logs.adminUsersCount||0,color:'var(--purple)'},
+        ].map((s,i)=>(
+          <div key={i} className="card" style={{padding:18, boxShadow:'4px 4px 0px var(--black-border)'}}>
+            <div style={{fontSize:12,color:'var(--gray-500)',fontWeight:700,textTransform:'uppercase',marginBottom:6}}>{s.label}</div>
+            <div style={{fontSize:28,fontWeight:700,color:s.color}}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{marginBottom:20}}><div className="tab-group">
+        {[['overview','Tổng quan'],['clicks','Click logs'],['actions','Action logs']].map(([k,v])=>(
+          <button key={k} className={`tab-btn ${tab===k?'active':''}`} onClick={()=>setTab(k)}>{v}</button>
+        ))}
+      </div></div>
+      {loading?<div style={{display:'flex',justifyContent:'center',padding:40}}><div className="spinner"/></div>
+      :tab==='overview'?(
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
+          <div className="card">
+            <div className="card-header"><div className="card-title"><Icon name="globe" size={15}/>Thiết bị truy cập</div></div>
+            <div className="card-body">
+              {deviceStats.length===0?<div className="empty-state" style={{padding:'24px 0'}}><p style={{fontSize:13}}>Chưa có dữ liệu</p></div>
+              :deviceStats.map(([dev,cnt],i)=>{
+                const total=deviceStats.reduce((s,[,c])=>s+c,0);
+                const pct=total>0?Math.round((cnt/total)*100):0;
+                const cols=['var(--yellow)','var(--blue)','var(--green)','var(--purple)'];
+                return <div key={i} style={{marginBottom:14}}>
+                  <div style={{display:'flex',justifyContent: 'space-between',fontSize:13,marginBottom:6}}><span style={{fontWeight:700}}>{dev}</span><span style={{color:'var(--gray-600)',fontWeight:600}}>{cnt} ({pct}%)</span></div>
+                  <div className="progress-wrap"><div className="progress-bar" style={{width:`${pct}%`,background:cols[i%cols.length]}}/></div>
+                </div>;
+              })}
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-title"><Icon name="globe" size={15}/>Vị trí địa lý</div></div>
+            <div className="card-body">
+              {geoStats.length===0?<div className="empty-state" style={{padding:'24px 0'}}><p style={{fontSize:13}}>Chưa có dữ liệu</p></div>
+              :geoStats.map(([co,cnt],i)=>{
+                const total=geoStats.reduce((s,[,c])=>s+c,0);
+                const pct=total>0?Math.round((cnt/total)*100):0;
+                return <div key={i} style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,fontSize:13}}>
+                  <span style={{width:80,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{co}</span>
+                  <div style={{flex:1}}><div className="progress-wrap"><div className="progress-bar" style={{width:`${pct}%`,background:'var(--green)'}}/></div></div>
+                  <span style={{width:36,textAlign:'right',color:'var(--gray-600)',fontWeight:600}}>{cnt}</span>
+                </div>;
+              })}
+            </div>
+          </div>
+        </div>
+      ):tab==='clicks'?(
+        <div className="card">
+          <div className="card-header"><div className="card-title"><Icon name="chart" size={15}/>Click logs ({(logs.clickLogs||[]).length})</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13}/>Làm mới</button></div>
+          <div className="table-wrap"><table>
+            <thead><tr><th>Thời gian</th><th>IP</th><th>Tên</th><th>Link</th><th>UTM</th><th>Country</th><th>Đích đến</th></tr></thead>
+            <tbody>{(logs.clickLogs||[]).length===0?<tr><td colSpan={7} style={{textAlign:'center',padding:32,color:'var(--gray-400)'}}>Chưa có log</td></tr>
+            :(logs.clickLogs||[]).map((l,i)=>(
+              <tr key={i}>
+                <td style={{fontSize:12,fontFamily:'DM Mono,monospace',whiteSpace:'nowrap'}}>{l.time}</td>
+                <td style={{fontSize:12,fontFamily:'DM Mono,monospace'}}>{l.ip}</td>
+                <td style={{fontSize:13,fontWeight:600}}>{l.user&&l.user!=='unknown'?l.user:<span style={{color:'var(--gray-400)',fontSize:12}}>—</span>}</td>
+                <td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip" style={{textDecoration:'none'}}>/{l.code}</a></td>
+                <td><span className="badge badge-yellow">{l.utm||'Direct'}</span></td>
+                <td style={{fontSize:12.5,fontWeight:600}}>{l.country&&l.country!=='Unknown'?l.country:<span style={{color:'var(--gray-400)'}}>—</span>}</td>
+                <td style={{fontSize:12,color:'var(--gray-600)',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.target}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        </div>
+      ):(
+        <div className="card">
+          <div className="card-header"><div className="card-title"><Icon name="logs" size={15}/>Action logs ({(logs.actionLogs||[]).length})</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13}/>Làm mới</button></div>
+          <div className="table-wrap"><table>
+            <thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
+            <tbody>{(logs.actionLogs||[]).length===0?<tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'var(--gray-400)'}}>Chưa có log</td></tr>
+            :(logs.actionLogs||[]).map((l,i)=>{
+              let detail='';
+              if(l.details?.code)detail=`/${l.details.code}`;
+              if(l.details?.url)detail+=` → ${l.details.url.substring(0,40)}...`;
+              if(l.details?.username)detail=l.details.username;
+              return <tr key={i}>
+                <td style={{fontSize:12,fontFamily:'DM Mono,monospace',whiteSpace:'nowrap'}}>{l.time}</td>
+                <td style={{fontSize:12,fontFamily:'DM Mono,monospace'}}>{l.ip}</td>
+                <td style={{fontWeight:600}}>{l.user||<span style={{color:'var(--gray-400)',fontSize:13}}>—</span>}</td>
+                <td><span className={`badge ${aColor[l.action]||'badge-gray'}`}>{aLabel[l.action]||l.action}</span></td>
+                <td style={{fontSize:12,color:'var(--gray-600)'}}>{detail||'-'}</td>
+              </tr>;
+            })}</tbody>
+          </table></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ==================== ADMIN VIEW ====================
+const AdminView = ({ auth, currentUser }) => {
+  const [users,setUsers]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [showModal,setShowModal]=useState(false);
+  const [editingUser,setEditingUser]=useState(null);
+  const [publicMode,setPublicMode]=useState(false);
+  const [selLogs,setSelLogs]=useState(null);
+  const [form,setForm]=useState({fullname:'',department:'',username:'',role:'Member'});
+
+  const fetchUsers=useCallback(async()=>{
+    setLoading(true);
+    try{const res=await fetch(`${WORKER_URL}/admin/users`,{headers:{Authorization:auth}});if(res.status===403){toast('Không có quyền','error');return;}setUsers(await res.json());}
+    catch{toast('Lỗi tải users','error');}finally{setLoading(false);}
+  },[auth]);
+  const fetchPublicMode=useCallback(async()=>{
+    try{const res=await fetch(`${WORKER_URL}/admin/settings/public`,{headers:{Authorization:auth}});const d=await res.json();setPublicMode(d.enabled);}catch{}
+  },[auth]);
+  useEffect(()=>{fetchUsers();fetchPublicMode();},[fetchUsers,fetchPublicMode]);
+
+  const saveUser=async()=>{
+    if(!form.username){toast('Nhập username','error');return;}
+    try{
+      const method=editingUser?'PUT':'POST';
+      const url=editingUser?`${WORKER_URL}/admin/users/${editingUser.username}`:`${WORKER_URL}/admin/users`;
+      const res=await fetch(url,{method,headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify(form)});
+      if(res.ok){toast(editingUser?'Cập nhật thành công':`Tạo user "${form.username}" thành công! Mật khẩu = username`,'success',4000);fetchUsers();setShowModal(false);setEditingUser(null);setForm({fullname:'',department:'',username:'',role:'Member'});}
+      else{const e=await res.json();toast(e.error||'Lỗi','error');}
+    }catch{toast('Lỗi kết nối','error');}
+  };
+
+  const resetPw=async(username)=>{
+    const r=await Swal.fire({title:'Reset mật khẩu?',text:`Mật khẩu mới = "${username}". User phải đổi khi đăng nhập lại.`,icon:'warning',showCancelButton:true,confirmButtonColor:'#FFC107',cancelButtonText:'Hủy',confirmButtonText:'Reset'});
+    if(!r.isConfirmed)return;
+    try{const res=await fetch(`${WORKER_URL}/admin/users/${username}/reset-password`,{method:'POST',headers:{Authorization:auth}});if(res.ok)toast(`Đã reset. Mật khẩu mới = "${username}"`);}
+    catch{toast('Lỗi','error');}
+  };
+
+  const toggleStatus=async(username)=>{
+    try{const res=await fetch(`${WORKER_URL}/admin/users/${username}/toggle-status`,{method:'POST',headers:{Authorization:auth}});if(res.ok){toast('Đã thay đổi trạng thái');fetchUsers();}}
+    catch{toast('Lỗi','error');}
+  };
+
+  const deleteUser=async(username)=>{
+    const r=await Swal.fire({title:'Xóa user?',text:`Xóa "${username}"? Không thể hoàn tác.`,icon:'error',showCancelButton:true,confirmButtonColor:'#EF4444',cancelButtonText:'Hủy',confirmButtonText:'Xóa'});
+    if(!r.isConfirmed)return;
+    try{const res=await fetch(`${WORKER_URL}/admin/users/${username}`,{method:'DELETE',headers:{Authorization:auth}});if(res.ok){toast('Đã xóa user');fetchUsers();}}
+    catch{toast('Lỗi','error');}
+  };
+
+  const viewLogs=async(username)=>{
+    try{const res=await fetch(`${WORKER_URL}/admin/logs/${username}`,{headers:{Authorization:auth}});setSelLogs({username,logs:await res.json()});}
+    catch{toast('Lỗi tải logs','error');}
+  };
+
+  const togglePM=async()=>{
+    try{const res=await fetch(`${WORKER_URL}/admin/settings/public`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({enabled:!publicMode})});if(res.ok){setPublicMode(!publicMode);toast(publicMode?'Đã chuyển Private Mode':'Đã chuyển Public Mode');}}
+    catch{toast('Lỗi','error');}
+  };
+
+  const roleColor={SuperAdmin:'badge-purple',Admin:'badge-blue',Member:'badge-gray'};
+
+  return (
+    <div className="view-section fade-in">
+      <div className="card" style={{marginBottom:24}}>
+        <div className="card-header"><div className="card-title"><Icon name="globe" size={16}/>Chế độ xem link</div><button className={`btn ${publicMode?'btn-primary':'btn-secondary'}`} onClick={togglePM}><Icon name={publicMode?'check':'lock'} size={14}/>{publicMode?'Public Mode':'Private Mode'}</button></div>
+        <div className="card-body"><div style={{fontSize:13,color:'var(--gray-600)',fontWeight:500}}>{publicMode?'Tất cả thành viên xem được link được đánh dấu public.':'Mỗi thành viên chỉ xem link mình tạo.'}</div></div>
+      </div>
+      <div className="card">
+        <div className="card-header"><div className="card-title"><Icon name="user" size={16}/>Quản lý tài khoản</div><button className="btn btn-primary btn-sm" onClick={()=>{setEditingUser(null);setForm({fullname:'',department:'',username:'',role:'Member'});setShowModal(true);}}><Icon name="user" size={14}/> Thêm user</button></div>
+        {loading?<div style={{padding:40,textAlign:'center'}}><div className="spinner"/></div>
+        :<div className="table-wrap"><table>
+          <thead><tr><th>Full Name</th><th>Department</th><th>Username</th><th>Role</th><th>Status</th><th>Password</th><th>Created at</th><th>Actions</th></tr></thead>
+          <tbody>{users.map(u=>(
+            <tr key={u.username} style={{opacity:u.status==='disabled'?.5:1}}>
+              <td style={{fontWeight:700}}>{u.fullname||'-'}</td>
+              <td style={{fontSize:12.5,color:'var(--gray-600)',fontWeight:500}}>{u.department||'-'}</td>
+              <td><span className="code-chip">{u.username}</span></td>
+              <td><span className={`badge ${roleColor[u.role]||'badge-gray'}`}>{u.role}</span></td>
+              <td><span className={`badge ${u.status==='active'?'badge-green':'badge-red'}`}>{u.status==='active'?'Active':'Disabled'}</span></td>
+              <td>{u.must_change_password?<span className="badge badge-orange"><Icon name="lock" size={11}/>Cần đổi</span>:<span className="badge badge-green"><Icon name="check" size={11}/>OK</span>}</td>
+              <td style={{fontSize:12.5,color:'var(--gray-600)'}}>{formatDate(u.created_at)}</td>
+              <td><div style={{display:'flex',gap:4}}>
+                <button className="btn-icon" title="Sửa" onClick={()=>{setEditingUser(u);setForm({fullname:u.fullname||'',department:u.department||'',username:u.username,role:u.role});setShowModal(true);}}><Icon name="edit" size={14}/></button>
+                <button className="btn-icon" title="Reset mật khẩu" onClick={()=>resetPw(u.username)}><Icon name="key" size={14}/></button>
+                <button className="btn-icon" title={u.status==='active'?'Disable':'Enable'} onClick={()=>toggleStatus(u.username)}><Icon name={u.status==='active'?'close':'check'} size={14}/></button>
+                <button className="btn-icon" title="Logs" onClick={()=>viewLogs(u.username)}><Icon name="logs" size={14}/></button>
+                {u.username!=='superadmin'&&<button className="btn-icon" title="Xóa" onClick={()=>deleteUser(u.username)} style={{color:'var(--red)'}}><Icon name="trash" size={14}/></button>}
+              </div></td>
+            </tr>
+          ))}</tbody>
+        </table></div>}
+      </div>
+
+      {showModal&&(
+        <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
+          <div className="modal">
+            <div className="modal-header"><div className="modal-title">{editingUser?'Sửa user':'Thêm user mới'}</div><button className="btn-icon" onClick={()=>setShowModal(false)}><Icon name="close" size={18}/></button></div>
+            <div className="modal-body">
+              <div className="form-group"><label className="form-label">Full Name</label><input className="form-input" value={form.fullname} onChange={e=>setForm({...form,fullname:e.target.value})}/></div>
+              <div className="form-group"><label className="form-label">Department</label><input className="form-input" value={form.department} onChange={e=>setForm({...form,department:e.target.value})}/></div>
+              <div className="form-group"><label className="form-label">Username</label><input className="form-input" value={form.username} onChange={e=>setForm({...form,username:e.target.value})} disabled={!!editingUser}/></div>
+              <div className="form-group"><label className="form-label">Role</label><select className="form-input" value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option value="Member">Member</option><option value="Admin">Admin</option>{currentUser?.role==='SuperAdmin'&&<option value="SuperAdmin">SuperAdmin</option>}</select></div>
+              {!editingUser&&<div style={{background:'var(--yellow-light)',border:'2px solid var(--black-border)',padding:'10px 14px',fontSize:12.5,color:'var(--gray-900)',fontWeight:600}}>🔐 Mật khẩu mặc định = username. User phải đổi khi đăng nhập lần đầu.</div>}
+            </div>
+            <div className="modal-footer"><button className="btn btn-secondary" onClick={()=>setShowModal(false)}>Hủy</button><button className="btn btn-primary" onClick={saveUser}>Lưu</button></div>
+          </div>
+        </div>
+      )}
+
+      {selLogs&&(
+        <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&setSelLogs(null)}>
+          <div className="modal" style={{maxWidth:600}}>
+            <div className="modal-header"><div className="modal-title">Logs của {selLogs.username}</div><button className="btn-icon" onClick={()=>setSelLogs(null)}><Icon name="close" size={18}/></button></div>
+            <div className="modal-body">{selLogs.logs.length===0?<div className="empty-state"><p>Chưa có logs</p></div>:<div style={{maxHeight:400,overflowY:'auto'}}>{selLogs.logs.map((l,i)=>(
+              <div key={i} style={{padding:'10px 0',borderBottom:'1px solid var(--black-border)',fontSize:12.5,fontWeight:500}}>
+                <div style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'var(--gray-500)',marginBottom:4}}>{l.time}</div>
+                <div><span className="badge badge-gray" style={{boxShadow:'none',marginRight:6}}>{l.action}</span>{l.details?.code&&` /${l.details.code}`}{l.details?.username&&` ${l.details.username}`}</div>
+              </div>
+            ))}</div>}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ==================== MAIN APP ====================
+const App = () => {
+  const [auth,setAuth]=useState(()=>sessionStorage.getItem('adminAuth'));
+  const [adminUser,setAdminUser]=useState(()=>sessionStorage.getItem('adminUser')||'');
+  const [userRole,setUserRole]=useState(()=>sessionStorage.getItem('userRole')||'Member');
+  const [currentUserInfo,setCurrentUserInfo]=useState(null);
+  const [mustChangePw,setMustChangePw]=useState(false);
+  const [tab,setTab]=useState('dashboard');
+  const [userFullname,setUserFullname]=useState(()=>localStorage.getItem('userFullname')||'');
+  const [showChangePw,setShowChangePw]=useState(false);
+
+  const handleLogin=(a,u,ud)=>{
+    setAuth(a);setAdminUser(u);setCurrentUserInfo(ud);
+    setUserRole(ud?.role||'Member');
+    if(ud?.fullname){setUserFullname(ud.fullname);localStorage.setItem('userFullname',ud.fullname);}
+    setMustChangePw(ud?.must_change_password===true);
+    sessionStorage.setItem('adminAuth',a);
+    sessionStorage.setItem('adminUser',u);
+    sessionStorage.setItem('userRole',ud?.role||'Member');
+  };
+
+  const handleLogout=()=>{
+    sessionStorage.removeItem('adminAuth');sessionStorage.removeItem('adminUser');sessionStorage.removeItem('userRole');
+    setAuth(null);setAdminUser('');setUserRole('Member');setUserFullname('');setMustChangePw(false);
+    localStorage.removeItem('userFullname');
+  };
+
+  const handlePwChanged=()=>{
+    setMustChangePw(false);
+    toast('Mật khẩu đã cập nhật. Vui lòng đăng nhập lại.','success',3000);
+    setTimeout(()=>handleLogout(),2000);
+  };
+
+  if (!auth) return <AuthScreen onLogin={handleLogin}/>;
+  if (mustChangePw) return <ForceChangePasswordScreen auth={auth} username={adminUser} onSuccess={handlePwChanged}/>;
+
+  const navItems=[
+    {key:'dashboard',label:'Dashboard',icon:'dashboard'},
+    {key:'create',label:'Tạo link mới',icon:'link'},
+    {key:'links',label:'Quản lý link',icon:'list'},
+  ];
+  if (userRole === 'Admin' || userRole === 'SuperAdmin') navItems.push({ key: 'analytics', label: 'Analytics & Logs', icon: 'analytics' });
+
+  const titles={dashboard:'Tổng quan hệ thống',create:'Rút gọn liên kết',links:'Quản lý liên kết',analytics:'Dữ liệu & Nhật ký',admin:'Hệ thống quản trị'};
+  const displayName=userFullname||adminUser||'Người dùng';
+  const initials=displayName.substring(0,2).toUpperCase();
+
+  return (
+    <>
+      {showChangePw&&<ChangePasswordModal auth={auth} onClose={()=>setShowChangePw(false)}/>}
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <img src="/icon.png" alt="" onError={e=>e.target.style.display='none'}/>
+          <div className="sidebar-logo-text"><h1>URL Shortener</h1><p style={{fontWeight:700}}>Enactus FTU Hanoi</p></div>
+        </div>
+        <nav className="sidebar-nav">
+          <div className="nav-section-label">Hệ thống</div>
+          {navItems.map(item => (
+            <a key={item.key} className={`nav-item ${tab === item.key ? 'active' : ''}`} onClick={() => setTab(item.key)} href="#">
+              <Icon name={item.icon} size={17}/>{item.label}
+            </a>
+          ))}
+          <div className="nav-spacer"/>
+          <div className="nav-section-label">Cá nhân</div>
+          {userRole === 'SuperAdmin' && (
+            <a className={`nav-item ${tab === 'admin' ? 'active' : ''}`} onClick={() => setTab('admin')} href="#">
+              <Icon name="user" size={17}/>Admin Panel
+            </a>
+          )}
+          <a className="nav-item" href="#" onClick={e => { e.preventDefault(); setShowChangePw(true); }}>
+            <Icon name="key" size={17}/>Đổi mật khẩu
+          </a>
+        </nav>
+        <div className="sidebar-footer">
+          <div className="sidebar-user" onClick={()=>{if(window.confirm('Xác nhận đăng xuất khỏi hệ thống?'))handleLogout();}}>
+            <div className="sidebar-avatar">{initials}</div>
+            <div className="sidebar-user-info"><p>{displayName}</p><span style={{fontWeight:600}}>{userRole} · Đăng xuất</span></div>
+          </div>
+        </div>
+      </aside>
+      <main className="main">
+        <header className="topbar">
+          <div className="topbar-title">{titles[tab]}</div>
+          <div className="topbar-meta">
+            <div className="topbar-badge"><span className="dot"/><span style={{fontFamily:'DM Mono,monospace',fontSize:12,fontWeight:700}}>{YOUR_DOMAIN}</span></div>
+            <div style={{fontSize:13,color:'var(--gray-900)',fontWeight:700}}>{new Date().toLocaleDateString('vi-VN',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'})}</div>
+          </div>
+        </header>
+        <div className="content" style={{position:'relative'}}>
+          {tab==='dashboard'&&<DashboardView auth={auth}/>}
+          {tab==='create'&&<CreateLinkView auth={auth}/>}
+          {tab==='links'&&<LinksView auth={auth} userRole={userRole} currentUsername={adminUser}/>}
+          {tab==='analytics'&&<AnalyticsView/>}
+          {tab==='admin'&&<AdminView auth={auth} currentUser={currentUserInfo}/>}
+        </div>
+      </main>
+    </>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
