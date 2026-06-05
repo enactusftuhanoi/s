@@ -146,81 +146,6 @@ export default {
       return result;
     }
 
-// ==================== SEO MANAGEMENT ====================
-
-async function getSEOConfigs(env) {
-  const data = await env.ADMIN_STORAGE.get("seo_configs");
-  return data ? JSON.parse(data) : [];
-}
-
-async function getSEOConfigById(env, id) {
-  const configs = await getSEOConfigs(env);
-  return configs.find(c => c.id === id);
-}
-
-async function createSEOConfig(env, config, username) {
-  const configs = await getSEOConfigs(env);
-
-  const newConfig = {
-    id: crypto.randomUUID(),
-    name: config.name || "",
-    title: config.title || "",
-    description: config.description || "",
-    keywords: config.keywords || "",
-    ogImage: config.ogImage || "",
-    twitterCard: config.twitterCard || "summary_large_image",
-
-    created_by: username,
-    created_at: new Date().toISOString()
-  };
-
-  configs.push(newConfig);
-
-  await env.ADMIN_STORAGE.put(
-    "seo_configs",
-    JSON.stringify(configs)
-  );
-
-  return newConfig;
-}
-
-async function updateSEOConfig(env, id, updates) {
-  const configs = await getSEOConfigs(env);
-
-  const index = configs.findIndex(c => c.id === id);
-
-  if (index === -1)
-    throw new Error("SEO config not found");
-
-  configs[index] = {
-    ...configs[index],
-    ...updates,
-    updated_at: new Date().toISOString()
-  };
-
-  await env.ADMIN_STORAGE.put(
-    "seo_configs",
-    JSON.stringify(configs)
-  );
-
-  return configs[index];
-}
-
-async function deleteSEOConfig(env, id) {
-  const configs = await getSEOConfigs(env);
-
-  const filtered = configs.filter(
-    c => c.id !== id
-  );
-
-  await env.ADMIN_STORAGE.put(
-    "seo_configs",
-    JSON.stringify(filtered)
-  );
-
-  return true;
-}
-
     async function addUserLog(env, username, action, details, ip) {
       const logEntry = {
         id: Date.now() + '_' + Math.random().toString(36).substr(2, 6),
@@ -375,125 +300,6 @@ async function deleteSEOConfig(env, id) {
       await addUserLog(env, cu.username, "set_public_mode", { enabled: body.enabled }, clientIP);
       return corsResponse(JSON.stringify({ enabled: body.enabled }));
     }
-
-if (path === "admin/seo-configs" && method === "GET") {
-  const cu = await getCurrentUser(request, env);
-
-  if (
-    !cu ||
-    (cu.role !== "Admin" &&
-     cu.role !== "SuperAdmin")
-  ) {
-    return corsResponse(
-      JSON.stringify({ error: "Unauthorized" }),
-      403
-    );
-  }
-
-  return corsResponse(
-    JSON.stringify(await getSEOConfigs(env))
-  );
-}
-
-if (path === "admin/seo-configs" && method === "POST") {
-  const cu = await getCurrentUser(request, env);
-
-  if (
-    !cu ||
-    (cu.role !== "Admin" &&
-     cu.role !== "SuperAdmin")
-  ) {
-    return corsResponse(
-      JSON.stringify({ error: "Unauthorized" }),
-      403
-    );
-  }
-
-  try {
-    const body = await request.json();
-
-    const config = await createSEOConfig(
-      env,
-      body,
-      cu.username
-    );
-
-    return corsResponse(
-      JSON.stringify(config)
-    );
-  } catch (e) {
-    return corsResponse(
-      JSON.stringify({ error: e.message }),
-      400
-    );
-  }
-}
-
-if (
-  path.startsWith("admin/seo-configs/") &&
-  method === "PUT"
-) {
-  const cu = await getCurrentUser(request, env);
-
-  if (
-    !cu ||
-    (cu.role !== "Admin" &&
-     cu.role !== "SuperAdmin")
-  ) {
-    return corsResponse(
-      JSON.stringify({ error: "Unauthorized" }),
-      403
-    );
-  }
-
-  const id = path.split("/")[2];
-
-  try {
-    const body = await request.json();
-
-    const updated =
-      await updateSEOConfig(
-        env,
-        id,
-        body
-      );
-
-    return corsResponse(
-      JSON.stringify(updated)
-    );
-  } catch (e) {
-    return corsResponse(
-      JSON.stringify({ error: e.message }),
-      400
-    );
-  }
-}
-
-if (
-  path.startsWith("admin/seo-configs/") &&
-  method === "DELETE"
-) {
-  const cu = await getCurrentUser(request, env);
-
-  if (
-    !cu ||
-    (cu.role !== "Admin" &&
-     cu.role !== "SuperAdmin")
-  ) {
-    return corsResponse(
-      JSON.stringify({ error: "Unauthorized" }),
-      403
-    );
-  }
-
-  const id = path.split("/")[2];
-
-  await deleteSEOConfig(env, id);
-
-  return corsResponse(
-    JSON.stringify({ success: true })
-  );
-}
 
     // FIX: Endpoint edit link (update URL, expiry, password)
     if (path.match(/^link\/.+\/edit/) && method === "POST") {
@@ -652,8 +458,8 @@ if (
       if (!cu) return corsResponse(JSON.stringify({ error: "Unauthorized" }), 401);
       try {
         const body = await request.json();
-        const { url: originalUrl, customCode, expiryDate, password, seoConfigId } = body;
-        const result = await createShortUrl(env, originalUrl, customCode, cu.username, expiryDate, password, seoConfigId);
+        const { url: originalUrl, customCode, expiryDate, password } = body;
+        const result = await createShortUrl(env, originalUrl, customCode, cu.username, expiryDate, password);
         await addActionLog(env, clientIP, cu.username, 'create_link', { code: result.code, url: originalUrl });
         return corsResponse(JSON.stringify(result));
       } catch (e) { return corsResponse(JSON.stringify({ error: e.message }), 400); }
@@ -697,50 +503,13 @@ if (
         const originalUrl = parsed.url || rawData;
         const expiryDate = parsed.expiry_date;
         const linkPassword = parsed.password;
-        const seoConfigId = parsed.seoConfigId;
 
-        // 1. Kiểm tra hết hạn
+        // Kiểm tra hết hạn
         if (expiryDate && new Date(expiryDate) < new Date()) {
           return new Response(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Link hết hạn</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#F3F4F6;margin:0}.box{background:white;padding:40px;border-radius:16px;text-align:center}h2{color:#EF4444;margin-bottom:8px}p{color:#6B7280;font-size:14px}</style></head><body><div class="box"><h2>🔒 Link đã hết hạn</h2><p>Link này đã hết hạn và không còn hoạt động.</p></div></body></html>`, { status: 410, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
         }
 
-        // 2. Xử lý hiển thị SEO Meta Tags cho Bot mạng xã hội (Facebook, Zalo, Telegram,...)
-        const botRegex = /facebookexternalhit|Facebot|facebookplatform|MessengerBot|ZaloBot|zalo|Twitterbot|TelegramBot|LinkedInBot|Slackbot/i;
-
-        if (seoConfigId && botRegex.test(userAgent)) {
-          const seoConfig = await getSEOConfigById(env, seoConfigId); 
-          if (seoConfig) {
-            const html = `<!DOCTYPE html>
-            <html lang="vi">
-            <head>
-                <meta charset="UTF-8">
-                <title>${seoConfig.title || 'Enactus FTU Hanoi'}</title> 
-                <meta name="description" content="${seoConfig.description || ''}"> 
-                <meta name="keywords" content="${seoConfig.keywords || ''}"> 
-                
-                <meta property="og:type" content="website">
-                <meta property="og:url" content="${request.url}"> 
-                <meta property="og:title" content="${seoConfig.title || ''}"> 
-                <meta property="og:description" content="${seoConfig.description || ''}"> 
-                <meta property="og:image" content="${seoConfig.ogImage || ''}"> 
-                
-                <meta property="twitter:card" content="${seoConfig.twitterCard || 'summary_large_image'}"> 
-                <meta property="twitter:url" content="${request.url}">
-                <meta property="twitter:title" content="${seoConfig.title || ''}"> 
-                <meta property="twitter:description" content="${seoConfig.description || ''}"> 
-                <meta property="twitter:image" content="${seoConfig.ogImage || ''}"> 
-            </head>
-            <body>
-                <p>Đang chuyển hướng...</p>
-            </body>
-            </html>`;
-            return new Response(html, {
-              headers: { 'Content-Type': 'text/html;charset=UTF-8' }
-            });
-          }
-        }
-
-        // 3. Kiểm tra mật khẩu (Người dùng thật mới cần nhập)
+        // Kiểm tra password
         if (linkPassword) {
           const provided = url.searchParams.get('pw');
           if (provided !== linkPassword) {
@@ -749,11 +518,11 @@ if (
           }
         }
 
-        // 4. Ghi nhận logs và Redirect đối với người dùng bình thường
         const utm = url.searchParams.get('utm') || 'direct';
         const logUsers = await env.LOG_STORAGE.get("users").then(d => d ? JSON.parse(d) : {});
         const userName = logUsers[clientIP]?.name || null;
         await updateStatsWithUTM(env, path, utm);
+        // FIX: Lưu country + userAgent đúng
         await addClickLog(env, clientIP, userName, path, utm, originalUrl, cfCountry, userAgent);
         return Response.redirect(originalUrl, 302);
       }
@@ -846,7 +615,6 @@ async function getAllLinks(env, username = null, userRole = null, publicMode = f
       is_public: isPublic,
       expiry_date: expiryDate,
       has_password: hasPassword,
-      seoConfigId: parsed.seoConfigId || null,
     });
   }
   return links;
@@ -867,13 +635,13 @@ async function hashPassword(password) {
 }
 
 // FIX: createShortUrl lưu đầy đủ metadata
-async function createShortUrl(env, originalUrl, customCode = "", userName = "", expiryDate = null, password = null, seoConfigId = null) {
+async function createShortUrl(env, originalUrl, customCode = "", userName = "", expiryDate = null, password = null) {
   if (!originalUrl || !originalUrl.startsWith("http")) throw new Error("URL không hợp lệ");
   let code = customCode || generateRandomCode();
   const existing = await env.URL_STORAGE.get(code);
   if (existing) throw new Error("Code đã tồn tại");
 
-  const linkData = { url: originalUrl, created_at: new Date().toISOString(), seoConfigId};
+  const linkData = { url: originalUrl, created_at: new Date().toISOString()};
   if (expiryDate) linkData.expiry_date = expiryDate;
   if (password) linkData.password = password;
   await env.URL_STORAGE.put(code, JSON.stringify(linkData));
@@ -993,3 +761,4 @@ async function addActionLog(env, ip, userName, action, details = {}) {
   if (actionLogs.length > 500) actionLogs = actionLogs.slice(0, 500);
   await env.LOG_STORAGE.put("action_logs", JSON.stringify(actionLogs));
 }
+
