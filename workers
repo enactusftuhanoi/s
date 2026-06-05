@@ -761,4 +761,3 @@ async function addActionLog(env, ip, userName, action, details = {}) {
   if (actionLogs.length > 500) actionLogs = actionLogs.slice(0, 500);
   await env.LOG_STORAGE.put("action_logs", JSON.stringify(actionLogs));
 }
-
