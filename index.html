@@ -1321,7 +1321,7 @@ const App = () => {
               <Icon name="user" size={17}/>Admin Panel
             </a>
           )}
-          {userRole === 'SuperAdmin' || userRole === 'Admin' && (
+          {(userRole === 'SuperAdmin' || userRole === 'Admin') && (
             <a className="nav-item" onClick={() => setTab('seo')} href="#">
               <Icon name="tag" size={17}/>SEO Configs
             </a>
