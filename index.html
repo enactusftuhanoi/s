@@ -820,25 +820,31 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
 
 // ==================== ANALYTICS ====================
 const AnalyticsView = () => {
-  const [logs,setLogs]=useState({clickLogs:[],actionLogs:[],users:{},adminUsersCount:0});
+  const [logs,setLogs]=useState({
+    clickLogs:[],
+    actionLogs:[],
+    users:{},
+    adminUsersCount:0,
+    todayStats:{clicks:0,actions:0,newLinks:0}  // ← Thêm todayStats
+  });
   const [loading,setLoading]=useState(true);
   const [tab,setTab]=useState('overview');
 
   const fetchLogs = useCallback(async()=>{
     setLoading(true);
-    try {const res=await fetch(`${WORKER_URL}/logs`);setLogs(await res.json());}
+    try {
+      const res=await fetch(`${WORKER_URL}/logs`);
+      setLogs(await res.json());  // Sẽ bao gồm todayStats từ API
+    }
     catch {toast('Lỗi tải logs','error');}
     finally {setLoading(false);}
   },[]);
 
   useEffect(()=>{fetchLogs();},[fetchLogs]);
-
-  const today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'});
-  const parseDate=(t)=>t?.split(' ')[1]?.split('/').reverse().join('-');
-
-  const todayClicks=useMemo(()=>(logs.clickLogs||[]).filter(l=>parseDate(l.time)===today).length,[logs,today]);
-  const todayActions=useMemo(()=>(logs.actionLogs||[]).filter(l=>parseDate(l.time)===today).length,[logs,today]);
-  const todayNewLinks=useMemo(()=>(logs.actionLogs||[]).filter(l=>parseDate(l.time)===today&&l.action==='create_link').length,[logs,today]);
+  
+  const todayClicks = logs.todayStats?.clicks || 0;
+  const todayActions = logs.todayStats?.actions || 0;
+  const todayNewLinks = logs.todayStats?.newLinks || 0;
 
   const deviceStats=useMemo(()=>{
     const d={};
