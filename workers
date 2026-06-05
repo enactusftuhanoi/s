@@ -55,7 +55,20 @@ export default {
     async function getAllUsers(env) {
       const usersData = await env.ADMIN_STORAGE.get("users");
       const users = usersData ? JSON.parse(usersData) : [];
-      return users.map(u => { const { password, ...rest } = u; return rest; });
+      
+      // Định nghĩa trọng số ưu tiên cho từng Role (Số càng nhỏ ưu tiên càng cao)
+      const rolePriority = { "SuperAdmin": 1, "Admin": 2, "Member": 3 };
+
+      return users
+        .map(u => { 
+          const { password, ...rest } = u; 
+          return rest; 
+        })
+        .sort((a, b) => {
+          const pA = rolePriority[a.role] || 99;
+          const pB = rolePriority[b.role] || 99;
+          return pA - pB; // Sắp xếp tăng dần theo trọng số: 1 -> 2 -> 3
+        });
     }
 
     async function createNewUser(env, userData, createdBy) {
@@ -187,7 +200,7 @@ export default {
     }
 
     await initDefaultUser(env);
-
+    
     // ==================== SERVE UI ====================
     if (hostname === 's.enactusftuhanoi.id.vn' && path === "") {
       return fetch("https://enactusftuhanoi.github.io/s/");
@@ -300,29 +313,24 @@ export default {
       return corsResponse(JSON.stringify({ enabled: body.enabled }));
     }
 
-    // FIX: Endpoint edit link (update URL, expiry, password)
     if (path.match(/^link\/.+\/edit/) && method === "POST") {
       const cu = await getCurrentUser(request, env);
       if (!cu) return corsResponse(JSON.stringify({ error: "Unauthorized" }), 401);
       const code = path.split("/")[1];
       try {
         const body = await request.json();
-
-        // Kiểm tra quyền: SuperAdmin/Admin được sửa tất cả, còn lại chỉ sửa link mình tạo
         const linkOwners = JSON.parse(await env.STATS_STORAGE.get("link_owners") || "{}");
         const owner = linkOwners[code];
         if (cu.role !== "SuperAdmin" && cu.role !== "Admin" && owner !== cu.username) {
           return corsResponse(JSON.stringify({ error: "Không có quyền sửa link này" }), 403);
         }
 
-        // Đọc link hiện tại
         const existing = await env.URL_STORAGE.get(code);
         if (!existing) return corsResponse(JSON.stringify({ error: "Link không tồn tại" }), 404);
 
         let linkData;
         try { linkData = JSON.parse(existing); } catch { linkData = { url: existing }; }
 
-        // Cập nhật các field được phép sửa
         if (body.url) {
           if (!body.url.startsWith("http")) return corsResponse(JSON.stringify({ error: "URL không hợp lệ" }), 400);
           linkData.url = body.url;
@@ -331,8 +339,6 @@ export default {
         if (body.password !== undefined) linkData.password = body.password || null;
 
         await env.URL_STORAGE.put(code, JSON.stringify(linkData));
-
-        // Cập nhật link_meta
         const linkMetaRaw = await env.ADMIN_STORAGE.get("link_meta");
         const linkMeta = linkMetaRaw ? JSON.parse(linkMetaRaw) : {};
         if (!linkMeta[code]) linkMeta[code] = {};
@@ -392,16 +398,16 @@ export default {
         env.LOG_STORAGE.get("users").then(d => d ? JSON.parse(d) : {}),
         getAllUsers(env)
       ]);
-      
-      // Tính stats hôm nay dựa theo giờ VN
-      const nowVN = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
-      const todayStartVN = new Date(nowVN.getFullYear(), nowVN.getMonth(), nowVN.getDate(), 0, 0, 0, 0);
-      const todayStartTime = todayStartVN.getTime();
-      
+
+      // FIX CHUẨN: Tính mốc thời gian bắt đầu ngày hôm nay (00:00:00) theo múi giờ VN bằng toán học Timestamp thuần túy
+      const now = new Date();
+      const tzOffset = 7 * 60 * 60 * 1000; // Múi giờ Việt Nam (+7) tính theo mili-giây
+      const todayStartTime = Math.floor((now.getTime() + tzOffset) / (24 * 60 * 60 * 1000)) * (24 * 60 * 60 * 1000) - tzOffset;
+
       const todayClickCount = (clickLogs || []).filter(l => (l.timestamp || 0) >= todayStartTime).length;
       const todayActionCount = (actionLogs || []).filter(l => (l.timestamp || 0) >= todayStartTime).length;
       const todayNewLinksCount = (actionLogs || []).filter(l => (l.timestamp || 0) >= todayStartTime && l.action === 'create_link').length;
-      
+
       return corsResponse(JSON.stringify({ 
         clickLogs, 
         actionLogs, 
@@ -417,21 +423,23 @@ export default {
 
     if (path === "hourly-stats" && method === "GET") {
       try {
-        const nowVN = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
-        const todayStartVN = new Date(nowVN.getFullYear(), nowVN.getMonth(), nowVN.getDate(), 0, 0, 0, 0);
-        const todayStartTime = todayStartVN.getTime();
+        const now = new Date();
+        const tzOffset = 7 * 60 * 60 * 1000;
+        const todayStartTime = Math.floor((now.getTime() + tzOffset) / (24 * 60 * 60 * 1000)) * (24 * 60 * 60 * 1000) - tzOffset;
 
         const hourlyData = Array.from({ length: 24 }, (_, i) => ({ hour: i, clicks: 0 }));
         const clickLogs = await env.LOG_STORAGE.get("click_logs").then(d => d ? JSON.parse(d) : []);
-
+        
         clickLogs.forEach(log => {
           if (log.timestamp && log.timestamp >= todayStartTime) {
-            const hour = new Date(new Date(log.timestamp).toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' })).getHours();
+            // Lấy giờ Việt Nam chuẩn xác
+            const logDate = new Date(log.timestamp + tzOffset);
+            const hour = logDate.getUTCHours(); 
             if (hour >= 0 && hour <= 23) hourlyData[hour].clicks++;
           }
         });
-
-        const currentHour = nowVN.getHours();
+        
+        const currentHour = new Date(now.getTime() + tzOffset).getUTCHours();
         return corsResponse(JSON.stringify(hourlyData.filter(h => h.hour <= currentHour)));
       } catch {
         return corsResponse(JSON.stringify([]));
@@ -468,8 +476,6 @@ export default {
       const cu = await getCurrentUser(request, env);
       if (!cu) return corsResponse(JSON.stringify({ error: "Unauthorized" }), 401);
       const code = path.split("/")[1];
-
-      // Kiểm tra quyền xóa
       const linkOwners = JSON.parse(await env.STATS_STORAGE.get("link_owners") || "{}");
       const owner = linkOwners[code];
       if (cu.role !== "SuperAdmin" && cu.role !== "Admin" && owner !== cu.username) {
@@ -503,12 +509,10 @@ export default {
         const expiryDate = parsed.expiry_date;
         const linkPassword = parsed.password;
 
-        // Kiểm tra hết hạn
         if (expiryDate && new Date(expiryDate) < new Date()) {
           return new Response(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Link hết hạn</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#F3F4F6;margin:0}.box{background:white;padding:40px;border-radius:16px;text-align:center}h2{color:#EF4444;margin-bottom:8px}p{color:#6B7280;font-size:14px}</style></head><body><div class="box"><h2>🔒 Link đã hết hạn</h2><p>Link này đã hết hạn và không còn hoạt động.</p></div></body></html>`, { status: 410, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
         }
 
-        // Kiểm tra password
         if (linkPassword) {
           const provided = url.searchParams.get('pw');
           if (provided !== linkPassword) {
@@ -521,7 +525,6 @@ export default {
         const logUsers = await env.LOG_STORAGE.get("users").then(d => d ? JSON.parse(d) : {});
         const userName = logUsers[clientIP]?.name || null;
         await updateStatsWithUTM(env, path, utm);
-        // FIX: Lưu country + userAgent đúng
         await addClickLog(env, clientIP, userName, path, utm, originalUrl, cfCountry, userAgent);
         return Response.redirect(originalUrl, 302);
       }
@@ -558,7 +561,6 @@ async function getStats(env) {
   return { totalLinks: stats.totalLinks || 0, totalClicks: stats.totalClick || 0, todayClicks, topLinks: topLinksArray, dailyClicks };
 }
 
-// FIX: getAllLinks trả về đầy đủ metadata
 async function getAllLinks(env, username = null, userRole = null, publicMode = false) {
   const [linkListRaw, statsRaw, linkOwnersRaw, publicLinksRaw, linkMetaRaw] = await Promise.all([
     env.STATS_STORAGE.get("link_list"),
@@ -567,7 +569,6 @@ async function getAllLinks(env, username = null, userRole = null, publicMode = f
     env.ADMIN_STORAGE.get("public_links"),
     env.ADMIN_STORAGE.get("link_meta")
   ]);
-
   const linkList = linkListRaw ? JSON.parse(linkListRaw) : [];
   const stats = statsRaw ? JSON.parse(statsRaw) : {};
   const topLinks = stats.topLinks || {};
@@ -578,9 +579,7 @@ async function getAllLinks(env, username = null, userRole = null, publicMode = f
   const isAdminOrSuper = userRole === "Admin" || userRole === "SuperAdmin";
   const links = [];
 
-  // FIX: Đọc tất cả link data song song thay vì tuần tự
   const rawDataList = await Promise.all(linkList.map(code => env.URL_STORAGE.get(code)));
-
   for (let i = 0; i < linkList.length; i++) {
     const code = linkList[i];
     const rawData = rawDataList[i];
@@ -588,7 +587,6 @@ async function getAllLinks(env, username = null, userRole = null, publicMode = f
 
     const owner = linkOwners[code] || "unknown";
     const isPublic = publicLinks.includes(code);
-
     let show = false;
     if (!username) show = false;
     else if (isAdminOrSuper) show = true;
@@ -596,7 +594,6 @@ async function getAllLinks(env, username = null, userRole = null, publicMode = f
     else if (publicMode && isPublic) show = true;
 
     if (!show) continue;
-
     let parsed;
     try { parsed = JSON.parse(rawData); } catch { parsed = { url: rawData }; }
 
@@ -604,7 +601,6 @@ async function getAllLinks(env, username = null, userRole = null, publicMode = f
     const expiryDate = parsed.expiry_date || meta.expiry_date || null;
     const hasPassword = !!(parsed.password || meta.has_password);
     const createdAt = parsed.created_at || meta.created_at || new Date().toISOString();
-
     links.push({
       code,
       original_url: parsed.url || rawData,
@@ -619,13 +615,11 @@ async function getAllLinks(env, username = null, userRole = null, publicMode = f
   return links;
 }
 
-// FIX: createShortUrl lưu đầy đủ metadata
 async function createShortUrl(env, originalUrl, customCode = "", userName = "", expiryDate = null, password = null) {
   if (!originalUrl || !originalUrl.startsWith("http")) throw new Error("URL không hợp lệ");
   let code = customCode || generateRandomCode();
   const existing = await env.URL_STORAGE.get(code);
   if (existing) throw new Error("Code đã tồn tại");
-
   const linkData = { url: originalUrl, created_at: new Date().toISOString()};
   if (expiryDate) linkData.expiry_date = expiryDate;
   if (password) linkData.password = password;
@@ -633,7 +627,10 @@ async function createShortUrl(env, originalUrl, customCode = "", userName = "", 
 
   const linkListRaw = await env.STATS_STORAGE.get("link_list");
   const linkList = linkListRaw ? JSON.parse(linkListRaw) : [];
-  if (!linkList.includes(code)) { linkList.push(code); await env.STATS_STORAGE.put("link_list", JSON.stringify(linkList)); }
+  if (!linkList.includes(code)) { 
+    linkList.push(code);
+    await env.STATS_STORAGE.put("link_list", JSON.stringify(linkList)); 
+  }
 
   const linkOwnersRaw = await env.STATS_STORAGE.get("link_owners");
   const linkOwners = linkOwnersRaw ? JSON.parse(linkOwnersRaw) : {};
@@ -645,7 +642,6 @@ async function createShortUrl(env, originalUrl, customCode = "", userName = "", 
   stats.totalLinks = linkList.length;
   await env.STATS_STORAGE.put("global", JSON.stringify(stats));
 
-  // Lưu meta riêng
   const linkMetaRaw = await env.ADMIN_STORAGE.get("link_meta");
   const linkMeta = linkMetaRaw ? JSON.parse(linkMetaRaw) : {};
   linkMeta[code] = { created_at: new Date().toISOString(), expiry_date: expiryDate || null, has_password: !!password };
@@ -685,12 +681,12 @@ async function updateStatsWithUTM(env, code, utm) {
   stats.todayClick = (stats.todayClick || 0) + 1;
   stats.topLinks[code] = (stats.topLinks[code] || 0) + 1;
   await env.STATS_STORAGE.put("global", JSON.stringify(stats));
-
+  
   const dayRaw = await env.STATS_STORAGE.get(`day_${today}`);
   const dayStats = dayRaw ? JSON.parse(dayRaw) : { clicks: 0 };
   dayStats.clicks++;
   await env.STATS_STORAGE.put(`day_${today}`, JSON.stringify(dayStats));
-
+  
   const utmRaw = await env.STATS_STORAGE.get("link_utm_stats");
   const linkUTMStats = utmRaw ? JSON.parse(utmRaw) : {};
   if (!linkUTMStats[code]) linkUTMStats[code] = {};
@@ -723,9 +719,13 @@ async function addClickLog(env, ip, userName, code, utm, target, country = 'Unkn
     id: Date.now() + '_' + Math.random().toString(36).substr(2, 6),
     time: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
     timestamp: Date.now(),
-    ip, user: userName || 'unknown', code,
+    ip, 
+    user: userName || 'unknown', 
+    code,
     utm: utm === 'direct' ? 'Trực tiếp' : utm,
-    target, country, ua
+    target, 
+    country, 
+    ua
   };
   const existing = await env.LOG_STORAGE.get("click_logs");
   let clickLogs = existing ? JSON.parse(existing) : [];
@@ -738,7 +738,11 @@ async function addActionLog(env, ip, userName, action, details = {}) {
   const logEntry = {
     id: Date.now() + '_' + Math.random().toString(36).substr(2, 6),
     time: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-    timestamp: Date.now(), ip, user: userName || 'unknown', action, details
+    timestamp: Date.now(),
+    ip, 
+    user: userName || 'unknown', 
+    action, 
+    details
   };
   const existing = await env.LOG_STORAGE.get("action_logs");
   let actionLogs = existing ? JSON.parse(existing) : [];
