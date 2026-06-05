@@ -38,7 +38,7 @@ export default {
       if (!usersData) {
         const defaultUser = {
           id: "1", fullname: "Super Administrator", department: "IT",
-          username: "superadmin", password: await hashPassword("superadmin"),
+          username: "superadmin", password: btoa("superadmin"),
           role: "SuperAdmin", status: "active", must_change_password: false,
           created_by: "system", created_at: new Date().toISOString()
         };
@@ -65,7 +65,7 @@ export default {
       const newUser = {
         id: Date.now().toString(), fullname: userData.fullname || "",
         department: userData.department || "", username: userData.username,
-        password: await hashPassword(userData.username), role: userData.role || "Member",
+        password: btoa(userData.username), role: userData.role || "Member",
         status: "active", must_change_password: true,
         created_by: createdBy, created_at: new Date().toISOString(), updated_at: new Date().toISOString()
       };
@@ -100,7 +100,7 @@ export default {
       const index = users.findIndex(u => u.username === username);
       if (index === -1) throw new Error("User not found");
       if (users[index].role === "SuperAdmin" && resetBy !== username) throw new Error("Cannot reset SuperAdmin password");
-      users[index].password = await hashPassword(username);
+      users[index].password = btoa(username);
       users[index].must_change_password = true;
       users[index].updated_at = new Date().toISOString();
       await env.ADMIN_STORAGE.put("users", JSON.stringify(users));
@@ -112,10 +112,10 @@ export default {
       let users = usersData ? JSON.parse(usersData) : [];
       const index = users.findIndex(u => u.username === username);
       if (index === -1) throw new Error("User not found");
-      if (users[index].password !== await hashPassword(currentPassword)) throw new Error("Mật khẩu hiện tại không đúng");
+      if (users[index].password !== btoa(currentPassword)) throw new Error("Mật khẩu hiện tại không đúng");
       if (newPassword.length < 6) throw new Error("Mật khẩu mới phải có ít nhất 6 ký tự");
       if (newPassword === username) throw new Error("Mật khẩu mới không được trùng với tên đăng nhập");
-      users[index].password = await hashPassword(newPassword);
+      users[index].password = btoa(newPassword);
       users[index].must_change_password = false;
       users[index].updated_at = new Date().toISOString();
       await env.ADMIN_STORAGE.put("users", JSON.stringify(users));
@@ -176,8 +176,7 @@ export default {
       const username = credentials.substring(0, colonIndex);
       const password = credentials.substring(colonIndex + 1);
       const user = await getUserByUsername(env, username);
-      const hashed = await hashPassword(password);
-      if (user && user.password === hashed && user.status === "active") {
+      if (user && user.password === btoa(password) && user.status === "active") {
         return {
           username: user.username, role: user.role, status: user.status,
           fullname: user.fullname, department: user.department,
@@ -618,20 +617,6 @@ async function getAllLinks(env, username = null, userRole = null, publicMode = f
     });
   }
   return links;
-}
-
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-
-  const hashBuffer = await crypto.subtle.digest(
-    "SHA-256",
-    data
-  );
-
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 // FIX: createShortUrl lưu đầy đủ metadata
