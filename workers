@@ -705,38 +705,33 @@ if (
         }
 
         // 2. Xử lý hiển thị SEO Meta Tags cho Bot mạng xã hội (Facebook, Zalo, Telegram,...)
-        const botRegex = /facebookexternalhit|Facebot|facebookplatform|MessengerBot|ZaloBot|Twitterbot|TelegramBot|LinkedInBot|Slackbot/i;
+        const botRegex = /facebookexternalhit|Facebot|facebookplatform|MessengerBot|ZaloBot|zalo|Twitterbot|TelegramBot|LinkedInBot|Slackbot/i;
+
         if (seoConfigId && botRegex.test(userAgent)) {
-          const seoConfig = await getSEOConfigById(env, seoConfigId);
+          const seoConfig = await getSEOConfigById(env, seoConfigId); 
           if (seoConfig) {
             const html = `<!DOCTYPE html>
             <html lang="vi">
             <head>
                 <meta charset="UTF-8">
-                <title>${seoConfig.title || 'Enactus FTU Hanoi'}</title>
-                <meta name="description" content="${seoConfig.description || ''}">
-                <meta name="keywords" content="${seoConfig.keywords || ''}">
+                <title>${seoConfig.title || 'Enactus FTU Hanoi'}</title> 
+                <meta name="description" content="${seoConfig.description || ''}"> 
+                <meta name="keywords" content="${seoConfig.keywords || ''}"> 
                 
-                <!-- Open Graph / Facebook / Zalo -->
                 <meta property="og:type" content="website">
-                <meta property="og:url" content="${request.url}">
-                <meta property="og:title" content="${seoConfig.title || ''}">
-                <meta property="og:description" content="${seoConfig.description || ''}">
-                <meta property="og:image" content="${seoConfig.ogImage || ''}">
+                <meta property="og:url" content="${request.url}"> 
+                <meta property="og:title" content="${seoConfig.title || ''}"> 
+                <meta property="og:description" content="${seoConfig.description || ''}"> 
+                <meta property="og:image" content="${seoConfig.ogImage || ''}"> 
                 
-                <!-- Twitter -->
-                <meta property="twitter:card" content="${seoConfig.twitterCard || 'summary_large_image'}">
+                <meta property="twitter:card" content="${seoConfig.twitterCard || 'summary_large_image'}"> 
                 <meta property="twitter:url" content="${request.url}">
-                <meta property="twitter:title" content="${seoConfig.title || ''}">
-                <meta property="twitter:description" content="${seoConfig.description || ''}">
-                <meta property="twitter:image" content="${seoConfig.ogImage || ''}">
-                
-                <!-- Dự phòng tự động chuyển hướng nếu bot chạy được JS -->
-                <meta http-equiv="refresh" content="0;url=${originalUrl}">
+                <meta property="twitter:title" content="${seoConfig.title || ''}"> 
+                <meta property="twitter:description" content="${seoConfig.description || ''}"> 
+                <meta property="twitter:image" content="${seoConfig.ogImage || ''}"> 
             </head>
             <body>
-                <p>Đang chuyển hướng đến <a href="${originalUrl}">${originalUrl}</a>...</p>
-                <script>window.location.href = "${originalUrl}";</script>
+                <p>Đang chuyển hướng...</p>
             </body>
             </html>`;
             return new Response(html, {
@@ -851,6 +846,7 @@ async function getAllLinks(env, username = null, userRole = null, publicMode = f
       is_public: isPublic,
       expiry_date: expiryDate,
       has_password: hasPassword,
+      seoConfigId: parsed.seoConfigId || null,
     });
   }
   return links;
