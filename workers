@@ -52,22 +52,19 @@ export default {
       return users.find(u => u.username === username);
     }
 
+    // ĐÃ CHECK: Sắp xếp tài khoản theo thứ tự SuperAdmin -> Admin -> Member
     async function getAllUsers(env) {
       const usersData = await env.ADMIN_STORAGE.get("users");
       const users = usersData ? JSON.parse(usersData) : [];
       
-      // Định nghĩa trọng số ưu tiên cho từng Role (Số càng nhỏ ưu tiên càng cao)
       const rolePriority = { "SuperAdmin": 1, "Admin": 2, "Member": 3 };
 
       return users
-        .map(u => { 
-          const { password, ...rest } = u; 
-          return rest; 
-        })
+        .map(u => { const { password, ...rest } = u; return rest; })
         .sort((a, b) => {
           const pA = rolePriority[a.role] || 99;
           const pB = rolePriority[b.role] || 99;
-          return pA - pB; // Sắp xếp tăng dần theo trọng số: 1 -> 2 -> 3
+          return pA - pB;
         });
     }
 
@@ -313,6 +310,7 @@ export default {
       return corsResponse(JSON.stringify({ enabled: body.enabled }));
     }
 
+    // ĐÃ FIX 1: Vá lỗ hổng chặn quyền sửa link khi owner vô chủ (undefined)
     if (path.match(/^link\/.+\/edit/) && method === "POST") {
       const cu = await getCurrentUser(request, env);
       if (!cu) return corsResponse(JSON.stringify({ error: "Unauthorized" }), 401);
@@ -321,8 +319,11 @@ export default {
         const body = await request.json();
         const linkOwners = JSON.parse(await env.STATS_STORAGE.get("link_owners") || "{}");
         const owner = linkOwners[code];
-        if (cu.role !== "SuperAdmin" && cu.role !== "Admin" && owner !== cu.username) {
-          return corsResponse(JSON.stringify({ error: "Không có quyền sửa link này" }), 403);
+        
+        if (cu.role !== "SuperAdmin" && cu.role !== "Admin") {
+          if (!owner || owner !== cu.username) {
+            return corsResponse(JSON.stringify({ error: "Không có quyền sửa link này" }), 403);
+          }
         }
 
         const existing = await env.URL_STORAGE.get(code);
@@ -346,7 +347,8 @@ export default {
         linkMeta[code].has_password = !!(linkData.password);
         await env.ADMIN_STORAGE.put("link_meta", JSON.stringify(linkMeta));
 
-        await addActionLog(env, clientIP, cu.username, 'edit_link', { code, url: linkData.url });
+        // ĐÃ FIX 2: Bọc dự phòng chuỗi rỗng để tránh crash lỗi undefined tên tài khoản
+        await addActionLog(env, clientIP, cu.username || "unknown", 'edit_link', { code, url: linkData.url });
         return corsResponse(JSON.stringify({ success: true }));
       } catch (e) { return corsResponse(JSON.stringify({ error: e.message }), 400); }
     }
@@ -399,9 +401,8 @@ export default {
         getAllUsers(env)
       ]);
 
-      // FIX CHUẨN: Tính mốc thời gian bắt đầu ngày hôm nay (00:00:00) theo múi giờ VN bằng toán học Timestamp thuần túy
       const now = new Date();
-      const tzOffset = 7 * 60 * 60 * 1000; // Múi giờ Việt Nam (+7) tính theo mili-giây
+      const tzOffset = 7 * 60 * 60 * 1000;
       const todayStartTime = Math.floor((now.getTime() + tzOffset) / (24 * 60 * 60 * 1000)) * (24 * 60 * 60 * 1000) - tzOffset;
 
       const todayClickCount = (clickLogs || []).filter(l => (l.timestamp || 0) >= todayStartTime).length;
@@ -432,7 +433,6 @@ export default {
         
         clickLogs.forEach(log => {
           if (log.timestamp && log.timestamp >= todayStartTime) {
-            // Lấy giờ Việt Nam chuẩn xác
             const logDate = new Date(log.timestamp + tzOffset);
             const hour = logDate.getUTCHours(); 
             if (hour >= 0 && hour <= 23) hourlyData[hour].clicks++;
@@ -467,7 +467,7 @@ export default {
         const body = await request.json();
         const { url: originalUrl, customCode, expiryDate, password } = body;
         const result = await createShortUrl(env, originalUrl, customCode, cu.username, expiryDate, password);
-        await addActionLog(env, clientIP, cu.username, 'create_link', { code: result.code, url: originalUrl });
+        await addActionLog(env, clientIP, cu.username || "unknown", 'create_link', { code: result.code, url: originalUrl });
         return corsResponse(JSON.stringify(result));
       } catch (e) { return corsResponse(JSON.stringify({ error: e.message }), 400); }
     }
@@ -483,7 +483,7 @@ export default {
       }
 
       await deleteLink(env, code);
-      await addActionLog(env, clientIP, cu.username, 'delete_link', { code });
+      await addActionLog(env, clientIP, cu.username || "unknown", 'delete_link', { code });
       return corsResponse(JSON.stringify({ success: true }));
     }
 
@@ -699,6 +699,7 @@ async function getLinkUTMStats(env) {
   return d ? JSON.parse(d) : {};
 }
 
+// ĐÃ FIX 3: Bọc Try/Catch cẩn thận tránh sập toàn bộ cụm biểu đồ 7 ngày
 async function getDailyClicks(env) {
   const today = new Date();
   const promises = [];
@@ -711,7 +712,18 @@ async function getDailyClicks(env) {
     promises.push(env.STATS_STORAGE.get(`day_${dateStr}`));
   }
   const results = await Promise.all(promises);
-  return dates.map((date, i) => ({ date, clicks: results[i] ? JSON.parse(results[i]).clicks : 0 }));
+  return dates.map((date, i) => {
+    let dayClicks = 0;
+    if (results[i]) {
+      try {
+        const parsed = JSON.parse(results[i]);
+        dayClicks = parsed.clicks || 0;
+      } catch (e) {
+        dayClicks = 0;
+      }
+    }
+    return { date, clicks: dayClicks };
+  });
 }
 
 async function addClickLog(env, ip, userName, code, utm, target, country = 'Unknown', ua = '') {
