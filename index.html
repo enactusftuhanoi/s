@@ -599,6 +599,18 @@ const CreateLinkView = ({ auth }) => {
   const [result,setResult]=useState(null);
   const [loading,setLoading]=useState(false);
   const [showAdv,setShowAdv]=useState(false);
+  const [seoConfigs, setSeoConfigs] = useState([]);
+  const [selectedSeoId, setSelectedSeoId] = useState('');
+  
+  useEffect(() => {
+    const fetchSeoConfigs = async () => {
+      try {
+        const res = await fetch(`${WORKER_URL}/admin/seo-configs`, { headers: { Authorization: auth } });
+        if (res.ok) setSeoConfigs(await res.json());
+      } catch(e) { console.error(e); }
+    };
+    fetchSeoConfigs();
+  }, [auth]);
 
   const handle = async () => {
     if (!url){toast('Vui lòng nhập URL','error');return;}
@@ -609,9 +621,10 @@ const CreateLinkView = ({ auth }) => {
       if(alias)body.customCode=alias;
       if(expiry)body.expiryDate=expiry;
       if(password)body.password=password;
+      if(selectedSeoId)body.seoConfigId=selectedSeoId;
       const res=await fetch(`${WORKER_URL}/shorten`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify(body)});
       const data=await res.json();
-      if(res.ok){setResult(data.shortUrl);toast('Tạo link thành công! 🎉');setUrl('');setAlias('');setExpiry('');setPassword('');setShowAdv(false);}
+      if(res.ok){setResult(data.shortUrl);toast('Tạo link thành công! 🎉');setUrl('');setAlias('');setExpiry('');setPassword('');setSelectedSeoId('');setShowAdv(false);}
       else toast(data.error||'Lỗi','error');
     } catch {toast('Lỗi kết nối','error');}
     finally {setLoading(false);}
@@ -645,6 +658,19 @@ const CreateLinkView = ({ auth }) => {
                 </div>
               </div>
             </div>}
+            
+            {/* SEO Config Dropdown */}
+            <div className="form-group" style={{ marginTop: 16, marginBottom: 16 }}>
+              <label className="form-label"><Icon name="image" size={13} style={{ verticalAlign: -2, marginRight: 4 }}/>SEO Config (Meta tags khi share)</label>
+              <select className="form-input" value={selectedSeoId} onChange={e => setSelectedSeoId(e.target.value)}>
+                <option value="">-- Không sử dụng --</option>
+                {seoConfigs.map(cfg => (
+                  <option key={cfg.id} value={cfg.id}>{cfg.name}</option>
+                ))}
+              </select>
+              <div className="form-hint">Chọn config để thêm meta tags OG/Twitter khi share link lên Facebook, Twitter...</div>
+            </div>
+            
             <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',padding:14,fontSize:15}} onClick={handle} disabled={loading}>
               {loading?<><div className="spinner" style={{width:18,height:18,borderWidth:2}}/>Đang tạo...</>:<><Icon name="link" size={16}/>Rút gọn ngay</>}
             </button>
@@ -683,6 +709,16 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
   },[auth]);
 
   useEffect(()=>{fetchLinks();},[fetchLinks]);
+
+  useEffect(() => {
+    const fetchSeoConfigs = async () => {
+      try {
+        const res = await fetch(`${WORKER_URL}/admin/seo-configs`, { headers: { Authorization: auth } });
+        if (res.ok) setSeoConfigs(await res.json());
+      } catch(e) { console.error(e); }
+    };
+    fetchSeoConfigs();
+  }, [auth]);
 
   const filtered = useMemo(()=>{
     let arr=links.filter(l=>!search||l.code.toLowerCase().includes(search.toLowerCase())||l.original_url.toLowerCase().includes(search.toLowerCase()));
@@ -1092,6 +1128,130 @@ const AdminView = ({ auth, currentUser }) => {
 };
 
 // ==================== MAIN APP ====================
+// ==================== SEO VIEW ====================
+const SEOView = ({ auth }) => {
+  const [configs, setConfigs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({
+    name: '', title: '', description: '', keywords: '', ogImage: '', twitterCard: 'summary_large_image'
+  });
+
+  const fetchConfigs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/seo-configs`, { headers: { Authorization: auth } });
+      if (res.ok) setConfigs(await res.json());
+      else toast('Không thể tải config', 'error');
+    } catch { toast('Lỗi kết nối', 'error'); }
+    finally { setLoading(false); }
+  }, [auth]);
+
+  useEffect(() => { fetchConfigs(); }, [fetchConfigs]);
+
+  const saveConfig = async () => {
+    if (!form.name) { toast('Vui lòng nhập tên config', 'error'); return; }
+    try {
+      const url = editing ? `${WORKER_URL}/admin/seo-configs/${editing.id}` : `${WORKER_URL}/admin/seo-configs`;
+      const method = editing ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method, headers: { 'Content-Type': 'application/json', Authorization: auth },
+        body: JSON.stringify(form)
+      });
+      if (res.ok) {
+        toast(editing ? 'Cập nhật thành công' : 'Tạo config thành công');
+        fetchConfigs();
+        setShowModal(false);
+        setEditing(null);
+        setForm({ name: '', title: '', description: '', keywords: '', ogImage: '', twitterCard: 'summary_large_image' });
+      } else toast('Lỗi lưu config', 'error');
+    } catch { toast('Lỗi kết nối', 'error'); }
+  };
+
+  const deleteConfig = async (id, name) => {
+    const confirmed = await confirmDialog('Xóa config?', `Xóa "${name}"?`, 'Xóa');
+    if (!confirmed.isConfirmed) return;
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/seo-configs/${id}`, { method: 'DELETE', headers: { Authorization: auth } });
+      if (res.ok) { toast('Đã xóa'); fetchConfigs(); }
+      else toast('Lỗi xóa', 'error');
+    } catch { toast('Lỗi kết nối', 'error'); }
+  };
+
+  const editConfig = (cfg) => {
+    setEditing(cfg);
+    setForm({
+      name: cfg.name || '',
+      title: cfg.title || '',
+      description: cfg.description || '',
+      keywords: cfg.keywords || '',
+      ogImage: cfg.ogImage || '',
+      twitterCard: cfg.twitterCard || 'summary_large_image'
+    });
+    setShowModal(true);
+  };
+
+  return (
+    <div className="view-section fade-in">
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title"><Icon name="tag" size={16} color="var(--yellow-dark)"/>Quản lý SEO Config</div>
+          <button className="btn btn-primary btn-sm" onClick={() => { setEditing(null); setForm({ name: '', title: '', description: '', keywords: '', ogImage: '', twitterCard: 'summary_large_image' }); setShowModal(true); }}>
+            <Icon name="plus" size={14}/> Thêm config
+          </button>
+        </div>
+        {loading ? <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner"/></div>
+          : configs.length === 0 ? <div className="empty-state"><p>Chưa có SEO config nào</p></div>
+            : <div className="table-wrap">
+                <table>
+                  <thead><tr><th>Tên</th><th>OG Title</th><th>OG Description</th><th>Image</th><th style={{ textAlign: 'center' }}>Actions</th></tr></thead>
+                  <tbody>
+                    {configs.map(cfg => (
+                      <tr key={cfg.id}>
+                        <td><span className="badge badge-purple">{cfg.name}</span></td>
+                        <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cfg.title || '—'}</td>
+                        <td style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cfg.description || '—'}</td>
+                        <td>{cfg.ogImage ? <span className="badge badge-green">✓ Có ảnh</span> : <span className="badge badge-gray">—</span>}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                            <button className="btn-icon" title="Sửa" onClick={() => editConfig(cfg)}><Icon name="edit" size={15}/></button>
+                            <button className="btn-icon" title="Xóa" onClick={() => deleteConfig(cfg.id, cfg.name)} style={{ color: 'var(--red)' }}><Icon name="trash" size={15}/></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>}
+      </div>
+
+      {showModal && (
+        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+          <div className="modal" style={{ maxWidth: 550 }}>
+            <div className="modal-header">
+              <div className="modal-title">{editing ? 'Sửa SEO Config' : 'Thêm SEO Config mới'}</div>
+              <button className="btn-icon" onClick={() => setShowModal(false)}><Icon name="close" size={18}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group"><label className="form-label">Tên config *</label><input className="form-input" placeholder="VD: Facebook Sharing" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}/></div>
+              <div className="form-group"><label className="form-label">OG Title (Meta Title)</label><input className="form-input" placeholder="Tiêu đề khi share lên mạng xã hội" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}/></div>
+              <div className="form-group"><label className="form-label">OG Description</label><textarea className="form-input" rows="2" placeholder="Mô tả ngắn gọn" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}/></div>
+              <div className="form-group"><label className="form-label">Keywords (cách nhau bằng dấu phẩy)</label><input className="form-input" placeholder="url, shortener, link" value={form.keywords} onChange={e => setForm({ ...form, keywords: e.target.value })}/></div>
+              <div className="form-group"><label className="form-label">OG Image URL</label><input className="form-input" placeholder="https://example.com/image.jpg" value={form.ogImage} onChange={e => setForm({ ...form, ogImage: e.target.value })}/><div className="form-hint">Nên dùng ảnh 1200x630px</div></div>
+              <div className="form-group"><label className="form-label">Twitter Card</label><select className="form-input" value={form.twitterCard} onChange={e => setForm({ ...form, twitterCard: e.target.value })}><option value="summary">summary</option><option value="summary_large_image">summary_large_image</option></select></div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Hủy</button>
+              <button className="btn btn-primary" onClick={saveConfig}>Lưu</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+  
 const App = () => {
   const [auth,setAuth]=useState(()=>sessionStorage.getItem('adminAuth'));
   const [adminUser,setAdminUser]=useState(()=>sessionStorage.getItem('adminUser')||'');
