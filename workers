@@ -499,7 +499,7 @@ export default {
       return corsResponse(JSON.stringify(topByLink));
     }
 
-    // ==================== REDIRECT ====================
+// ==================== REDIRECT ====================
     if (path !== "" && !path.includes("/")) {
       const rawData = await env.URL_STORAGE.get(path);
       if (rawData) {
@@ -509,15 +509,480 @@ export default {
         const expiryDate = parsed.expiry_date;
         const linkPassword = parsed.password;
 
+        // XỬ LÝ GIAO DIỆN LINK HẾT HẠN (FORMAL - NO EMOJI)
         if (expiryDate && new Date(expiryDate) < new Date()) {
-          return new Response(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Link hết hạn</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#F3F4F6;margin:0}.box{background:white;padding:40px;border-radius:16px;text-align:center}h2{color:#EF4444;margin-bottom:8px}p{color:#6B7280;font-size:14px}</style></head><body><div class="box"><h2>🔒 Link đã hết hạn</h2><p>Link này đã hết hạn và không còn hoạt động.</p></div></body></html>`, { status: 410, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
+          return new Response(`<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thông báo hệ thống | Enactus FTU Hanoi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family: 'Space Grotesk', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: #F3F4F6;
+    color: #1F2937;
+    padding: 20px;
+  }
+  
+  .card-container{
+    position: relative;
+    max-width: 460px;
+    width: 100%;
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) ease;
+  }
+
+  .box {
+    background: white;
+    padding: 56px 40px;
+    border: 2.5px solid #111827; /* Đường viền đen dày đậm nét nghệ thuật */
+    box-shadow: 8px 8px 0px #111827; /* Đổ bóng khối dịch góc cực chất */
+    text-align: left; /* Căn lề trái high-end */
+    position: relative;
+    overflow: hidden; /* Giữ con chim blur không bị tràn ra ngoài viền hộp */
+    z-index: 2; /* Đẩy hộp lên trên để che bớt một phần khối vàng phía sau */
+  }
+  
+  /* Đã chuyển cái khung vàng ra SAU hộp trắng và XÓA SẠCH icon bên trong */
+  .floating-icon {
+    position: absolute;
+    top: -20px;
+    left: 36px;
+    width: 56px;
+    height: 56px;
+    background: #FFC107;
+    border: 2.5px solid #111827;
+    transform: rotate(-8deg); /* Nghiêng nhẹ ngược chiều */
+    box-shadow: 3px 3px 0px #111827;
+    user-select: none;
+    pointer-events: none;
+    z-index: 1; /* Đặt layer bằng 1 để nó chìm ra phía sau box */
+  }
+
+  /* Đã PHÓNG TO icon con chim blur lên 160px rõ ràng và nghệ thuật */
+  .watermark-bird {
+    position: absolute;
+    bottom: -28px;
+    right: -20px;
+    width: 160px;  /* Tăng từ 110px lên 160px siêu to rõ nét */
+    height: 160px;
+    opacity: 0.08; /* Giữ độ mờ watermark tinh tế */
+    transform: rotate(-15deg); /* Nghiêng nhẹ phá cách */
+    user-select: none;
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  .status-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #FEE2E2;
+    color: #991B1B;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    border: 1.5px solid #991B1B;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 3;
+  }
+  
+  h2 {
+    font-family: 'Playfair Display', serif;
+    color: #111827;
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+    position: relative;
+    z-index: 3;
+  }
+  
+  p {
+    color: #4B5563;
+    font-size: 14px;
+    line-height: 1.7;
+    font-weight: 400;
+    position: relative;
+    z-index: 3;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="card-container">
+  <div class="floating-icon"></div>
+  
+  <div class="box">
+    <img src="/icon.png" class="watermark-bird" alt="Enactus Bird">
+
+    <div class="status-tag">System Alert</div>
+    <h2>Liên kết đã ngừng<br><span style="font-family: 'Playfair Display', serif; font-style: italic; font-weight: 400; color: #F59E0B;">hoạt động.</span></h2>
+    <p>Đường dẫn này đã hết thời gian khả dụng hoặc đã bị gỡ bỏ khỏi hệ thống của Enactus FTU Hanoi.</p>
+  </div>
+</div>
+
+</body>
+</html>`, { status: 410, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
         }
 
+        // XỬ LÝ GIAO DIỆN NHẬP MẬT KHẨU BẢO VỆ (FORMAL - NO EMOJI)
         if (linkPassword) {
           const provided = url.searchParams.get('pw');
           if (provided !== linkPassword) {
             const wrongPw = url.searchParams.has('pw');
-            return new Response(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Nhập mật khẩu</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#F3F4F6;margin:0}.box{background:white;padding:40px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.1);text-align:center;width:360px}h2{margin-bottom:8px;color:#1F2937}p{color:#6B7280;font-size:14px;margin-bottom:24px}input{width:100%;padding:12px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;box-sizing:border-box;outline:none;margin-bottom:12px}input:focus{border-color:#FFC107}button{width:100%;padding:12px;background:#FFC107;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer}.err{color:#EF4444;font-size:13px;margin-top:8px}</style></head><body><div class="box"><h2>🔒 Link được bảo vệ</h2><p>Nhập mật khẩu để truy cập</p><input type="password" id="pw" placeholder="Mật khẩu..." onkeydown="if(event.key==='Enter')go()"/><button onclick="go()">Truy cập →</button>${wrongPw ? '<div class="err">Mật khẩu không đúng</div>' : ''}</div><script>function go(){const p=document.getElementById('pw').value;if(p)window.location.href=window.location.pathname+'?pw='+encodeURIComponent(p);}</script></body></html>`, { status: 200, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
+            return new Response(`<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yêu cầu xác thực | Enactus FTU Hanoi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  
+  body{
+    font-family: 'Space Grotesk', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: #F3F4F6;
+    color: #1F2937;
+    padding: 20px;
+    position: relative;
+    overflow: hidden; 
+  }
+  
+  /* ==================== HỆ THỐNG DÂY BĂNG CẢNH BÁO NỀN PHÍA SAU ==================== */
+  .tape-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .tape {
+    position: absolute;
+    width: 250%; 
+    height: 52px; 
+    background: #FFC107;
+    border-top: 3px solid #111827; 
+    border-bottom: 3px solid #111827;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  /* Dây 1: Phía sau - dốc xuống bên trên */
+  .tape-1 {
+    top: 25%;
+    left: -60%;
+    transform: rotate(-18deg); 
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+    z-index: 2;
+  }
+
+  /* Dây 3: Phía sau - đi ngang dốc nhẹ phía dưới */
+  .tape-3 {
+    top: 68%;
+    left: -60%;
+    transform: rotate(5deg);
+    box-shadow: 0 12px 26px rgba(0,0,0,0.07);
+    z-index: 3;
+  }
+
+  /* ==================== SIÊU PHẨM: DÂY LỚP ĐẦU CÙNG ĐÈ TRÊN TOÀN BỘ BOX + CHỮ ==================== */
+  .tape-top-overlay {
+    z-index: 999 !important; /* Đẩy max layer lên trên cả box trắng và nội dung bên trong */
+    top: 28%;
+    left: -60%;
+    transform: rotate(35deg);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.22);
+    pointer-events: none; /* Click xuyên thấu mượt mà không lo kẹt chuột */
+  }
+
+  /* Hiệu ứng chữ chạy mượt mà ngay khi vừa tải trang */
+  .tape-track {
+    display: flex;
+    animation: marquee 18s linear infinite; 
+  }
+
+  .tape-top-overlay .tape-track {
+    animation: marquee-reverse 18s linear infinite;
+  }
+
+  .tape-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-right: 50px;
+  }
+
+  /* ==================== CARD CONTAINER & BOX NỀN CHÍNH ==================== */
+  .card-container{
+    position: relative;
+    max-width: 460px;
+    width: 100%;
+    z-index: 10; /* Nằm dưới dải dây overlay z-index 999 */
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) ease;
+  }
+
+  .box {
+    background: white;
+    padding: 56px 40px;
+    border: 2.5px solid #111827; 
+    box-shadow: 14px 14px 0px #111827; 
+    text-align: left; 
+    position: relative;
+    overflow: hidden; 
+    z-index: 12;
+  }
+  
+  .floating-bg {
+    position: absolute;
+    top: -20px;
+    left: 36px;
+    width: 56px;
+    height: 56px;
+    background: #FFC107;
+    border: 2.5px solid #111827;
+    transform: rotate(-8deg); 
+    box-shadow: 3px 3px 0px #111827;
+    user-select: none;
+    pointer-events: none;
+    z-index: 11;
+  }
+
+  .watermark-bird {
+    position: absolute;
+    bottom: -28px;
+    right: -20px;
+    width: 160px;  
+    height: 160px;
+    opacity: 0.08; 
+    transform: rotate(-15deg);
+    user-select: none;
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  .status-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #FEF3C7;
+    color: #92400E;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    border: 1.5px solid #92400E;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 3;
+  }
+  
+  h2 {
+    font-family: 'Playfair Display', serif;
+    color: #111827;
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+    position: relative;
+    z-index: 3;
+  }
+  
+  p {
+    color: #4B5563;
+    font-size: 14px;
+    line-height: 1.7;
+    font-weight: 400;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 3;
+  }
+
+  .input-wrap {
+    position: relative;
+    margin-bottom: 16px;
+    z-index: 3;
+  }
+
+  input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #111827;
+    border-radius: 0px; 
+    font-size: 16px;
+    box-sizing: border-box;
+    outline: none;
+    background: #F9FAFB;
+    transition: all 0.15s;
+    color: #111827;
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: 2px;
+  }
+  
+  input:focus {
+    background: white;
+    box-shadow: 4px 4px 0px #111827;
+  }
+
+  button {
+    width: 100%;
+    padding: 14px;
+    background: #FFC107;
+    color: #111827;
+    border: 2px solid #111827;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    z-index: 3;
+    box-shadow: 4px 4px 0px #111827;
+  }
+
+  button:hover {
+    background: #F59E0B;
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px #111827;
+  }
+
+  button:active {
+    transform: translate(0, 0);
+    box-shadow: 4px 4px 0px #111827;
+  }
+
+  .err {
+    color: #991B1B;
+    font-size: 13px;
+    margin-top: 16px;
+    background: #FEE2E2;
+    padding: 12px;
+    border: 2px solid #991B1B;
+    font-weight: 500;
+    animation: shake 0.3s ease;
+    position: relative;
+    z-index: 3;
+  }
+
+  /* ANIMATION KEYFRAMES */
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  @keyframes marquee {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-50%, 0, 0); }
+  }
+
+  @keyframes marquee-reverse {
+    0% { transform: translate3d(-50%, 0, 0); }
+    100% { transform: translate3d(0, 0, 0); }
+  }
+</style>
+</head>
+<body>
+
+  <div class="tape-wrapper">
+    <div class="tape tape-1">
+      <div class="tape-track">
+        <span class="tape-text">Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • </span>
+        <span class="tape-text">Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • </span>
+      </div>
+    </div>
+    <div class="tape tape-3">
+      <div class="tape-track">
+        <span class="tape-text">Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • </span>
+        <span class="tape-text">Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-container">
+    <div class="floating-bg"></div>
+    
+    <div class="box">
+      <img src="/icon.png" class="watermark-bird" alt="Enactus Bird">
+
+      <div class="status-tag">Access Control</div>
+      <h2>Đường dẫn được<br><span style="font-family: 'Playfair Display', serif; font-style: italic; font-weight: 400; color: #F59E0B;">bảo vệ.</span></h2>
+      <p>Vui lòng nhập mật khẩu xác thực để được chuyển hướng tự động đến liên kết đích.</p>
+      
+      <div class="input-wrap">
+        <input type="text" id="display-pw" placeholder="Nhập mật khẩu truy cập..." autocomplete="off" oninput="maskPassword(this)" onkeydown="if(event.key==='Enter')go()"/>
+      </div>
+      
+      <button onclick="go()">Xác nhận mật khẩu</button>
+      ${wrongPw ? '<div class="err">Mật khẩu không chính xác. Vui lòng kiểm tra lại.</div>' : ''}
+    </div>
+  </div>
+
+  <div class="tape tape-2 tape-top-overlay">
+    <div class="tape-track">
+      <span class="tape-text">Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi</span>
+      <span class="tape-text">Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi • Enactus FTU Hanoi</span>
+    </div>
+  </div>
+
+<script>
+  let realPassword = "";
+
+  function maskPassword(input) {
+    const currentVal = input.value;
+    
+    if (currentVal.length < realPassword.length) {
+      realPassword = realPassword.substring(0, currentVal.length);
+    } else {
+      const newChar = currentVal.substring(realPassword.length);
+      realPassword += newChar;
+    }
+    
+    input.value = "■".repeat(realPassword.length);
+  }
+
+  function go(){
+    if(realPassword) window.location.href = window.location.pathname + '?pw=' + encodeURIComponent(realPassword);
+  }
+</script>
+</body>
+</html>`, { status: 200, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
           }
         }
 
