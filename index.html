@@ -983,55 +983,52 @@ const AdminView = ({ auth, currentUser }) => {
   // Hàm phân tích dữ liệu dán vào (Tab-separated)
   const handleParseBulkData = () => {
     if (!bulkInputText.trim()) {
-      Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Vui lòng dán dữ liệu vào ô trống!', timer: 2000, showConfirmButton: false });
+      toast('Vui lòng dán dữ liệu vào ô!', 'error');
       return;
     }
-
+  
     const lines = bulkInputText.split("\n");
     const tempUsers = [];
     const errors = [];
-
+  
     lines.forEach((line, index) => {
-      if (!line.trim()) return; // Bỏ qua dòng trống
-
-      const parts = line.split("\t");
-      let fullname = parts[0] ? parts[0].trim() : "";
-      let department = parts[1] ? parts[1].trim() : "";
-      let username = parts[2] ? parts[2].trim() : "";
-      let role = parts[3] ? parts[3].trim() : "Member";
-
-      // Chuẩn hóa Role khớp với hệ thống
-      if (role.toLowerCase() === "admin") role = "Admin";
-      if (role.toLowerCase() === "superadmin") role = "SuperAdmin";
-      if (role.toLowerCase() === "member" || !role) role = "Member";
-
-      // Kiểm tra logic cơ bản
+      if (!line.trim()) return;
+  
+      // Sử dụng regex để tách dữ liệu an toàn hơn, thay vì chỉ split theo tab
+      const parts = line.split("\t").map(p => p.trim());
+      
+      // Kiểm tra số lượng cột tối thiểu
+      if (parts.length < 3) {
+        errors.push(`Dòng ${index + 1}: Dữ liệu không đủ cột (Cần ít nhất: Họ tên, Phòng ban, Username).`);
+        return;
+      }
+  
+      const [fullname, department, username, roleRaw] = parts;
+      
+      // Xử lý Role với fallback an toàn
+      const role = ['Admin', 'SuperAdmin'].includes(roleRaw) ? roleRaw : 'Member';
+  
       if (!fullname || !username) {
         errors.push(`Dòng ${index + 1}: Thiếu Họ tên hoặc Username.`);
         return;
       }
-
-      // Check trùng ngay trong list vừa dán
+  
+      // Kiểm tra username trùng lặp
       if (tempUsers.some(u => u.username === username)) {
-        errors.push(`Dòng ${index + 1}: Username "${username}" bị lặp lại trong nội dung dán.`);
+        errors.push(`Dòng ${index + 1}: Username "${username}" bị trùng lặp trong danh sách.`);
         return;
       }
-
-      // Check trùng với DB hiện tại đang có ở client
-      if (users.some(u => u.username === username)) {
-        errors.push(`Dòng ${index + 1}: Username "${username}" đã tồn tại trên hệ thống.`);
-      }
-
+  
       tempUsers.push({ fullname, department, username, role });
     });
-
+  
     setParsedUsers(tempUsers);
     setBulkErrors(errors);
-
+  
     if (errors.length > 0) {
-      Swal.fire({ icon: 'warning', title: 'Lưu ý', text: `Phát hiện ${errors.length} lỗi logic (trùng lặp/thiếu thông tin). Bạn vẫn có thể chỉnh sửa lại ở bảng bên dưới hoặc xóa dòng lỗi.` });
+      toast(`Phát hiện ${errors.length} lỗi. Vui lòng kiểm tra lại bảng bên dưới.`, 'warning');
     } else {
-      toast(`Đã quét thành công ${tempUsers.length} dòng dữ liệu!`);
+      toast(`Đã quét thành công ${tempUsers.length} tài khoản!`, 'success');
     }
   };
 
