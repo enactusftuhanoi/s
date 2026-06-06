@@ -413,17 +413,17 @@ const EditLinkModal = ({ link, auth, userRole, currentUsername, onClose, onSaved
             <input className="form-input" type="url" value={url} onChange={e=>setUrl(e.target.value)} disabled={!canEdit}/>
           </div>
           <div className="form-group">
-            <label className="form-label"><Icon name="clock" size={13} style={{verticalAlign:-2,marginRight:4}}/>Ngày hết hạn</label>
+            <label className="form-label"><Icon name="clock" size={13} style={{verticalAlign:-2,marginRight:4}}/>Expiry Date</label>
             <input className="form-input" type="date" value={expiry} min={new Date().toISOString().split('T')[0]} onChange={e=>setExpiry(e.target.value)} disabled={!canEdit}/>
-            <div className="form-hint">Để trống = không hết hạn</div>
+            <div className="form-hint">Leave empty = never expires</div>
           </div>
           <div className="form-group" style={{marginBottom:0}}>
-            <label className="form-label"><Icon name="lock" size={13} style={{verticalAlign:-2,marginRight:4}}/>Mật khẩu mới</label>
-            <input className="form-input" type="password" placeholder={link.has_password ? 'Để trống = giữ nguyên mật khẩu cũ' : 'Để trống = không cần mật khẩu'} value={password} onChange={e=>{setPassword(e.target.value);setClearPw(false);}} disabled={!canEdit||clearPw}/>
+            <label className="form-label"><Icon name="lock" size={13} style={{verticalAlign:-2,marginRight:4}}/>New Password</label>
+            <input className="form-input" type="password" placeholder={link.has_password ? 'Leave empty = keep current password' : 'Leave empty = no password required'} value={password} onChange={e=>{setPassword(e.target.value);setClearPw(false);}} disabled={!canEdit||clearPw}/>
             {link.has_password && canEdit && (
               <label style={{display:'flex',alignItems:'center',gap:6,marginTop:8,fontSize:12.5,color:'var(--gray-600)',cursor:'pointer'}}>
                 <input type="checkbox" checked={clearPw} onChange={e=>{setClearPw(e.target.checked);if(e.target.checked)setPassword('');}}/>
-                Xóa mật khẩu (link sẽ không cần mật khẩu nữa)
+                Remove password (link will not require a password anymore)
               </label>
             )}
           </div>
@@ -462,11 +462,11 @@ const ChangePasswordModal = ({ auth, onClose }) => {
   return (
     <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal">
-        <div className="modal-header"><div className="modal-title"><Icon name="key" size={16} style={{verticalAlign:-2,marginRight:6}}/>Đổi mật khẩu</div><button className="btn-icon" onClick={onClose}><Icon name="close" size={18}/></button></div>
+        <div className="modal-header"><div className="modal-title"><Icon name="key" size={16} style={{verticalAlign:-2,marginRight:6}}/>Change password</div><button className="btn-icon" onClick={onClose}><Icon name="close" size={18}/></button></div>
         <div className="modal-body">
-          <div className="form-group"><label className="form-label">Mật khẩu hiện tại</label><input className="form-input" type="password" value={currentPw} onChange={e=>setCurrentPw(e.target.value)}/></div>
-          <div className="form-group"><label className="form-label">Mật khẩu mới</label><input className="form-input" type="password" placeholder="Ít nhất 6 ký tự" value={newPw} onChange={e=>setNewPw(e.target.value)}/>{newPw&&<><div className="pw-strength" style={{background:`linear-gradient(to right,${strength.color} ${strength.pct}%,var(--gray-200) ${strength.pct}%)`}}/><div className="pw-strength-text" style={{color:strength.color}}>{strength.label}</div></>}</div>
-          <div className="form-group" style={{marginBottom:0}}><label className="form-label">Xác nhận</label><input className="form-input" type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>{confirmPw&&newPw&&<div style={{fontSize:12,marginTop:5,color:confirmPw===newPw?'#10B981':'#EF4444',display:'flex',alignItems:'center',gap:4}}><Icon name={confirmPw===newPw?'check':'close'} size={13} color={confirmPw===newPw?'#10B981':'#EF4444'}/>{confirmPw===newPw?'Khớp':'Chưa khớp'}</div>}</div>
+          <div className="form-group"><label className="form-label">Current password</label><input className="form-input" type="password" value={currentPw} onChange={e=>setCurrentPw(e.target.value)}/></div>
+          <div className="form-group"><label className="form-label">New password</label><input className="form-input" type="password" placeholder="At least 6 characters" value={newPw} onChange={e=>setNewPw(e.target.value)}/>{newPw&&<><div className="pw-strength" style={{background:`linear-gradient(to right,${strength.color} ${strength.pct}%,var(--gray-200) ${strength.pct}%)`}}/><div className="pw-strength-text" style={{color:strength.color}}>{strength.label}</div></>}</div>
+          <div className="form-group" style={{marginBottom:0}}><label className="form-label">Confirm</label><input className="form-input" type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>{confirmPw&&newPw&&<div style={{fontSize:12,marginTop:5,color:confirmPw===newPw?'#10B981':'#EF4444',display:'flex',alignItems:'center',gap:4}}><Icon name={confirmPw===newPw?'check':'close'} size={13} color={confirmPw===newPw?'#10B981':'#EF4444'}/>{confirmPw===newPw?'Match':'No match'}</div>}</div>
         </div>
         <div className="modal-footer"><button className="btn btn-secondary" onClick={onClose}>Hủy</button><button className="btn btn-primary" onClick={handle} disabled={loading}>{loading?'Đang lưu...':<><Icon name="check" size={14}/>Xác nhận</>}</button></div>
       </div>
@@ -1878,7 +1878,7 @@ const App = () => {
     {key:'links',label:'Links management',icon:'list'},
   ];
 
-  const titles={dashboard:'Dashboard',create:'Add new link',links:'Links management',analytics:'Analytics & Logs',admin:'Admin Panel'};
+  const titles={dashboard:'Dashboard',create:'Add new link',links:'Links management',analytics:'Analytics & Logs',admin:'Administration',profile:'My Profile'};
   const displayName=userFullname||adminUser||'Người dùng';
   const initials=displayName.substring(0,2).toUpperCase();
 
