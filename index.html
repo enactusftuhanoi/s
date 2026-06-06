@@ -1355,6 +1355,66 @@ const AdminView = ({ auth, currentUser }) => {
   );
 };
 
+const ProfileView = ({ auth, username }) => {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProfile = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${WORKER_URL}/user/profile/${username}`, {
+        headers: { Authorization: auth }
+      });
+      if (!res.ok) throw new Error();
+      setProfile(await res.json());
+    } catch { toast('Lỗi tải profile', 'error'); }
+    finally { setLoading(false); }
+  }, [auth, username]);
+
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
+
+  if (loading) return <div className="spinner" style={{ margin: '40px auto' }} />;
+  if (!profile) return <div>Không tìm thấy dữ liệu.</div>;
+
+  return (
+    <div className="view-section fade-in">
+      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 24 }}>
+        {/* Card thông tin user */}
+        <div className="card" style={{ padding: 24, textAlign: 'center', height: 'fit-content' }}>
+          <div className="sidebar-avatar" style={{ width: 80, height: 80, fontSize: 32, margin: '0 auto 16px' }}>
+            {profile.fullname?.substring(0, 2).toUpperCase()}
+          </div>
+          <h2 style={{ fontSize: 18, marginBottom: 4 }}>{profile.fullname}</h2>
+          <p style={{ color: 'var(--gray-500)', fontSize: 13, marginBottom: 20 }}>{profile.department}</p>
+          <div className="stat-card" style={{ padding: 12 }}>
+            <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>Tổng link đã tạo</div>
+            <div style={{ fontSize: 24, fontWeight: 700 }}>{profile.links?.length || 0}</div>
+          </div>
+        </div>
+
+        {/* Bảng link của user */}
+        <div className="card">
+          <div className="card-header"><div className="card-title">Các liên kết của {profile.username}</div></div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Code</th><th>Đích đến</th><th>Clicks</th></tr></thead>
+              <tbody>
+                {profile.links?.map(l => (
+                  <tr key={l.code}>
+                    <td><span className="code-chip">{l.code}</span></td>
+                    <td title={l.original_url} style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.original_url}</td>
+                    <td>{l.clicks || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ==================== MAIN APP ====================
 const App = () => {
   const [auth,setAuth]=useState(()=>sessionStorage.getItem('adminAuth'));
@@ -1419,6 +1479,9 @@ const App = () => {
           ))}
           <div className="nav-spacer"/>
           <div className="nav-section-label">Tài khoản</div>
+          <a className={`nav-item ${tab === 'profile' ? 'active' : ''}`} onClick={() => setTab('profile')} href="#">
+            <Icon name="user" size={17}/>Trang cá nhân
+          </a>
           {userRole === 'SuperAdmin' && (
             <a className="nav-item" onClick={() => setTab('admin')} href="#">
               <Icon name="user" size={17}/>Admin Panel
@@ -1449,6 +1512,7 @@ const App = () => {
           {tab==='links'&&<LinksView auth={auth} userRole={userRole} currentUsername={adminUser}/>}
           {tab==='analytics'&&<AnalyticsView/>}
           {tab==='admin'&&<AdminView auth={auth} currentUser={currentUserInfo}/>}
+          {tab === 'profile' && <ProfileView auth={auth} username={adminUser} />}
         </div>
       </main>
     </>
