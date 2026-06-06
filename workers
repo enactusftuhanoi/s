@@ -1369,6 +1369,21 @@ async function addActionLog(env, ip, userName, action, details = {}) {
 
 async function sendEmailToUsers(env, recipients, subject, body) {
   const logs = [];
+
+  // 1. Lấy Access Token từ Refresh Token
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: env.GOOGLE_CLIENT_ID,
+      client_secret: env.GOOGLE_CLIENT_SECRET,
+      refresh_token: "1//04MpaaHrG6tTzCgYIARAAGAQSNwF-L9IrkIkIJbaI0qLVWp3w0IENqYNCGNfwhuIxEAv7P0Rwj3joUYSJ-xy8u_32Mqf-AHpm3Ks",
+      grant_type: "refresh_token"
+    })
+  });
+  const tokenData = await tokenRes.json();
+  const accessToken = tokenData.access_token;
+
   for (const recipient of recipients) {
     try {
       let personalizedBody = body
@@ -1376,32 +1391,35 @@ async function sendEmailToUsers(env, recipients, subject, body) {
         .replace(/{username}/g, recipient.username)
         .replace(/{email}/g, recipient.email || recipient.username + '@enactus.local')
         .replace(/{department}/g, recipient.department || '');
-      
-      const emailLog = {
-        id: Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-        timestamp: new Date().toISOString(),
-        recipient: recipient.email || recipient.username,
-        subject, 
-        status: 'logged'
-      };
-      
-      const existingLog = await env.ADMIN_STORAGE.get("email_logs");
-      let emailLogs = existingLog ? JSON.parse(existingLog) : [];
-      emailLogs.unshift(emailLog);
-      if (emailLogs.length > 500) emailLogs = emailLogs.slice(0, 500);
-      await env.ADMIN_STORAGE.put("email_logs", JSON.stringify(emailLogs));
-      
-      logs.push({ 
-        recipient: recipient.email || recipient.username, 
-        success: true, 
-        message: 'Email được ghi nhận' 
+
+      // 2. Định dạng email theo chuẩn RFC 2822
+      const emailContent = [
+        `To: ${recipient.email || recipient.username + '@enactus.local'}`,
+        `Subject: ${subject}`,
+        "Content-Type: text/plain; charset=utf-8",
+        "",
+        personalizedBody
+      ].join("\r\n");
+
+      // 3. Encode base64url
+      const encodedEmail = btoa(unescape(encodeURIComponent(emailContent)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+      // 4. Gửi qua Gmail API
+      const sendRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ raw: encodedEmail })
       });
+
+      if (!sendRes.ok) throw new Error("Lỗi API Gmail: " + sendRes.statusText);
+
+      logs.push({ recipient: recipient.email || recipient.username, success: true, message: 'Đã gửi thành công' });
     } catch (error) {
-      logs.push({ 
-        recipient: recipient.email || recipient.username, 
-        success: false, 
-        message: error.message 
-      });
+      logs.push({ recipient: recipient.email || recipient.username, success: false, message: error.message });
     }
   }
   return logs;
