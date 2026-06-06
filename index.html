@@ -1376,72 +1376,72 @@ const ProfileView = ({ auth, username }) => {
   if (loading) return <div className="spinner" style={{ margin: '40px auto' }} />;
   if (!profile) return <div>Không tìm thấy dữ liệu.</div>;
 
-  // TÍNH TOÁN CÁC CHỈ SỐ CÁ NHÂN (KHÔNG LẶP DASHBOARD)
-  const totalLinks = profile.links?.length || 0;
-  const activeLinks = profile.links?.filter(l => !isExpired(l.expiry_date)).length || 0;
   const totalClicks = profile.links?.reduce((sum, l) => sum + (l.clicks || 0), 0) || 0;
-  const avgPerformance = totalLinks > 0 ? (totalClicks / totalLinks).toFixed(1) : 0;
-  
-  // Tỉ lệ link công khai
-  const publicLinks = profile.links?.filter(l => l.is_public).length || 0;
 
   return (
-    <div className="view-section fade-in">
-      {/* HEADER PROFILE */}
-      <div className="card" style={{ marginBottom: 24, overflow: 'hidden' }}>
-        <div style={{ height: 120, background: 'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)' }} />
-        <div style={{ padding: '0 32px 32px 32px', display: 'flex', alignItems: 'flex-end', gap: 24 }}>
-          <div className="sidebar-avatar" style={{ width: 100, height: 100, fontSize: 40, marginTop: -50, border: '6px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', background: 'var(--purple)', color: 'white' }}>
-            {profile.fullname?.substring(0, 2).toUpperCase()}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <h2 style={{ fontSize: 24, fontWeight: 700 }}>{profile.fullname}</h2>
-            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-              <span className="badge badge-purple"><Icon name="user" size={11}/> {profile.role}</span>
-              <span className="badge badge-gray"><Icon name="tag" size={11}/> {profile.department}</span>
+    <div className="view-section fade-in" style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      {/* HEADER TÁC PHONG CHUYÊN NGHIỆP */}
+      <div className="card" style={{ marginBottom: 24, position: 'relative', border: 'none', boxShadow: 'var(--shadow-lg)' }}>
+        <div style={{ height: 160, background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)', borderRadius: '16px 16px 0 0' }} />
+        <div style={{ padding: '0 40px 32px 40px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 24 }}>
+            <div className="sidebar-avatar" style={{ width: 110, height: 110, fontSize: 48, marginTop: -50, border: '6px solid white', boxShadow: '0 10px 20px rgba(0,0,0,0.15)', background: '#7C3AED', color: 'white' }}>
+              {profile.fullname?.substring(0, 2).toUpperCase()}
+            </div>
+            <div style={{ paddingBottom: 10 }}>
+              <h2 style={{ fontSize: 28, fontWeight: 800, color: 'var(--gray-900)' }}>{profile.fullname}</h2>
+              <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                <span className="badge badge-purple" style={{ padding: '6px 12px' }}><Icon name="user" size={12}/> {profile.role}</span>
+                <span className="badge badge-gray" style={{ padding: '6px 12px' }}><Icon name="tag" size={12}/> {profile.department}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* STATS CÁ NHÂN (ĐỘC ĐÁO & KHÔNG LẶP) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>SỨC MẠNH LINK</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--purple)' }}>{avgPerformance} <span style={{fontSize:12, fontWeight:400, color:'var(--gray-400)'}}>clicks/link</span></div>
-        </div>
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>TỈ LỆ HOẠT ĐỘNG</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--green)' }}>{totalLinks > 0 ? Math.round((activeLinks/totalLinks)*100) : 0}%</div>
-        </div>
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>LINK CÔNG KHAI</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)' }}>{publicLinks}</div>
-        </div>
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>LINK ĐÃ HẾT HẠN</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--red)' }}>{totalLinks - activeLinks}</div>
-        </div>
-      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 24 }}>
+        {/* SIDEBAR CHI TIẾT */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="card" style={{ padding: 24 }}>
+            <h3 style={{ fontSize: 14, marginBottom: 20, color: 'var(--gray-500)', letterSpacing: '0.05em' }}>TỔNG QUAN</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div><p style={{fontSize:11, color:'var(--gray-400)'}}>Username</p><p style={{fontWeight:600}}>{profile.username}</p></div>
+              <div><p style={{fontSize:11, color:'var(--gray-400)'}}>Ngày tham gia</p><p style={{fontWeight:600}}>{formatDate(profile.created_at)}</p></div>
+            </div>
+          </div>
 
-      {/* BẢNG LINK */}
-      <div className="card">
-        <div className="card-header"><div className="card-title">Các liên kết của tôi</div></div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Code</th><th>Destination</th><th>Clicks</th><th>Trạng thái</th></tr></thead>
-            <tbody>
-              {profile.links?.length === 0 ? <tr><td colSpan={4} style={{textAlign:'center', padding:40, color:'var(--gray-400)'}}>Chưa có liên kết nào</td></tr> :
-              profile.links?.map(l => (
-                <tr key={l.code}>
-                  <td><span className="code-chip">{l.code}</span></td>
-                  <td title={l.original_url} style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13 }}>{l.original_url}</td>
-                  <td style={{ fontWeight: 600 }}>{l.clicks || 0}</td>
-                  <td>{isExpired(l.expiry_date) ? <span className="badge badge-red">Expired</span> : <span className="badge badge-green">Active</span>}</td>
+          <div className="card" style={{ padding: 24, background: 'var(--gray-900)', color: 'white' }}>
+            <div style={{ fontSize: 11, color: 'var(--gray-400)', marginBottom: 8 }}>TỔNG CLICK</div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--yellow)' }}>{totalClicks}</div>
+          </div>
+        </div>
+
+        {/* BẢNG LINK */}
+        <div className="card">
+          <div className="card-header" style={{ padding: 24 }}>
+            <h3 className="card-title"><Icon name="link" size={18}/>Danh sách Link hoạt động ({profile.links?.length || 0})</h3>
+          </div>
+          <div className="table-wrap">
+            <table style={{ minWidth: '500px' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '16px 24px' }}>Code</th>
+                  <th style={{ padding: '16px 24px' }}>Đích đến</th>
+                  <th style={{ padding: '16px 24px', textAlign:'center' }}>Clicks</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {profile.links?.length === 0 ? <tr><td colSpan={3} style={{textAlign:'center', padding:40, color:'var(--gray-400)'}}>Chưa có link nào</td></tr> :
+                profile.links?.map(l => (
+                  <tr key={l.code}>
+                    <td style={{ padding: '16px 24px' }}><span className="code-chip">{l.code}</span></td>
+                    <td style={{ padding: '16px 24px', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.original_url}</td>
+                    <td style={{ padding: '16px 24px', textAlign:'center', fontWeight:700, color: 'var(--blue)' }}>{l.clicks || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
