@@ -569,7 +569,30 @@ export default {
       return corsResponse(JSON.stringify(topByLink));
     }
 
-// ==================== REDIRECT ====================
+    // Route mới: Lấy profile và danh sách link của user
+    if (path.startsWith("user/profile/") && method === "GET") {
+      const cu = await getCurrentUser(request, env);
+      if (!cu) return corsResponse(JSON.stringify({ error: "Unauthorized" }), 401);
+      
+      const targetUsername = path.split("/")[2];
+      
+      // 1. Lấy thông tin user
+      const users = await getAllUsers(env);
+      const targetUser = users.find(u => u.username === targetUsername);
+      if (!targetUser) return corsResponse(JSON.stringify({ error: "User not found" }), 404);
+
+      // 2. Lấy link của user đó (Sử dụng hàm getAllLinks đã có, nhưng lọc lại)
+      // Lưu ý: publicMode = false vì chúng ta đang xem trang cá nhân
+      const allLinks = await getAllLinks(env, targetUsername, cu.role, false);
+      const userLinks = allLinks.filter(l => l.created_by === targetUsername);
+
+      return corsResponse(JSON.stringify({
+        ...targetUser,
+        links: userLinks
+      }));
+    }
+
+    // ==================== REDIRECT ====================
     if (path !== "" && !path.includes("/")) {
       const rawData = await env.URL_STORAGE.get(path);
       if (rawData) {
