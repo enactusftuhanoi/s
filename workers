@@ -89,7 +89,7 @@ export default {
         id: Date.now().toString(), fullname: userData.fullname || "",
         department: userData.department || "", username: userData.username,
         password: btoa(userData.username), role: userData.role || "Member",
-        status: "active", must_change_password: true,
+        status: "active", must_change_password: true, email: userData.email || "",
         created_by: createdBy, created_at: new Date().toISOString(), updated_at: new Date().toISOString()
       };
       users.push(newUser);
@@ -297,6 +297,7 @@ export default {
             fullname: fName,
             department: dept || "BĐH",
             username: uName,
+            email: inputUser.email || "",
             password: btoa(uName), // Mật khẩu mặc định là mã hóa base64 của username
             role: role,
             status: "active",
@@ -1386,7 +1387,7 @@ async function sendEmailToUsers(env, recipients, subject, body) {
 
   for (const recipient of recipients) {
     try {
-      const recipientEmail = recipient.email || recipient.username + '@enactus.local';
+      const recipientEmail = recipient.email;
       
       let personalizedBody = body
         .replace(/{fullname}/g, recipient.fullname || recipient.username)
