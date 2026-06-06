@@ -1182,7 +1182,7 @@ const handleTemplateChange = (template) => {
         return;
       }
   
-      const [fullname, department, username, roleRaw] = parts;
+      const [fullname, department, username, email, roleRaw] = parts;
       
       // Xử lý Role với fallback an toàn
       const role = ['Admin', 'SuperAdmin'].includes(roleRaw) ? roleRaw : 'Member';
@@ -1198,7 +1198,7 @@ const handleTemplateChange = (template) => {
         return;
       }
   
-      tempUsers.push({ fullname, department, username, role });
+      tempUsers.push({ fullname, department, username, email, role });
     });
   
     setParsedUsers(tempUsers);
@@ -1363,6 +1363,7 @@ const handleTemplateChange = (template) => {
                   <th>Full Name</th>
                   <th>Department</th>
                   <th>Username</th>
+                  <th>Email</th>
                   <th>Role</th>
                   <th>Status</th>
                   <th>Password</th>
@@ -1376,6 +1377,7 @@ const handleTemplateChange = (template) => {
                     <td style={{ fontWeight: 500 }}>{u.fullname || '-'}</td>
                     <td style={{ fontSize: 12.5, color: 'var(--gray-500)' }}>{u.department || '-'}</td>
                     <td><span className="code-chip">{u.username}</span></td>
+                    <td style={{ fontSize: 12.5 }}>{u.email || '-'}</td>
                     <td><span className={`badge ${roleColor[u.role] || 'badge-gray'}`}>{u.role}</span></td>
                     <td><span className={`badge ${u.status === 'active' ? 'badge-green' : 'badge-red'}`}>{u.status === 'active' ? 'Active' : 'Disabled'}</span></td>
                     <td>{u.must_change_password ? <span className="badge badge-orange"><Icon name="lock" size={11}/>Cần đổi</span> : <span className="badge badge-green"><Icon name="check" size={11}/>OK</span>}</td>
@@ -1412,14 +1414,14 @@ const handleTemplateChange = (template) => {
             <div className="modal-body">
               <div style={{ fontSize: '13px', color: 'var(--gray-600)', marginBottom: '12px', lineHeight: '1.5' }}>
                 💡 Hãy sao chép (Copy) các cột dữ liệu trực tiếp từ file Excel hoặc Google Sheets theo đúng thứ tự cấu trúc: <br />
-                <strong style={{ color: 'var(--gray-900)' }}>Họ và tên [Tab] Phòng ban [Tab] Username [Tab] Quyền (Admin/Member)</strong>
+                <strong style={{ color: 'var(--gray-900)' }}>Họ và tên [Tab] Ban [Tab] Username [Tab] Email [Tab] Quyền (Admin/Member)</strong>
               </div>
               
               <textarea 
                 className="form-input" 
                 rows={6} 
                 style={{ width: '100%', fontFamily: 'var(--font-mono, monospace)', fontSize: '12.5px', padding: '12px', resize: 'vertical', background: 'var(--gray-50)', marginBottom: '12px', borderRadius: 'var(--radius)' }}
-                placeholder="Dán dữ liệu vào đây...&#10;Ví dụ:&#10;Đỗ Huyền Trang&#9;BĐH&#9;trangdh&#9;Admin&#10;Dương Minh Anh&#9;ER&#9;anhdm&#9;Member"
+                placeholder="Dán dữ liệu vào đây...&#10;Ví dụ:&#10;Đỗ Huyền Trang&#9;BĐH&#9;trangdh&#9;trangdh@example.com&#9;Admin&#10;Dương Minh Anh&#9;ER&#9;anhdm&#9;anhdm@example.com&#9;Member"
                 value={bulkInputText}
                 onChange={e => setBulkInputText(e.target.value)}
               />
@@ -1458,6 +1460,7 @@ const handleTemplateChange = (template) => {
                           <th style={{ padding: '8px 12px', background: 'var(--gray-50)', fontSize: '12px', color: 'var(--gray-500)', borderBottom: '1px solid var(--gray-200)' }}>Họ và tên</th>
                           <th style={{ padding: '8px 12px', background: 'var(--gray-50)', fontSize: '12px', color: 'var(--gray-500)', borderBottom: '1px solid var(--gray-200)' }}>Phòng ban</th>
                           <th style={{ padding: '8px 12px', background: 'var(--gray-50)', fontSize: '12px', color: 'var(--gray-500)', borderBottom: '1px solid var(--gray-200)' }}>Username</th>
+                          <th style={{ padding: '8px 12px', background: 'var(--gray-50)', fontSize: '12px', color: 'var(--gray-500)', borderBottom: '1px solid var(--gray-200)' }}>Email</th>
                           <th style={{ padding: '8px 12px', background: 'var(--gray-50)', fontSize: '12px', color: 'var(--gray-500)', borderBottom: '1px solid var(--gray-200)' }}>Quyền hạn</th>
                           <th style={{ padding: '8px 12px', background: 'var(--gray-50)', fontSize: '12px', color: 'var(--gray-500)', borderBottom: '1px solid var(--gray-200)', textAlign: 'center' }}>Xóa</th>
                         </tr>
