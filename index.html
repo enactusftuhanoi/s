@@ -1376,39 +1376,72 @@ const ProfileView = ({ auth, username }) => {
   if (loading) return <div className="spinner" style={{ margin: '40px auto' }} />;
   if (!profile) return <div>Không tìm thấy dữ liệu.</div>;
 
+  // TÍNH TOÁN CÁC CHỈ SỐ CÁ NHÂN (KHÔNG LẶP DASHBOARD)
+  const totalLinks = profile.links?.length || 0;
+  const activeLinks = profile.links?.filter(l => !isExpired(l.expiry_date)).length || 0;
+  const totalClicks = profile.links?.reduce((sum, l) => sum + (l.clicks || 0), 0) || 0;
+  const avgPerformance = totalLinks > 0 ? (totalClicks / totalLinks).toFixed(1) : 0;
+  
+  // Tỉ lệ link công khai
+  const publicLinks = profile.links?.filter(l => l.is_public).length || 0;
+
   return (
     <div className="view-section fade-in">
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 24 }}>
-        {/* Card thông tin user */}
-        <div className="card" style={{ padding: 24, textAlign: 'center', height: 'fit-content' }}>
-          <div className="sidebar-avatar" style={{ width: 80, height: 80, fontSize: 32, margin: '0 auto 16px' }}>
+      {/* HEADER PROFILE */}
+      <div className="card" style={{ marginBottom: 24, overflow: 'hidden' }}>
+        <div style={{ height: 120, background: 'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)' }} />
+        <div style={{ padding: '0 32px 32px 32px', display: 'flex', alignItems: 'flex-end', gap: 24 }}>
+          <div className="sidebar-avatar" style={{ width: 100, height: 100, fontSize: 40, marginTop: -50, border: '6px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', background: 'var(--purple)', color: 'white' }}>
             {profile.fullname?.substring(0, 2).toUpperCase()}
           </div>
-          <h2 style={{ fontSize: 18, marginBottom: 4 }}>{profile.fullname}</h2>
-          <p style={{ color: 'var(--gray-500)', fontSize: 13, marginBottom: 20 }}>{profile.department}</p>
-          <div className="stat-card" style={{ padding: 12 }}>
-            <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>Tổng link đã tạo</div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{profile.links?.length || 0}</div>
+          <div style={{ marginBottom: 12 }}>
+            <h2 style={{ fontSize: 24, fontWeight: 700 }}>{profile.fullname}</h2>
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <span className="badge badge-purple"><Icon name="user" size={11}/> {profile.role}</span>
+              <span className="badge badge-gray"><Icon name="tag" size={11}/> {profile.department}</span>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Bảng link của user */}
-        <div className="card">
-          <div className="card-header"><div className="card-title">Các liên kết của {profile.username}</div></div>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Code</th><th>Đích đến</th><th>Clicks</th></tr></thead>
-              <tbody>
-                {profile.links?.map(l => (
-                  <tr key={l.code}>
-                    <td><span className="code-chip">{l.code}</span></td>
-                    <td title={l.original_url} style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.original_url}</td>
-                    <td>{l.clicks || 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* STATS CÁ NHÂN (ĐỘC ĐÁO & KHÔNG LẶP) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>SỨC MẠNH LINK</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--purple)' }}>{avgPerformance} <span style={{fontSize:12, fontWeight:400, color:'var(--gray-400)'}}>clicks/link</span></div>
+        </div>
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>TỈ LỆ HOẠT ĐỘNG</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--green)' }}>{totalLinks > 0 ? Math.round((activeLinks/totalLinks)*100) : 0}%</div>
+        </div>
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>LINK CÔNG KHAI</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)' }}>{publicLinks}</div>
+        </div>
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>LINK ĐÃ HẾT HẠN</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--red)' }}>{totalLinks - activeLinks}</div>
+        </div>
+      </div>
+
+      {/* BẢNG LINK */}
+      <div className="card">
+        <div className="card-header"><div className="card-title">Các liên kết của tôi</div></div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Code</th><th>Destination</th><th>Clicks</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+              {profile.links?.length === 0 ? <tr><td colSpan={4} style={{textAlign:'center', padding:40, color:'var(--gray-400)'}}>Chưa có liên kết nào</td></tr> :
+              profile.links?.map(l => (
+                <tr key={l.code}>
+                  <td><span className="code-chip">{l.code}</span></td>
+                  <td title={l.original_url} style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13 }}>{l.original_url}</td>
+                  <td style={{ fontWeight: 600 }}>{l.clicks || 0}</td>
+                  <td>{isExpired(l.expiry_date) ? <span className="badge badge-red">Expired</span> : <span className="badge badge-green">Active</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
