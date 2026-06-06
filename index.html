@@ -1358,6 +1358,7 @@ const AdminView = ({ auth, currentUser }) => {
 const ProfileView = ({ auth, username }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const chartRef = useRef(null);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -1366,77 +1367,101 @@ const ProfileView = ({ auth, username }) => {
         headers: { Authorization: auth }
       });
       if (!res.ok) throw new Error();
-      setProfile(await res.json());
+      const data = await res.json();
+      setProfile(data);
     } catch { toast('Lỗi tải profile', 'error'); }
     finally { setLoading(false); }
   }, [auth, username]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
-  if (loading) return <div className="spinner" style={{ margin: '40px auto' }} />;
-  if (!profile) return <div>Không tìm thấy dữ liệu.</div>;
+  // Cấu hình biểu đồ
+  useEffect(() => {
+    if (!profile || !chartRef.current) return;
+    const ctx = chartRef.current.getContext('2d');
+    
+    // Giả định tổng số link hệ thống là 100 để tính % (Bạn có thể lấy từ API nếu cần)
+    const myLinks = profile.links?.length || 0;
+    const others = 100 - myLinks; 
 
-  const totalClicks = profile.links?.reduce((sum, l) => sum + (l.clicks || 0), 0) || 0;
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Link của tôi', 'Link hệ thống'],
+        datasets: [{
+          data: [myLinks, others],
+          backgroundColor: ['#F59E0B', '#E5E7EB'],
+          borderWidth: 0,
+          cutout: '75%'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } }
+      }
+    });
+  }, [profile]);
+
+  if (loading) return <div className="spinner" style={{ margin: '40px auto' }} />;
+
+  // Xử lý tên: Lấy 2 chữ cái cuối
+  const nameParts = profile.fullname?.split(' ');
+  const lastName = nameParts ? nameParts[nameParts.length - 1] : "??";
+  const initials = lastName.length >= 2 ? lastName.slice(-2).toUpperCase() : lastName.toUpperCase();
 
   return (
     <div className="view-section fade-in" style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      {/* HEADER TÁC PHONG CHUYÊN NGHIỆP */}
-      <div className="card" style={{ marginBottom: 24, position: 'relative', border: 'none', boxShadow: 'var(--shadow-lg)' }}>
-        <div style={{ height: 160, background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)', borderRadius: '16px 16px 0 0' }} />
-        <div style={{ padding: '0 40px 32px 40px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 24 }}>
-            <div className="sidebar-avatar" style={{ width: 110, height: 110, fontSize: 48, marginTop: -50, border: '6px solid white', boxShadow: '0 10px 20px rgba(0,0,0,0.15)', background: '#7C3AED', color: 'white' }}>
-              {profile.fullname?.substring(0, 2).toUpperCase()}
+      <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: 24 }}>
+        
+        {/* SIDEBAR CÁ NHÂN */}
+        <div className="card" style={{ padding: 32, textAlign: 'center', height: 'fit-content', borderTop: '4px solid #F59E0B' }}>
+          <div className="sidebar-avatar" style={{ width: 90, height: 90, fontSize: 32, margin: '0 auto 16px', background: '#F59E0B', color: 'white', fontWeight: 800 }}>
+            {initials}
+          </div>
+          <h2 style={{ fontSize: 20, fontWeight: 700 }}>{profile.fullname}</h2>
+          <p style={{ color: 'var(--gray-500)', fontSize: 13, marginBottom: 24 }}>{profile.department}</p>
+          
+          <div style={{ position: 'relative', width: '200px', margin: '0 auto' }}>
+            <canvas ref={chartRef}></canvas>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+              <div style={{ fontSize: 24, fontWeight: 800 }}>{profile.links?.length}</div>
+              <div style={{ fontSize: 10, color: 'var(--gray-400)' }}>LINKS</div>
             </div>
-            <div style={{ paddingBottom: 10 }}>
-              <h2 style={{ fontSize: 28, fontWeight: 800, color: 'var(--gray-900)' }}>{profile.fullname}</h2>
-              <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-                <span className="badge badge-purple" style={{ padding: '6px 12px' }}><Icon name="user" size={12}/> {profile.role}</span>
-                <span className="badge badge-gray" style={{ padding: '6px 12px' }}><Icon name="tag" size={12}/> {profile.department}</span>
-              </div>
+          </div>
+          
+          <div style={{ marginTop: 24, textAlign: 'left', fontSize: 13 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+              <span style={{ color: 'var(--gray-500)' }}>Username</span>
+              <span style={{ fontWeight: 600 }}>{profile.username}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+              <span style={{ color: 'var(--gray-500)' }}>Tổng Clicks</span>
+              <span style={{ fontWeight: 600, color: '#F59E0B' }}>{profile.links?.reduce((sum, l) => sum + (l.clicks || 0), 0)}</span>
             </div>
           </div>
         </div>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 24 }}>
-        {/* SIDEBAR CHI TIẾT */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div className="card" style={{ padding: 24 }}>
-            <h3 style={{ fontSize: 14, marginBottom: 20, color: 'var(--gray-500)', letterSpacing: '0.05em' }}>TỔNG QUAN</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div><p style={{fontSize:11, color:'var(--gray-400)'}}>Username</p><p style={{fontWeight:600}}>{profile.username}</p></div>
-              <div><p style={{fontSize:11, color:'var(--gray-400)'}}>Ngày tham gia</p><p style={{fontWeight:600}}>{formatDate(profile.created_at)}</p></div>
-            </div>
-          </div>
-
-          <div className="card" style={{ padding: 24, background: 'var(--gray-900)', color: 'white' }}>
-            <div style={{ fontSize: 11, color: 'var(--gray-400)', marginBottom: 8 }}>TỔNG CLICK</div>
-            <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--yellow)' }}>{totalClicks}</div>
-          </div>
-        </div>
-
-        {/* BẢNG LINK */}
+        {/* BẢNG LINK HOẠT ĐỘNG */}
         <div className="card">
-          <div className="card-header" style={{ padding: 24 }}>
-            <h3 className="card-title"><Icon name="link" size={18}/>Danh sách Link hoạt động ({profile.links?.length || 0})</h3>
-          </div>
+          <div className="card-header"><h3 className="card-title">Danh sách Link hoạt động</h3></div>
           <div className="table-wrap">
-            <table style={{ minWidth: '500px' }}>
+            <table style={{ minWidth: '400px' }}>
               <thead>
                 <tr>
-                  <th style={{ padding: '16px 24px' }}>Code</th>
+                  <th style={{ padding: '16px 24px' }}>Mã Code</th>
                   <th style={{ padding: '16px 24px' }}>Đích đến</th>
-                  <th style={{ padding: '16px 24px', textAlign:'center' }}>Clicks</th>
+                  <th style={{ padding: '16px 24px', textAlign:'center' }}>Hiệu suất</th>
                 </tr>
               </thead>
               <tbody>
-                {profile.links?.length === 0 ? <tr><td colSpan={3} style={{textAlign:'center', padding:40, color:'var(--gray-400)'}}>Chưa có link nào</td></tr> :
-                profile.links?.map(l => (
+                {profile.links?.map(l => (
                   <tr key={l.code}>
                     <td style={{ padding: '16px 24px' }}><span className="code-chip">{l.code}</span></td>
-                    <td style={{ padding: '16px 24px', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.original_url}</td>
-                    <td style={{ padding: '16px 24px', textAlign:'center', fontWeight:700, color: 'var(--blue)' }}>{l.clicks || 0}</td>
+                    <td style={{ padding: '16px 24px', fontSize: 13, maxWidth: 250, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.original_url}</td>
+                    <td style={{ padding: '16px 24px', textAlign:'center' }}>
+                       <div style={{ fontSize: 14, fontWeight: 700 }}>{l.clicks}</div>
+                       <div style={{ fontSize: 10, color: 'var(--gray-400)' }}>CLICKS</div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
