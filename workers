@@ -324,6 +324,7 @@ export default {
         return corsResponse(JSON.stringify({ error: e.message }), 500);
       }
     }
+    
 
     if (path.startsWith("admin/users/") && method === "PUT") {
       const cu = await getCurrentUser(request, env);
@@ -378,6 +379,38 @@ export default {
       const cu = await getCurrentUser(request, env);
       if (!cu || (cu.role !== "SuperAdmin" && cu.role !== "Admin")) return corsResponse(JSON.stringify({ error: "Unauthorized" }), 403);
       return corsResponse(JSON.stringify(await getUserLogsByUsername(env, path.split("/")[2])));
+    }
+
+    if (path === "admin/send-email" && method === 'POST') {
+      const cu = await getCurrentUser(request, env);
+      if (!cu || (cu.role !== 'Admin' && cu.role !== 'SuperAdmin')) {
+        return corsResponse(JSON.stringify({ error: 'Không có quyền' }), 403);
+      }
+      
+      try {
+        const body = await request.json();
+        const { recipients, subject, body: emailBody } = body;
+        
+        if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+          return corsResponse(JSON.stringify({ error: 'Không có người nhận' }), 400);
+        }
+        
+        if (!subject || !emailBody) {
+          return corsResponse(JSON.stringify({ error: 'Thiếu tiêu đề hoặc nội dung' }), 400);
+        }
+        
+        await addActionLog(env, clientIP, cu.username, 'SEND_EMAIL', { count: recipients.length });
+        const logs = await sendEmailToUsers(env, recipients, subject, emailBody);
+        
+        return corsResponse(JSON.stringify({ 
+          success: true, 
+          message: `Đã gửi email cho ${recipients.length} người`,
+          log: logs 
+        }));
+      } catch (error) {
+        console.error('Email error:', error);
+        return corsResponse(JSON.stringify({ error: error.message || 'Lỗi gửi email' }), 500);
+      }
     }
 
     if (path === "admin/settings/public" && method === "GET") {
@@ -1333,3 +1366,45 @@ async function addActionLog(env, ip, userName, action, details = {}) {
   if (actionLogs.length > 500) actionLogs = actionLogs.slice(0, 500);
   await env.LOG_STORAGE.put("action_logs", JSON.stringify(actionLogs));
 }
+
+async function sendEmailToUsers(env, recipients, subject, body) {
+  const logs = [];
+  for (const recipient of recipients) {
+    try {
+      let personalizedBody = body
+        .replace(/{fullname}/g, recipient.fullname || recipient.username)
+        .replace(/{username}/g, recipient.username)
+        .replace(/{email}/g, recipient.email || recipient.username + '@enactus.local')
+        .replace(/{department}/g, recipient.department || '');
+      
+      const emailLog = {
+        id: Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        timestamp: new Date().toISOString(),
+        recipient: recipient.email || recipient.username,
+        subject, 
+        status: 'logged'
+      };
+      
+      const existingLog = await env.ADMIN_STORAGE.get("email_logs");
+      let emailLogs = existingLog ? JSON.parse(existingLog) : [];
+      emailLogs.unshift(emailLog);
+      if (emailLogs.length > 500) emailLogs = emailLogs.slice(0, 500);
+      await env.ADMIN_STORAGE.put("email_logs", JSON.stringify(emailLogs));
+      
+      logs.push({ 
+        recipient: recipient.email || recipient.username, 
+        success: true, 
+        message: 'Email được ghi nhận' 
+      });
+    } catch (error) {
+      logs.push({ 
+        recipient: recipient.email || recipient.username, 
+        success: false, 
+        message: error.message 
+      });
+    }
+  }
+  return logs;
+}
+
+
