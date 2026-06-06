@@ -184,6 +184,7 @@ const Icon = ({ name, size=18, color='currentColor', style={} }) => {
     edit:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
     key:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>,
     shield:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+    mail: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
     settings: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
   };
   return icons[name] || null;
@@ -1340,14 +1341,27 @@ const handleTemplateChange = (template) => {
             <Icon name="user" size={16} color="var(--purple)"/>Quản lý tài khoản
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="btn btn-primary btn-sm" style={{ background: 'var(--blue)' }} onClick={() => setShowEmailModal(true)}>
-              <Icon name="mail" size={14}/> Gửi Email
+            <button className="btn btn-sm" 
+              style={{ 
+                background: '#EFF6FF',
+                color: '#1E40AF',
+                border: '1px solid #BFDBFE',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+              onClick={() => setShowEmailModal(true)}>
+              <Icon name="mail" size={14}/> Gửi mail hệ thống
             </button>
             <button className="btn btn-secondary btn-sm" style={{ background: 'var(--yellow-mid)', color: '#92400E', border: '1px solid #FDE68A' }} onClick={() => setShowBulkModal(true)}>
               <Icon name="logs" size={13} style={{ marginRight: '4px', verticalAlign: '-1px' }}/> Import hàng loạt
             </button>
             <button className="btn btn-primary btn-sm" onClick={() => { setEditingUser(null); setForm({ fullname: '', department: '', username: '', role: 'Member' }); setShowModal(true); }}>
-              <Icon name="user" size={14}/> Thêm user
+              <Icon name="user" size={14}/> Add user
             </button>
           </div>
         </div>
@@ -1541,13 +1555,13 @@ const handleTemplateChange = (template) => {
         <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && !emailForm.sending && setShowEmailModal(false)}>
           <div className="modal" style={{ maxWidth: 700, maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
-              <div className="modal-title">📧 Gửi Email cho Thành viên</div>
+              <div className="modal-title">Gửi mail hệ thống</div>
               <button className="btn-icon" onClick={() => setShowEmailModal(false)} disabled={emailForm.sending}><Icon name="close" size={18} /></button>
             </div>
             <div className="modal-body">
               {emailForm.sendLog.length > 0 ? (
                 <div>
-                  <h3 style={{ fontSize: 14, marginBottom: 12, fontWeight: 600 }}>✅ Kết quả:</h3>
+                  <h3 style={{ fontSize: 14, marginBottom: 12, fontWeight: 600 }}>Kết quả:</h3>
                   <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--gray-200)', borderRadius: 8, padding: 12 }}>
                     {emailForm.sendLog.map((log, i) => (
                       <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid var(--gray-100)', fontSize: 12 }}>
@@ -1623,7 +1637,7 @@ const handleTemplateChange = (template) => {
               <div></div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="btn btn-secondary" onClick={() => { setShowEmailModal(false); setEmailForm({ ...emailForm, sendLog: [] }); }} disabled={emailForm.sending}>Hủy</button>
-                {emailForm.sendLog.length === 0 && <button className="btn btn-primary" onClick={handleSendEmail} disabled={emailForm.sending || getRecipientList().length === 0}>{emailForm.sending ? '⏳ Gửi...' : `📧 Gửi (${getRecipientList().length})`}</button>}
+                {emailForm.sendLog.length === 0 && <button className="btn btn-primary" onClick={handleSendEmail} disabled={emailForm.sending || getRecipientList().length === 0}>{emailForm.sending ? '⏳ Gửi...' : `Gửi (${getRecipientList().length})`}</button>}
               </div>
             </div>
           </div>
