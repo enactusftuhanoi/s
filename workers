@@ -242,6 +242,76 @@ export default {
       } catch (e) { return corsResponse(JSON.stringify({ error: e.message }), 400); }
     }
 
+    // ==================== API BULK CREATE USERS ====================
+    if (path === "admin/users/bulk" && method === "POST") {
+      const cu = await getCurrentUser(request, env);
+      if (!cu || (cu.role !== 'SuperAdmin' && cu.role !== 'Admin')) {
+        return corsResponse(JSON.stringify({ error: "Không có quyền thực hiện hành động này." }), 403);
+      }
+
+      try {
+        const body = await request.json(); // Nhận mảng [{fullname, department, username, role}]
+        if (!body.users || !Array.isArray(body.users)) {
+          return corsResponse(JSON.stringify({ error: "Dữ liệu không hợp lệ." }), 400);
+        }
+
+        const usersData = await env.ADMIN_STORAGE.get("users");
+        let users = usersData ? JSON.parse(usersData) : [];
+        
+        const errors = [];
+        const usersToAdd = [];
+
+        for (const inputUser of body.users) {
+          const uName = (inputUser.username || "").trim();
+          const fName = (inputUser.fullname || "").trim();
+          const dept = (inputUser.department || "").trim();
+          const role = (inputUser.role || "Member").trim();
+
+          if (!uName || !fName) {
+            errors.push(`Bỏ qua dòng lỗi: Thiếu tên hoặc username.`);
+            continue;
+          }
+
+          // Kiểm tra trùng lặp trong bộ nhớ tạm và trong DB hiện tại
+          const isDuplicate = users.some(u => u.username === uName) || usersToAdd.some(u => u.username === uName);
+          if (isDuplicate) {
+            errors.push(`Username "${uName}" đã tồn tại trên hệ thống.`);
+            continue;
+          }
+
+          usersToAdd.push({
+            id: (Date.now() + Math.floor(Math.random() * 10000)).toString() + '_' + Math.random().toString(36).substr(2, 4),
+            fullname: fName,
+            department: dept || "BĐH",
+            username: uName,
+            password: btoa(uName), // Mật khẩu mặc định là mã hóa base64 của username
+            role: role,
+            status: "active",
+            must_change_password: true, // Ép đổi mật khẩu khi đăng nhập lần đầu
+            created_by: cu.username,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        }
+
+        if (usersToAdd.length > 0) {
+          users = [...users, ...usersToAdd];
+          await env.ADMIN_STORAGE.put("users", JSON.stringify(users));
+          // Ghi nhật ký hành động (Action Log)
+          await addActionLog(env, clientIP, cu.username, "BULK_CREATE_USER", { count: usersToAdd.length });
+        }
+
+        return corsResponse(JSON.stringify({
+          success: true,
+          message: `Đã tạo thành công ${usersToAdd.length} tài khoản.`,
+          errors: errors
+        }));
+
+      } catch (e) {
+        return corsResponse(JSON.stringify({ error: e.message }), 500);
+      }
+    }
+
     if (path.startsWith("admin/users/") && method === "PUT") {
       const cu = await getCurrentUser(request, env);
       if (!cu || (cu.role !== "SuperAdmin" && cu.role !== "Admin")) return corsResponse(JSON.stringify({ error: "Unauthorized" }), 403);
