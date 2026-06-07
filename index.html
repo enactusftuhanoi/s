@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>URL Shortener | Enactus FTU Hanoi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -148,73 +148,49 @@ tbody td{padding:10px 12px;font-size:13.5px;color:var(--gray-700)}
 /* Edit request badge */
 .pending-badge{background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600}
 
-/* ==================== RESPONSIVE MOBILE ==================== */
+/* ==================== MOBILE LAYOUT (≤ 768px) ==================== */
 @media (max-width: 768px) {
-  .sidebar { width: 200px; }
-  .sidebar-logo-text h1 { font-size: 13px; }
-  .sidebar-logo-text p { font-size: 10px; }
-  .nav-item { font-size: 12.5px; padding: 8px 10px; }
-  .topbar { padding: 0 16px; height: 60px; }
-  .topbar-title { font-size: 16px; }
-  .topbar-badge { font-size: 11px; padding: 4px 10px; }
-  .content { padding: 16px; }
-  .card-header { padding: 16px; }
-  .card-body { padding: 16px; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
-  .btn { padding: 8px 14px; font-size: 12.5px; }
-  .btn-sm { padding: 6px 11px; font-size: 12px; }
-  .form-input { padding: 8px 12px; font-size: 13px; }
-  .form-label { font-size: 12px; margin-bottom: 5px; }
-  .modal { max-width: 95vw; }
-  .modal-header { padding: 16px 16px 0; }
-  .modal-body { padding: 16px; }
-  .modal-footer { padding: 0 16px 16px; }
-  table { min-width: 900px; font-size: 12px; }
-  thead th { padding: 8px 10px; font-size: 10.5px; }
-  tbody td { padding: 8px 10px; font-size: 12px; }
-  .code-chip { font-size: 11px; padding: 2px 7px; }
-  .badge { font-size: 10.5px; padding: 2px 7px; }
+  .sidebar{display:none!important}
+  .main{padding-bottom:64px}
+  .topbar{height:56px;padding:0 16px}
+  .topbar-title{font-size:16px}
+  .topbar-meta{display:none}
+  .content{padding:16px;padding-bottom:20px}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:12px}
+  .card{border-radius:12px}
+  .card-header{padding:16px}
+  .card-body{padding:16px}
+  .btn{padding:8px 14px;font-size:12.5px}
+  .form-label{font-size:12px}
+  .form-input{padding:8px 12px;font-size:13px}
+  .modal{max-width:95vw}
+  table{min-width:900px;font-size:12px}
+  thead th{padding:6px 8px;font-size:10px}
+  tbody td{padding:6px 8px;font-size:11px}
+  .code-chip{font-size:10px;padding:2px 6px}
+  .badge{font-size:10px;padding:2px 6px}
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;height:64px;background:white;border-top:1px solid var(--gray-200);display:flex;align-items:flex-start;justify-content:space-around;padding-top:6px;box-shadow:0 -1px 3px rgba(0,0,0,.1);z-index:20}
+  .bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;cursor:pointer;transition:all .2s;border-radius:8px;flex:1;color:var(--gray-600);font-size:10px;font-weight:500}
+  .bottom-nav-item:active{background:var(--yellow-light);transform:scale(0.95)}
+  .bottom-nav-item.active{color:var(--yellow-dark);font-weight:600}
+  .bottom-nav-item svg{width:20px;height:20px}
 }
 
 @media (max-width: 480px) {
-  .sidebar { width: 180px; }
-  .sidebar-logo { height: 60px; padding: 0 12px; }
-  .sidebar-logo img { width: 32px; height: 32px; }
-  .sidebar-logo-text h1 { font-size: 12px; }
-  .sidebar-user-info p { font-size: 12px; }
-  .nav-item { font-size: 12px; padding: 7px 9px; gap: 8px; }
-  .nav-section-label { font-size: 9px; padding: 0 10px; }
-  .topbar { padding: 0 12px; height: 56px; }
-  .topbar-title { font-size: 14px; }
-  .topbar-meta { gap: 8px; }
-  .topbar-badge { font-size: 10px; padding: 3px 8px; }
-  .content { padding: 12px; }
-  .card { border-radius: 12px; }
-  .card-header { padding: 12px; }
-  .card-body { padding: 12px; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
-  .stat-card { padding: 14px; }
-  .stat-card .stat-label { font-size: 11px; }
-  .stat-card .stat-value { font-size: 24px; }
-  .btn { padding: 7px 12px; font-size: 12px; }
-  .btn-sm { padding: 5px 10px; font-size: 11.5px; }
-  .form-group { margin-bottom: 14px; }
-  .form-label { font-size: 11.5px; margin-bottom: 4px; }
-  .form-input { padding: 8px 11px; font-size: 12px; }
-  .form-hint { font-size: 10.5px; }
-  .modal { max-width: 98vw; max-height: 95vh; }
-  .modal-header { padding: 12px 12px 0; }
-  .modal-body { padding: 12px; }
-  .modal-footer { padding: 0 12px 12px; gap: 8px; }
-  .modal-title { font-size: 15px; }
-  table { min-width: 800px; font-size: 11px; }
-  thead th { padding: 6px 8px; font-size: 10px; }
-  tbody td { padding: 6px 8px; font-size: 11px; }
-  .code-chip { font-size: 10px; padding: 2px 6px; }
-  .badge { font-size: 10px; padding: 2px 6px; }
-  .btn-icon { padding: 6px; border-radius: 6px; }
-  .empty-state { padding: 40px 16px; }
-  .result-box { padding: 16px; margin-top: 12px; }
+  .sidebar{display:none}
+  .topbar{padding:0 12px}
+  .topbar-title{font-size:14px}
+  .content{padding:12px}
+  .card-header{padding:12px}
+  .card-body{padding:12px}
+  .btn{padding:7px 12px;font-size:12px}
+  .form-label{font-size:11.5px}
+  .form-input{padding:8px 11px;font-size:12px}
+  .modal{max-width:98vw}
+  .modal-header{padding:12px 12px 0}
+  .modal-body{padding:12px}
+  .modal-footer{padding:0 12px 12px}
+  table{min-width:800px;font-size:11px}
 }
 
 </style>
@@ -2301,6 +2277,38 @@ const App = () => {
           {tab === 'profile' && <ProfileView auth={auth} username={adminUser} />}
         </div>
       </main>
+      
+      {/* ==================== BOTTOM NAVIGATION - MOBILE ==================== */}
+      <div className="bottom-nav" style={{display: window.innerWidth <= 768 ? 'flex' : 'none'}}>
+        <div className={`bottom-nav-item ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')} style={{cursor:'pointer'}}>
+          <Icon name="dashboard" size={18}/>
+          <span style={{fontSize:'10px'}}>Dashboard</span>
+        </div>
+        <div className={`bottom-nav-item ${tab === 'create' ? 'active' : ''}`} onClick={() => setTab('create')} style={{cursor:'pointer'}}>
+          <Icon name="link" size={18}/>
+          <span style={{fontSize:'10px'}}>Add Link</span>
+        </div>
+        <div className={`bottom-nav-item ${tab === 'links' ? 'active' : ''}`} onClick={() => setTab('links')} style={{cursor:'pointer'}}>
+          <Icon name="list" size={18}/>
+          <span style={{fontSize:'10px'}}>Links</span>
+        </div>
+        {(userRole === 'Admin' || userRole === 'SuperAdmin') && (
+          <div className={`bottom-nav-item ${tab === 'analytics' ? 'active' : ''}`} onClick={() => setTab('analytics')} style={{cursor:'pointer'}}>
+            <Icon name="analytics" size={18}/>
+            <span style={{fontSize:'10px'}}>Analytics</span>
+          </div>
+        )}
+        {userRole === 'SuperAdmin' && (
+          <div className={`bottom-nav-item ${tab === 'admin' ? 'active' : ''}`} onClick={() => setTab('admin')} style={{cursor:'pointer'}}>
+            <Icon name="settings" size={18}/>
+            <span style={{fontSize:'10px'}}>Admin</span>
+          </div>
+        )}
+        <div className={`bottom-nav-item ${tab === 'profile' ? 'active' : ''}`} onClick={() => setTab('profile')} style={{cursor:'pointer'}}>
+          <Icon name="user" size={18}/>
+          <span style={{fontSize:'10px'}}>Profile</span>
+        </div>
+      </div>
     </>
   );
 };
