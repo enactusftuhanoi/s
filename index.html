@@ -147,6 +147,76 @@ tbody td{padding:10px 12px;font-size:13.5px;color:var(--gray-700)}
 
 /* Edit request badge */
 .pending-badge{background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600}
+
+/* ==================== RESPONSIVE MOBILE ==================== */
+@media (max-width: 768px) {
+  .sidebar { width: 200px; }
+  .sidebar-logo-text h1 { font-size: 13px; }
+  .sidebar-logo-text p { font-size: 10px; }
+  .nav-item { font-size: 12.5px; padding: 8px 10px; }
+  .topbar { padding: 0 16px; height: 60px; }
+  .topbar-title { font-size: 16px; }
+  .topbar-badge { font-size: 11px; padding: 4px 10px; }
+  .content { padding: 16px; }
+  .card-header { padding: 16px; }
+  .card-body { padding: 16px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+  .btn { padding: 8px 14px; font-size: 12.5px; }
+  .btn-sm { padding: 6px 11px; font-size: 12px; }
+  .form-input { padding: 8px 12px; font-size: 13px; }
+  .form-label { font-size: 12px; margin-bottom: 5px; }
+  .modal { max-width: 95vw; }
+  .modal-header { padding: 16px 16px 0; }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 0 16px 16px; }
+  table { min-width: 900px; font-size: 12px; }
+  thead th { padding: 8px 10px; font-size: 10.5px; }
+  tbody td { padding: 8px 10px; font-size: 12px; }
+  .code-chip { font-size: 11px; padding: 2px 7px; }
+  .badge { font-size: 10.5px; padding: 2px 7px; }
+}
+
+@media (max-width: 480px) {
+  .sidebar { width: 180px; }
+  .sidebar-logo { height: 60px; padding: 0 12px; }
+  .sidebar-logo img { width: 32px; height: 32px; }
+  .sidebar-logo-text h1 { font-size: 12px; }
+  .sidebar-user-info p { font-size: 12px; }
+  .nav-item { font-size: 12px; padding: 7px 9px; gap: 8px; }
+  .nav-section-label { font-size: 9px; padding: 0 10px; }
+  .topbar { padding: 0 12px; height: 56px; }
+  .topbar-title { font-size: 14px; }
+  .topbar-meta { gap: 8px; }
+  .topbar-badge { font-size: 10px; padding: 3px 8px; }
+  .content { padding: 12px; }
+  .card { border-radius: 12px; }
+  .card-header { padding: 12px; }
+  .card-body { padding: 12px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+  .stat-card { padding: 14px; }
+  .stat-card .stat-label { font-size: 11px; }
+  .stat-card .stat-value { font-size: 24px; }
+  .btn { padding: 7px 12px; font-size: 12px; }
+  .btn-sm { padding: 5px 10px; font-size: 11.5px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 11.5px; margin-bottom: 4px; }
+  .form-input { padding: 8px 11px; font-size: 12px; }
+  .form-hint { font-size: 10.5px; }
+  .modal { max-width: 98vw; max-height: 95vh; }
+  .modal-header { padding: 12px 12px 0; }
+  .modal-body { padding: 12px; }
+  .modal-footer { padding: 0 12px 12px; gap: 8px; }
+  .modal-title { font-size: 15px; }
+  table { min-width: 800px; font-size: 11px; }
+  thead th { padding: 6px 8px; font-size: 10px; }
+  tbody td { padding: 6px 8px; font-size: 11px; }
+  .code-chip { font-size: 10px; padding: 2px 6px; }
+  .badge { font-size: 10px; padding: 2px 6px; }
+  .btn-icon { padding: 6px; border-radius: 6px; }
+  .empty-state { padding: 40px 16px; }
+  .result-box { padding: 16px; margin-top: 12px; }
+}
+
 </style>
 </head>
 <body>
@@ -1089,7 +1159,7 @@ const AdminView = ({ auth, currentUser }) => {
   const [editingUser,setEditingUser]=useState(null);
   const [publicMode,setPublicMode]=useState(false);
   const [selLogs,setSelLogs]=useState(null);
-  const [form,setForm]=useState({fullname:'',department:'',username:'',role:'Member'});
+  const [form,setForm]=useState({fullname:'',department:'',username:'',email:'',role:'Member'});
 
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailForm, setEmailForm] = useState({
@@ -1281,7 +1351,7 @@ const handleTemplateChange = (template) => {
       const method=editingUser?'PUT':'POST';
       const url=editingUser?`${WORKER_URL}/admin/users/${editingUser.username}`:`${WORKER_URL}/admin/users`;
       const res=await fetch(url,{method,headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify(form)});
-      if(res.ok){toast(editingUser?'Cập nhật thành công':`Tạo user "${form.username}" thành công! Mật khẩu = username, phải đổi khi đăng nhập lần đầu.`,'success',4000);fetchUsers();setShowModal(false);setEditingUser(null);setForm({fullname:'',department:'',username:'',role:'Member'});}
+      if(res.ok){toast(editingUser?'Cập nhật thành công':`Tạo user "${form.username}" thành công! Mật khẩu = username, phải đổi khi đăng nhập lần đầu.`,'success',4000);fetchUsers();setShowModal(false);setEditingUser(null);setForm({fullname:'',department:'',username:'',email:'',role:'Member'});}
       else{const e=await res.json();toast(e.error||'Lỗi','error');}
     }catch{toast('Lỗi kết nối','error');}
   };
@@ -1360,7 +1430,7 @@ const handleTemplateChange = (template) => {
             <button className="btn btn-secondary btn-sm" style={{ background: 'var(--yellow-mid)', color: '#92400E', border: '1px solid #FDE68A' }} onClick={() => setShowBulkModal(true)}>
               <Icon name="logs" size={13} style={{ marginRight: '4px', verticalAlign: '-1px' }}/> Import hàng loạt
             </button>
-            <button className="btn btn-primary btn-sm" onClick={() => { setEditingUser(null); setForm({ fullname: '', department: '', username: '', role: 'Member' }); setShowModal(true); }}>
+            <button className="btn btn-primary btn-sm" onClick={() => { setEditingUser(null); setForm({ fullname: '', department: '', username: '', email: '', role: 'Member' }); setShowModal(true); }}>
               <Icon name="user" size={14}/> Add user
             </button>
           </div>
@@ -1398,7 +1468,7 @@ const handleTemplateChange = (template) => {
                     <td style={{ fontSize: 12 }}>{formatDate(u.created_at)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 5 }}>
-                        <button className="btn-icon" title="Sửa" onClick={() => { setEditingUser(u); setForm({ fullname: u.fullname || '', department: u.department || '', username: u.username, role: u.role }); setShowModal(true); }}><Icon name="edit" size={14}/></button>
+                        <button className="btn-icon" title="Sửa" onClick={() => { setEditingUser(u); setForm({ fullname: u.fullname || '', department: u.department || '', username: u.username, email: u.email || '', role: u.role }); setShowModal(true); }}><Icon name="edit" size={14}/></button>
                         <button className="btn-icon" title="Reset mật khẩu" onClick={() => resetPw(u.username)}><Icon name="key" size={14}/></button>
                         <button className="btn-icon" title={u.status === 'active' ? 'Disable' : 'Enable'} onClick={() => toggleStatus(u.username)}><Icon name={u.status === 'active' ? 'close' : 'check'} size={14}/></button>
                         <button className="btn-icon" title="Logs" onClick={() => viewLogs(u.username)}><Icon name="logs" size={14}/></button>
@@ -1528,6 +1598,7 @@ const handleTemplateChange = (template) => {
             <div className="modal-body">
               <div className="form-group"><label className="form-label">Full Name</label><input className="form-input" value={form.fullname} onChange={e=>setForm({...form,fullname:e.target.value})}/></div>
               <div className="form-group"><label className="form-label">Department</label><input className="form-input" value={form.department} onChange={e=>setForm({...form,department:e.target.value})}/></div>
+              <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></div>
               <div className="form-group"><label className="form-label">Username</label><input className="form-input" value={form.username} onChange={e=>setForm({...form,username:e.target.value})} disabled={!!editingUser}/></div>
               <div className="form-group"><label className="form-label">Role</label><select className="form-input" value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option value="Member">Member</option><option value="Admin">Admin</option>{currentUser?.role==='SuperAdmin'&&<option value="SuperAdmin">SuperAdmin</option>}</select></div>
               {!editingUser&&<div style={{background:'var(--yellow-light)',border:'1px solid var(--yellow-mid)',borderRadius:8,padding:'10px 14px',fontSize:12.5,color:'#92400E'}}>🔐 Mật khẩu mặc định = username. User phải đổi khi đăng nhập lần đầu.</div>}
