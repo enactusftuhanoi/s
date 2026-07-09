@@ -45,7 +45,17 @@
     background: #fff;
     padding: 20mm 18mm;
     box-shadow: 0 0 6px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
   }
+
+  .footer-grading {
+    margin-top: auto;
+    padding-top: 30px;
+    font-style: italic;
+  }
+  .footer-grading label { font-style: italic; }
+  .footer-grading input { font-style: italic; }
 
   .title-block { text-align: center; margin-bottom: 26px; }
   .title-block h1 { font-size: 22px; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 4px; }
@@ -196,16 +206,38 @@
       <label>Điểm tổng</label>
       <input type="text" id="diemtong">
     </div>
+
+    <div class="footer-grading">
+      <div class="row">
+        <div class="field">
+          <label>Người chấm</label>
+          <input type="text" id="nguoicham">
+        </div>
+        <div class="field">
+          <label>Thời gian chấm</label>
+          <input type="text" id="thoigiancham">
+        </div>
+      </div>
+    </div>
   </div>
 
 <script>
+function toSo(str){
+  // Chấp nhận cả dấu phẩy (8,5) lẫn dấu chấm (8.5) làm dấu thập phân
+  if(!str) return 0;
+  const chuan = str.trim().replace(',', '.');
+  const n = parseFloat(chuan);
+  return isNaN(n) ? 0 : n;
+}
+
 function tinhTong(){
   const tnEl = document.getElementById('diemtn');
   const tlEl = document.getElementById('diemtl');
   if(tnEl.value || tlEl.value){
-    const tn = parseFloat(tnEl.value) || 0;
-    const tl = parseFloat(tlEl.value) || 0;
-    document.getElementById('diemtong').value = (tn + tl).toString();
+    const tn = toSo(tnEl.value);
+    const tl = toSo(tlEl.value);
+    let tong = Math.round((tn + tl) * 100) / 100; // tránh lỗi số thập phân lẻ 0.1+0.2
+    document.getElementById('diemtong').value = tong.toString().replace('.', ',');
   }
 }
 
@@ -220,6 +252,14 @@ function printMode(mode){
 
 window.addEventListener('afterprint', () => {
   document.body.classList.remove('print-mau');
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  const now = new Date();
+  const pad = n => n.toString().padStart(2, '0');
+  const gio = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const ngay = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+  document.getElementById('thoigiancham').value = `${gio} - ${ngay}`;
 });
 </script>
 
