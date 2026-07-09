@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>In phiếu điểm</title>
+<title>Phiếu điểm</title>
 <style>
   @page { size: A4; margin: 20mm 18mm; }
   * { box-sizing: border-box; }
@@ -22,19 +22,21 @@
     align-items: center;
     gap: 16px;
     font-size: 13px;
+    flex-wrap: wrap;
   }
   .toolbar .hint { color: #555; }
+  .toolbar .buttons { display: flex; gap: 10px; }
   .toolbar button {
     font-family: 'Times New Roman', Times, serif;
     font-size: 15px;
-    padding: 8px 20px;
+    padding: 8px 18px;
     border: 1px solid #1a1a1a;
-    background: #1a1a1a;
-    color: #fff;
     border-radius: 4px;
     cursor: pointer;
     white-space: nowrap;
   }
+  .btn-primary { background: #1a1a1a; color: #fff; }
+  .btn-outline { background: #fff; color: #1a1a1a; }
 
   .sheet {
     width: 210mm;
@@ -91,16 +93,41 @@
     body { background: #fff; }
     .toolbar { display: none; }
     .sheet { box-shadow: none; margin: 0; padding: 0; width: auto; min-height: auto; }
+
+    /* Mặc định: chỉ in GIÁ TRỊ, ẩn nhãn/tiêu đề/viền để chồng lên giấy mẫu đã in sẵn */
     .title-block, .section-title, .field label, .total label { visibility: hidden; }
     .field input, .field textarea, .scores .field, .total input { border-color: transparent !important; }
+
+    /* Chế độ in giấy mẫu (trống): hiện lại nhãn/tiêu đề/viền, ẩn chữ đã gõ */
+    body.print-mau .title-block,
+    body.print-mau .section-title,
+    body.print-mau .field label,
+    body.print-mau .total label {
+      visibility: visible;
+    }
+    body.print-mau .field input,
+    body.print-mau .field textarea {
+      border-bottom-color: #999 !important;
+      color: transparent !important;
+    }
+    body.print-mau .field textarea { border-color: #999 !important; }
+    body.print-mau .scores .field { border-color: #1a1a1a !important; }
+    body.print-mau .scores .field input { color: transparent !important; }
+    body.print-mau .total input {
+      border-color: #1a1a1a !important;
+      color: transparent !important;
+    }
   }
 </style>
 </head>
 <body>
 
   <div class="toolbar">
-    <span class="hint">Điền thông tin rồi bấm "In phiếu". Khi in, chỉ phần giá trị hiện ra (không viền, không nhãn) để khớp vào ô trống trên giấy mẫu.</span>
-    <button onclick="window.print()">In phiếu</button>
+    <span class="hint">Bấm "In giấy mẫu" để in giấy trống dùng nhiều lần. Điền thông tin rồi bấm "In phiếu" để in chỉ phần giá trị, khớp lên tờ giấy mẫu đó.</span>
+    <div class="buttons">
+      <button class="btn-outline" onclick="printMode('mau')">In giấy mẫu</button>
+      <button class="btn-primary" onclick="printMode('gia-tri')">In phiếu</button>
+    </div>
   </div>
 
   <div class="sheet">
@@ -181,6 +208,19 @@ function tinhTong(){
     document.getElementById('diemtong').value = (tn + tl).toString();
   }
 }
+
+function printMode(mode){
+  if(mode === 'mau'){
+    document.body.classList.add('print-mau');
+  } else {
+    document.body.classList.remove('print-mau');
+  }
+  window.print();
+}
+
+window.addEventListener('afterprint', () => {
+  document.body.classList.remove('print-mau');
+});
 </script>
 
 </body>
