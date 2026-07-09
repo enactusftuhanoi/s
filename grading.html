@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>In phiếu điểm</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm; }
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    color: #111;
+    margin: 0;
+    background: #eee;
+  }
+
+  .toolbar {
+    max-width: 210mm;
+    margin: 14px auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+  }
+  .toolbar .hint { color: #555; }
+  .toolbar button {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 15px;
+    padding: 8px 20px;
+    border: 1px solid #1a1a1a;
+    background: #1a1a1a;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .sheet {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto 30px;
+    background: #fff;
+    padding: 20mm 18mm;
+    box-shadow: 0 0 6px rgba(0,0,0,0.15);
+  }
+
+  .title-block { text-align: center; margin-bottom: 26px; }
+  .title-block h1 { font-size: 22px; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 4px; }
+  .title-block .sub { font-size: 13px; font-style: italic; color: #444; }
+
+  .row { display: flex; gap: 24px; margin-bottom: 16px; }
+  .field { flex: 1; }
+  .field.full { flex: 1 1 100%; }
+  .field label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; }
+  .field input, .field textarea {
+    width: 100%;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 15px;
+    border: none;
+    border-bottom: 1px solid #999;
+    padding: 4px 2px;
+    background: transparent;
+    outline: none;
+  }
+  .field textarea { border: 1px solid #999; resize: vertical; min-height: 50px; padding: 6px 8px; }
+
+  .section-title {
+    font-size: 13.5px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-left: 4px solid #1a1a1a;
+    padding-left: 8px;
+    margin: 24px 0 12px;
+  }
+
+  .scores { display: flex; gap: 16px; }
+  .scores .field { border: 1px solid #1a1a1a; padding: 10px 14px; text-align: center; }
+  .scores .field label { text-align: center; }
+  .scores .field input { text-align: center; font-size: 18px; border: none; }
+
+  .total { display: flex; justify-content: flex-end; align-items: center; gap: 14px; margin-top: 20px; }
+  .total label { font-weight: bold; text-transform: uppercase; font-size: 14px; }
+  .total input {
+    width: 100px; height: 50px; text-align: center; font-size: 22px; font-weight: bold;
+    border: 2px solid #1a1a1a; font-family: 'Times New Roman', Times, serif;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .sheet { box-shadow: none; margin: 0; padding: 0; width: auto; min-height: auto; }
+    .title-block, .section-title, .field label, .total label { visibility: hidden; }
+    .field input, .field textarea, .scores .field, .total input { border-color: transparent !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <span class="hint">Điền thông tin rồi bấm "In phiếu". Khi in, chỉ phần giá trị hiện ra (không viền, không nhãn) để khớp vào ô trống trên giấy mẫu.</span>
+    <button onclick="window.print()">In phiếu</button>
+  </div>
+
+  <div class="sheet">
+    <div class="title-block">
+      <h1>Phiếu chấm điểm</h1>
+      <div class="sub">Kết quả bài kiểm tra</div>
+    </div>
+
+    <div class="row">
+      <div class="field full">
+        <label>Họ và tên</label>
+        <input type="text" id="hoten">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Lớp</label>
+        <input type="text" id="lop">
+      </div>
+      <div class="field">
+        <label>Môn</label>
+        <input type="text" id="mon">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Ngày tháng năm sinh</label>
+        <input type="text" id="ngaysinh">
+      </div>
+    </div>
+
+    <div class="section-title">Điểm số</div>
+    <div class="scores">
+      <div class="field">
+        <label>Điểm trắc nghiệm</label>
+        <input type="text" id="diemtn" oninput="tinhTong()">
+      </div>
+      <div class="field">
+        <label>Điểm tự luận</label>
+        <input type="text" id="diemtl" oninput="tinhTong()">
+      </div>
+    </div>
+
+    <div class="section-title">Câu sai trắc nghiệm</div>
+    <div class="row">
+      <div class="field">
+        <label>Số câu sai</label>
+        <input type="text" id="socausai">
+      </div>
+      <div class="field" style="flex: 2;">
+        <label>Các câu sai (ghi số thứ tự câu)</label>
+        <input type="text" id="cacausai">
+      </div>
+    </div>
+
+    <div class="section-title">Nhận xét</div>
+    <div class="row">
+      <div class="field full">
+        <textarea id="nhanxet" rows="4"></textarea>
+      </div>
+    </div>
+
+    <div class="total">
+      <label>Điểm tổng</label>
+      <input type="text" id="diemtong">
+    </div>
+  </div>
+
+<script>
+function tinhTong(){
+  const tnEl = document.getElementById('diemtn');
+  const tlEl = document.getElementById('diemtl');
+  if(tnEl.value || tlEl.value){
+    const tn = parseFloat(tnEl.value) || 0;
+    const tl = parseFloat(tlEl.value) || 0;
+    document.getElementById('diemtong').value = (tn + tl).toString();
+  }
+}
+</script>
+
+</body>
+</html>
