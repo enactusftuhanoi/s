@@ -14,6 +14,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -201,6 +202,7 @@ tbody td{padding:10px 12px;font-size:13.5px;color:var(--gray-700)}
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
 const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
+const GOOGLE_CLIENT_ID = '281439714678-2esupokkvceqqb8ho8ob5cvrkgl2ti9u.apps.googleusercontent.com';
 
 // ==================== ICONS ====================
 const Icon = ({ name, size=18, color='currentColor', style={} }) => {
@@ -340,6 +342,7 @@ const AuthScreen = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const googleBtnRef = useRef(null);
   const handle = async () => {
     if (!username||!password){toast('Vui lòng nhập đầy đủ','error');return;}
     setLoading(true);
@@ -356,6 +359,32 @@ const AuthScreen = ({ onLogin }) => {
     } catch {toast('Không thể kết nối server','error');}
     finally {setLoading(false);}
   };
+
+  useEffect(()=>{
+    if(!window.google||!googleBtnRef.current) return;
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: async (resp)=>{
+        try {
+          const res = await fetch(`${WORKER_URL}/auth/google-login`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({credential:resp.credential})
+          });
+          const data = await res.json();
+          if (res.ok){
+            const authStr = 'Bearer '+data.token;
+            sessionStorage.setItem('adminAuth',authStr);
+            sessionStorage.setItem('adminUser',data.username);
+            sessionStorage.setItem('userRole',data.role||'Member');
+            onLogin(authStr,data.username,data);
+          } else toast(data.error||'Đăng nhập Google thất bại','error');
+        } catch { toast('Lỗi kết nối','error'); }
+      }
+    });
+    window.google.accounts.id.renderButton(googleBtnRef.current,{theme:'outline',size:'large',width:360,text:'signin_with'});
+  },[]);
+
   return (
     <div className="auth-screen">
       <div className="auth-card">
@@ -363,6 +392,12 @@ const AuthScreen = ({ onLogin }) => {
         <div className="auth-form-group"><label className="auth-label">Tên đăng nhập</label><input className="auth-input" type="text" placeholder="username" value={username} onChange={e=>setUsername(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/></div>
         <div className="auth-form-group"><label className="auth-label">Mật khẩu</label><input className="auth-input" type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/></div>
         <button className="auth-btn" onClick={handle} disabled={loading}>{loading?'Đang đăng nhập...':'Đăng nhập →'}</button>
+        <div style={{display:'flex',alignItems:'center',gap:10,margin:'20px 0'}}>
+          <div style={{flex:1,height:1,background:'var(--gray-200)'}}/>
+          <span style={{fontSize:12,color:'var(--gray-400)'}}>hoặc</span>
+          <div style={{flex:1,height:1,background:'var(--gray-200)'}}/>
+        </div>
+        <div ref={googleBtnRef} style={{display:'flex',justifyContent:'center'}}/>
       </div>
     </div>
   );
@@ -486,36 +521,105 @@ const EditLinkModal = ({ link, auth, userRole, currentUsername, onClose, onSaved
   );
 };
 
-// ==================== CHANGE PW MODAL ====================
-const ChangePasswordModal = ({ auth, onClose }) => {
+// ==================== SETTINGS VIEW (Đổi mật khẩu + Liên kết Google) ====================
+const SettingsView = ({ auth }) => {
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleStatus, setGoogleStatus] = useState(null);
+  const [googleLoading, setGoogleLoading] = useState(true);
+  const googleBtnRef = useRef(null);
   const strength = getPasswordStrength(newPw);
-  const handle = async () => {
-    if (!currentPw||!newPw||!confirmPw){toast('Điền đầy đủ','error');return;}
-    if (newPw!==confirmPw){toast('Không khớp','error');return;}
-    if (newPw.length<6){toast('Tối thiểu 6 ký tự','error');return;}
+
+  const fetchGoogleStatus = useCallback(async () => {
+    setGoogleLoading(true);
+    try {
+      const res = await fetch(`${WORKER_URL}/settings/google-status`, { headers: { Authorization: auth } });
+      setGoogleStatus(await res.json());
+    } catch { toast('Lỗi tải trạng thái Google', 'error'); }
+    finally { setGoogleLoading(false); }
+  }, [auth]);
+
+  useEffect(() => { fetchGoogleStatus(); }, [fetchGoogleStatus]);
+
+  useEffect(() => {
+    if (!window.google || !googleBtnRef.current || googleStatus?.linked) return;
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: async (resp) => {
+        try {
+          const res = await fetch(`${WORKER_URL}/settings/link-google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: auth },
+            body: JSON.stringify({ credential: resp.credential })
+          });
+          const data = await res.json();
+          if (res.ok) { toast('Đã liên kết Google!'); fetchGoogleStatus(); }
+          else toast(data.error || 'Lỗi liên kết', 'error');
+        } catch { toast('Lỗi kết nối', 'error'); }
+      }
+    });
+    window.google.accounts.id.renderButton(googleBtnRef.current, { theme: 'outline', size: 'medium', width: 280, text: 'signin_with' });
+  }, [googleStatus, auth]);
+
+  const unlinkGoogle = async () => {
+    const r = await confirmDialog('Hủy liên kết Google?', 'Bạn sẽ không thể đăng nhập nhanh bằng Google nữa.', 'Hủy liên kết');
+    if (!r.isConfirmed) return;
+    try {
+      const res = await fetch(`${WORKER_URL}/settings/unlink-google`, { method: 'POST', headers: { Authorization: auth } });
+      if (res.ok) { toast('Đã hủy liên kết'); fetchGoogleStatus(); }
+    } catch { toast('Lỗi kết nối', 'error'); }
+  };
+
+  const handleChangePw = async () => {
+    if (!currentPw || !newPw || !confirmPw) { toast('Điền đầy đủ', 'error'); return; }
+    if (newPw !== confirmPw) { toast('Không khớp', 'error'); return; }
+    if (newPw.length < 6) { toast('Tối thiểu 6 ký tự', 'error'); return; }
     setLoading(true);
     try {
-      const res=await fetch(`${WORKER_URL}/admin/change-password`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({currentPassword:currentPw,newPassword:newPw})});
-      const d=await res.json();
-      if(res.ok){toast('Đổi mật khẩu thành công!');onClose();}
-      else toast(d.error||'Lỗi','error');
-    } catch {toast('Lỗi kết nối','error');}
-    finally {setLoading(false);}
+      const res = await fetch(`${WORKER_URL}/admin/change-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: auth },
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw })
+      });
+      const d = await res.json();
+      if (res.ok) { toast('Đổi mật khẩu thành công!'); setCurrentPw(''); setNewPw(''); setConfirmPw(''); }
+      else toast(d.error || 'Lỗi', 'error');
+    } catch { toast('Lỗi kết nối', 'error'); }
+    finally { setLoading(false); }
   };
+
   return (
-    <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal">
-        <div className="modal-header"><div className="modal-title"><Icon name="key" size={16} style={{verticalAlign:-2,marginRight:6}}/>Change password</div><button className="btn-icon" onClick={onClose}><Icon name="close" size={18}/></button></div>
-        <div className="modal-body">
-          <div className="form-group"><label className="form-label">Current password</label><input className="form-input" type="password" value={currentPw} onChange={e=>setCurrentPw(e.target.value)}/></div>
-          <div className="form-group"><label className="form-label">New password</label><input className="form-input" type="password" placeholder="At least 6 characters" value={newPw} onChange={e=>setNewPw(e.target.value)}/>{newPw&&<><div className="pw-strength" style={{background:`linear-gradient(to right,${strength.color} ${strength.pct}%,var(--gray-200) ${strength.pct}%)`}}/><div className="pw-strength-text" style={{color:strength.color}}>{strength.label}</div></>}</div>
-          <div className="form-group" style={{marginBottom:0}}><label className="form-label">Confirm</label><input className="form-input" type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>{confirmPw&&newPw&&<div style={{fontSize:12,marginTop:5,color:confirmPw===newPw?'#10B981':'#EF4444',display:'flex',alignItems:'center',gap:4}}><Icon name={confirmPw===newPw?'check':'close'} size={13} color={confirmPw===newPw?'#10B981':'#EF4444'}/>{confirmPw===newPw?'Match':'No match'}</div>}</div>
+    <div className="view-section fade-in" style={{maxWidth:640,margin:'0 auto'}}>
+      <div className="card" style={{marginBottom:16}}>
+        <div className="card-header"><div className="card-title"><Icon name="key" size={16} color="var(--yellow-dark)"/>Đổi mật khẩu</div></div>
+        <div className="card-body">
+          <div className="form-group"><label className="form-label">Mật khẩu hiện tại</label><input className="form-input" type="password" value={currentPw} onChange={e=>setCurrentPw(e.target.value)}/></div>
+          <div className="form-group"><label className="form-label">Mật khẩu mới</label><input className="form-input" type="password" placeholder="Ít nhất 6 ký tự" value={newPw} onChange={e=>setNewPw(e.target.value)}/>{newPw&&<><div className="pw-strength" style={{background:`linear-gradient(to right,${strength.color} ${strength.pct}%,var(--gray-200) ${strength.pct}%)`}}/><div className="pw-strength-text" style={{color:strength.color}}>{strength.label}</div></>}</div>
+          <div className="form-group" style={{marginBottom:0}}><label className="form-label">Xác nhận</label><input className="form-input" type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleChangePw()}/></div>
+          <button className="btn btn-primary" style={{marginTop:16}} onClick={handleChangePw} disabled={loading}>{loading?'Đang lưu...':<><Icon name="check" size={14}/>Cập nhật mật khẩu</>}</button>
         </div>
-        <div className="modal-footer"><button className="btn btn-secondary" onClick={onClose}>Hủy</button><button className="btn btn-primary" onClick={handle} disabled={loading}>{loading?'Đang lưu...':<><Icon name="check" size={14}/>Xác nhận</>}</button></div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><div className="card-title"><Icon name="shield" size={16} color="var(--blue)"/>Đăng nhập nhanh bằng Google</div></div>
+        <div className="card-body">
+          {googleLoading ? <div className="spinner" style={{margin:'0 auto'}}/> :
+           googleStatus?.linked ? (
+            <div>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                <span className="badge badge-green"><Icon name="check" size={11}/>Đã liên kết</span>
+                <span style={{fontSize:13,color:'var(--gray-600)'}}>{googleStatus.email}</span>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={unlinkGoogle}><Icon name="close" size={14}/>Hủy liên kết</button>
+            </div>
+           ) : (
+            <div>
+              <div style={{fontSize:13,color:'var(--gray-500)',marginBottom:14}}>Liên kết tài khoản Google để đăng nhập nhanh, không cần nhập mật khẩu.</div>
+              <div ref={googleBtnRef}/>
+            </div>
+           )}
+        </div>
       </div>
     </div>
   );
@@ -2182,7 +2286,6 @@ const App = () => {
   const [mustChangePw,setMustChangePw]=useState(false);
   const [tab,setTab]=useState('dashboard');
   const [userFullname,setUserFullname]=useState(()=>localStorage.getItem('userFullname')||'');
-  const [showChangePw,setShowChangePw]=useState(false);
 
   const handleLogin=(a,u,ud)=>{
     setAuth(a);setAdminUser(u);setCurrentUserInfo(ud);
@@ -2215,13 +2318,12 @@ const App = () => {
     {key:'links',label:'Links management',icon:'list'},
   ];
 
-  const titles={dashboard:'Dashboard',create:'Add new link',links:'Links management',analytics:'Analytics & Logs',admin:'Administration',profile:'My Profile'};
+  const titles={dashboard:'Dashboard',create:'Add new link',links:'Links management',analytics:'Analytics & Logs',admin:'Administration',profile:'My Profile',settings:'Cài đặt'};
   const displayName=userFullname||adminUser||'Người dùng';
   const initials=displayName.substring(0,2).toUpperCase();
 
   return (
     <>
-      {showChangePw&&<ChangePasswordModal auth={auth} onClose={()=>setShowChangePw(false)}/>}
       <aside className="sidebar">
         <div className="sidebar-logo">
           <img src="/icon.png" alt="" onError={e=>e.target.style.display='none'}/>
@@ -2249,8 +2351,8 @@ const App = () => {
               <Icon name="settings" size={17}/>Administration
             </a>
           )}
-          <a className="nav-item" href="#" onClick={e => { e.preventDefault(); setShowChangePw(true); }}>
-            <Icon name="key" size={17}/>Change Password
+          <a className={`nav-item ${tab === 'settings' ? 'active' : ''}`} onClick={() => setTab('settings')} href="#">
+            <Icon name="key" size={17}/>Cài đặt
           </a>
         </nav>
         <div className="sidebar-footer">
@@ -2275,6 +2377,7 @@ const App = () => {
           {tab==='analytics'&&<AnalyticsView/>}
           {tab==='admin'&&<AdminView auth={auth} currentUser={currentUserInfo}/>}
           {tab === 'profile' && <ProfileView auth={auth} username={adminUser} />}
+          {tab === 'settings' && <SettingsView auth={auth} username={adminUser} />}
         </div>
       </main>
       
@@ -2307,6 +2410,10 @@ const App = () => {
         <div className={`bottom-nav-item ${tab === 'profile' ? 'active' : ''}`} onClick={() => setTab('profile')} style={{cursor:'pointer'}}>
           <Icon name="user" size={18}/>
           <span style={{fontSize:'10px'}}>Profile</span>
+        </div>
+        <div className={`bottom-nav-item ${tab === 'settings' ? 'active' : ''}`} onClick={() => setTab('settings')} style={{cursor:'pointer'}}>
+          <Icon name="key" size={18}/>
+          <span style={{fontSize:'10px'}}>Cài đặt</span>
         </div>
       </div>
     </>
