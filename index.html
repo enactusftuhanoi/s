@@ -2318,7 +2318,7 @@ const App = () => {
     {key:'links',label:'Links management',icon:'list'},
   ];
 
-  const titles={dashboard:'Dashboard',create:'Add new link',links:'Links management',analytics:'Analytics & Logs',admin:'Administration',profile:'My Profile',settings:'Cài đặt'};
+  const titles={dashboard:'Dashboard',create:'Add new link',links:'Links management',analytics:'Analytics & Logs',admin:'Administration',profile:'My Profile',settings:'Setting'};
   const displayName=userFullname||adminUser||'Người dùng';
   const initials=displayName.substring(0,2).toUpperCase();
 
@@ -2352,7 +2352,7 @@ const App = () => {
             </a>
           )}
           <a className={`nav-item ${tab === 'settings' ? 'active' : ''}`} onClick={() => setTab('settings')} href="#">
-            <Icon name="key" size={17}/>Cài đặt
+            <Icon name="key" size={17}/>Setting
           </a>
         </nav>
         <div className="sidebar-footer">
@@ -2413,7 +2413,7 @@ const App = () => {
         </div>
         <div className={`bottom-nav-item ${tab === 'settings' ? 'active' : ''}`} onClick={() => setTab('settings')} style={{cursor:'pointer'}}>
           <Icon name="key" size={18}/>
-          <span style={{fontSize:'10px'}}>Cài đặt</span>
+          <span style={{fontSize:'10px'}}>Setting</span>
         </div>
       </div>
     </>
