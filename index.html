@@ -613,9 +613,14 @@ const SettingsView = ({ auth }) => {
               </div>
               <button className="btn btn-ghost btn-sm" onClick={unlinkGoogle}><Icon name="close" size={14}/>Hủy liên kết</button>
             </div>
+           ) : !googleStatus?.profileEmail ? (
+            <div style={{background:'#FEE2E2',border:'1px solid #FECACA',borderRadius:8,padding:'10px 14px',fontSize:13,color:'#991B1B'}}>
+              ⚠️ Tài khoản của bạn chưa có Email trong hồ sơ. Liên hệ Admin/SuperAdmin để bổ sung Email trước khi liên kết Google.
+            </div>
            ) : (
             <div>
-              <div style={{fontSize:13,color:'var(--gray-500)',marginBottom:14}}>Liên kết tài khoản Google để đăng nhập nhanh, không cần nhập mật khẩu.</div>
+              <div style={{fontSize:13,color:'var(--gray-500)',marginBottom:6}}>Liên kết tài khoản Google để đăng nhập nhanh, không cần nhập mật khẩu.</div>
+              <div style={{fontSize:12.5,color:'var(--gray-600)',marginBottom:14}}>Bắt buộc đăng nhập đúng Gmail: <b style={{fontFamily:'DM Mono,monospace'}}>{googleStatus.profileEmail}</b></div>
               <div ref={googleBtnRef}/>
             </div>
            )}
