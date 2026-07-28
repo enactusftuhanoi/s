@@ -204,6 +204,16 @@ const WORKER_URL = 'https://api.enactusftuhanoi.workers.dev';
 const YOUR_DOMAIN = 's.enactusftuhanoi.id.vn';
 const GOOGLE_CLIENT_ID = '281439714678-2esupokkvceqqb8ho8ob5cvrkgl2ti9u.apps.googleusercontent.com';
 
+// ==================== MULTI-DOMAIN CONFIG ====================
+// Phải khớp với DOMAINS trong worker.js
+const DOMAINS = {
+  enactus: { hostname: 's.enactusftuhanoi.id.vn', label: 'Enactus FTU Hanoi' },
+  vsic: { hostname: 'vsic.info', label: 'VSIC' }
+};
+const DOMAIN_KEYS = Object.keys(DOMAINS);
+const DEFAULT_DOMAIN_KEY = 'enactus';
+const domainHost = (key) => (DOMAINS[key] && DOMAINS[key].hostname) || YOUR_DOMAIN;
+
 // ==================== ICONS ====================
 const Icon = ({ name, size=18, color='currentColor', style={} }) => {
   const icons = {
@@ -404,9 +414,10 @@ const AuthScreen = ({ onLogin }) => {
 };
 
 // ==================== QR MODAL ====================
-const QRModal = ({ code, onClose }) => {
+const QRModal = ({ link, onClose }) => {
+  const code = link.code;
   const qrRef = useRef(null);
-  const url = `https://${YOUR_DOMAIN}/${code}`;
+  const url = `https://${domainHost(link.domain)}/${code}`;
   useEffect(()=>{
     if(qrRef.current){qrRef.current.innerHTML='';new QRCode(qrRef.current,{text:url,width:200,height:200,colorDark:'#1F2937',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});}
   },[code]);
@@ -431,9 +442,10 @@ const QRModal = ({ code, onClose }) => {
 };
 
 // ==================== UTM MODAL ====================
-const UTMModal = ({ code, onClose }) => {
+const UTMModal = ({ link, onClose }) => {
+  const code = link.code;
   const [utm, setUtm] = useState('');
-  const gen = utm.trim() ? `https://${YOUR_DOMAIN}/${code}?utm=${utm.trim()}` : '';
+  const gen = utm.trim() ? `https://${domainHost(link.domain)}/${code}?utm=${utm.trim()}` : '';
   return (
     <div className="modal-backdrop" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal">
@@ -742,7 +754,7 @@ const ProfileHeader = ({ auth, username }) => {
 };
 
 // ==================== DASHBOARD ====================
-const DashboardView = ({ auth, username }) => {
+const DashboardView = ({ auth, username, activeDomain }) => {
   const [stats, setStats] = useState(null);
   const [hourly, setHourly] = useState([]);
   const [topUTM, setTopUTM] = useState([]);
@@ -753,12 +765,13 @@ const DashboardView = ({ auth, username }) => {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [sr,hr,ur] = await Promise.all([fetch(`${WORKER_URL}/stats`),fetch(`${WORKER_URL}/hourly-stats`),fetch(`${WORKER_URL}/top-utm`)]);
+      const dq = `?domain=${activeDomain}`;
+      const [sr,hr,ur] = await Promise.all([fetch(`${WORKER_URL}/stats${dq}`),fetch(`${WORKER_URL}/hourly-stats${dq}`),fetch(`${WORKER_URL}/top-utm${dq}`)]);
       const [sd,hd,ud] = await Promise.all([sr.json(),hr.json(),ur.json()]);
       setStats(sd); setHourly(hd||[]); setTopUTM((ud||[]).filter(i=>i.utms?.length>0).slice(0,5));
     } catch(e){console.error(e);}
     finally {setLoading(false);}
-  },[]);
+  },[activeDomain]);
 
   useEffect(()=>{fetchAll();},[fetchAll]);
   useEffect(()=>()=>{dailyInst.current?.destroy();hourlyInst.current?.destroy();},[]);
@@ -847,7 +860,7 @@ const DashboardView = ({ auth, username }) => {
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
                       <span style={{width:22,height:22,borderRadius:'50%',background:i===0?'var(--yellow)':'var(--gray-100)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:i===0?'var(--gray-800)':'var(--gray-500)'}}>{i+1}</span>
-                      <a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{fontFamily:'DM Mono,monospace',fontSize:13,color:'var(--yellow-dark)',textDecoration:'none',fontWeight:600}}>/{link.code}</a>
+                      <a href={`https://${domainHost(link.domain)}/${link.code}`} target="_blank" style={{fontFamily:'DM Mono,monospace',fontSize:13,color:'var(--yellow-dark)',textDecoration:'none',fontWeight:600}}>/{link.code}</a>
                     </div>
                     <span className="badge badge-gray">{link.clicks} clicks</span>
                   </div>
@@ -863,7 +876,9 @@ const DashboardView = ({ auth, username }) => {
 };
 
 // ==================== CREATE LINK ====================
-const CreateLinkView = ({ auth }) => {
+const CreateLinkView = ({ auth, currentUser, activeDomain }) => {
+  const domain = DOMAINS[activeDomain] ? activeDomain : DEFAULT_DOMAIN_KEY;
+  const canUseDomain = currentUser?.role==='SuperAdmin' || (currentUser?.allowed_domains||[]).includes(domain);
   const [url,setUrl]=useState('');
   const [alias,setAlias]=useState('');
   const [expiry,setExpiry]=useState('');
@@ -877,7 +892,7 @@ const CreateLinkView = ({ auth }) => {
     if (alias&&!/^[a-zA-Z0-9-]+$/.test(alias)){toast('Alias chỉ dùng chữ, số, gạch ngang','error');return;}
     setLoading(true);
     try {
-      const body={url};
+      const body={url, domain};
       if(alias)body.customCode=alias;
       if(expiry)body.expiryDate=expiry;
       if(password)body.password=password;
@@ -892,14 +907,17 @@ const CreateLinkView = ({ auth }) => {
   return (
     <div className="view-section fade-in">
       <div style={{maxWidth:640,margin:'0 auto'}}>
+        {!canUseDomain && <div style={{background:'#FEE2E2',border:'1.5px solid #FCA5A5',color:'#991B1B',padding:'12px 14px',borderRadius:8,marginBottom:16,fontSize:13}}>
+          Bạn chưa được cấp quyền tạo link trên domain <strong>{DOMAINS[domain]?.hostname}</strong>. Hãy đổi domain ở góc trên bên phải hoặc liên hệ SuperAdmin để được cấp quyền.
+        </div>}
         <div className="card">
-          <div className="card-header"><div className="card-title"><Icon name="link" size={16} color="var(--yellow-dark)"/>Rút gọn URL mới</div></div>
+          <div className="card-header"><div className="card-title"><Icon name="link" size={16} color="var(--yellow-dark)"/>Rút gọn URL mới — <span style={{color:'var(--yellow-dark)'}}>{DOMAINS[domain]?.hostname}</span></div></div>
           <div className="card-body">
             <div className="form-group"><label className="form-label">URL cần rút gọn *</label><input className="form-input" type="url" placeholder="https://example.com/..." value={url} onChange={e=>setUrl(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/></div>
             <div className="form-group">
               <label className="form-label">Alias tùy chỉnh</label>
-              <div className="input-group"><div className="form-prefix">{YOUR_DOMAIN}/</div><input className="form-input" placeholder="my-link" maxLength={20} value={alias} onChange={e=>setAlias(e.target.value)}/></div>
-              <div className="form-hint">Tùy chọn — chữ, số, gạch ngang, tối đa 20 ký tự</div>
+              <div className="input-group"><div className="form-prefix">{domainHost(domain)}/</div><input className="form-input" placeholder="my-link" maxLength={20} value={alias} onChange={e=>setAlias(e.target.value)}/></div>
+              <div className="form-hint">Tùy chọn — chữ, số, gạch ngang, tối đa 20 ký tự. Muốn tạo link cho domain khác, đổi domain ở góc trên bên phải trước.</div>
             </div>
             <button onClick={()=>setShowAdv(!showAdv)} style={{display:'flex',alignItems:'center',gap:6,fontSize:13,color:'var(--gray-500)',background:'none',border:'none',cursor:'pointer',padding:'4px 0',marginBottom:16,fontFamily:'DM Sans,sans-serif'}}>
               <Icon name={showAdv?'close':'lock'} size={14}/>{showAdv?'Ẩn tùy chọn nâng cao':'Tùy chọn nâng cao (hết hạn, mật khẩu)'}
@@ -917,7 +935,7 @@ const CreateLinkView = ({ auth }) => {
                 </div>
               </div>
             </div>}
-            <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',padding:14,fontSize:15}} onClick={handle} disabled={loading}>
+            <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',padding:14,fontSize:15}} onClick={handle} disabled={loading||!canUseDomain}>
               {loading?<><div className="spinner" style={{width:18,height:18,borderWidth:2}}/>Đang tạo...</>:<><Icon name="link" size={16}/>Rút gọn ngay</>}
             </button>
             {result&&<div className="result-box">
@@ -935,7 +953,7 @@ const CreateLinkView = ({ auth }) => {
 };
 
 // ==================== LINKS VIEW ====================
-const LinksView = ({ auth, userRole, currentUsername }) => {
+const LinksView = ({ auth, userRole, currentUsername, activeDomain }) => {
   const [links,setLinks]=useState([]);
   const [search,setSearch]=useState('');
   const [loading,setLoading]=useState(true);
@@ -948,11 +966,11 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
   const fetchLinks = useCallback(async () => {
     setLoading(true);
     try {
-      const res=await fetch(`${WORKER_URL}/links`,{headers:{Authorization:auth}});
+      const res=await fetch(`${WORKER_URL}/links?domain=${activeDomain}`,{headers:{Authorization:auth}});
       setLinks(await res.json());
     } catch {toast('Lỗi tải link','error');}
     finally {setLoading(false);}
-  },[auth]);
+  },[auth,activeDomain]);
 
   useEffect(()=>{fetchLinks();},[fetchLinks]);
 
@@ -979,7 +997,7 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
   const exportExcel = () => {
     if(!window.XLSX){toast('Chưa tải thư viện Excel','error');return;}
     const ws=window.XLSX.utils.json_to_sheet(links.map(l=>({
-      'Short Code':l.code,'Short URL':`https://${YOUR_DOMAIN}/${l.code}`,'Original URL':l.original_url,
+      'Short Code':l.code,'Short URL':`https://${domainHost(l.domain)}/${l.code}`,'Original URL':l.original_url,
       'Clicks':l.clicks||0,'Status':isExpired(l.expiry_date)?'Hết hạn':'Active',
       'Expiry':l.expiry_date||'-','Has Password':l.has_password?'Yes':'No',
       'Created By':l.created_by,'Created At':formatDate(l.created_at)
@@ -1011,8 +1029,8 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
 
   return (
     <div className="view-section fade-in">
-      {qrCode&&<QRModal code={qrCode} onClose={()=>setQrCode(null)}/>}
-      {utmCode&&<UTMModal code={utmCode} onClose={()=>setUtmCode(null)}/>}
+      {qrCode&&<QRModal link={qrCode} onClose={()=>setQrCode(null)}/>}
+      {utmCode&&<UTMModal link={utmCode} onClose={()=>setUtmCode(null)}/>}
       {editLink&&<EditLinkModal link={editLink} auth={auth} userRole={userRole} currentUsername={currentUsername} onClose={()=>setEditLink(null)} onSaved={fetchLinks}/>}
       <div className="card">
         <div className="card-header">
@@ -1045,7 +1063,7 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
           <tbody>{filtered.map(link=>(
             <tr key={link.code} style={{opacity:isExpired(link.expiry_date)?0.7:1}}>
               <td><span className="code-chip">{link.code}</span></td>
-              <td><a href={`https://${YOUR_DOMAIN}/${link.code}`} target="_blank" style={{color:'var(--yellow-dark)',fontFamily:'DM Mono,monospace',fontSize:12.5,textDecoration:'none',display:'flex',alignItems:'center',gap:4}}>{YOUR_DOMAIN}/{link.code} <Icon name="external" size={12}/></a></td>
+              <td><a href={`https://${domainHost(link.domain)}/${link.code}`} target="_blank" style={{color:'var(--yellow-dark)',fontFamily:'DM Mono,monospace',fontSize:12.5,textDecoration:'none',display:'flex',alignItems:'center',gap:4}}>{domainHost(link.domain)}/{link.code} <Icon name="external" size={12}/></a></td>
               <td><div style={{maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:12.5,color:'var(--gray-500)'}} title={link.original_url}>{link.original_url}</div></td>
               <td><span className="badge badge-gray"><Icon name="analytics" size={11}/>{link.clicks||0}</span></td>
               <td><LinkStatusBadges link={link}/></td>
@@ -1071,9 +1089,9 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
               </td>
               <td>
                 <div style={{display:'flex',gap:4,justifyContent:'center'}}>
-                  <button className="btn-icon" title="Copy" onClick={()=>{copyText(`https://${YOUR_DOMAIN}/${link.code}`);toast('Đã sao chép!')}}><Icon name="copy" size={15}/></button>
-                  <button className="btn-icon" title="QR" onClick={()=>setQrCode(link.code)} style={{color:'var(--purple)'}}><Icon name="qr" size={15}/></button>
-                  <button className="btn-icon" title="UTM" onClick={()=>setUtmCode(link.code)} style={{color:'var(--blue)'}}><Icon name="tag" size={15}/></button>
+                  <button className="btn-icon" title="Copy" onClick={()=>{copyText(`https://${domainHost(link.domain)}/${link.code}`);toast('Đã sao chép!')}}><Icon name="copy" size={15}/></button>
+                  <button className="btn-icon" title="QR" onClick={()=>setQrCode(link)} style={{color:'var(--purple)'}}><Icon name="qr" size={15}/></button>
+                  <button className="btn-icon" title="UTM" onClick={()=>setUtmCode(link)} style={{color:'var(--blue)'}}><Icon name="tag" size={15}/></button>
                   {(link.created_by===currentUsername||userRole==='Admin'||userRole==='SuperAdmin')&&(
                     <button className="btn-icon" title="Chỉnh sửa" onClick={()=>setEditLink(link)} style={{color:'var(--orange)'}}><Icon name="edit" size={15}/></button>
                   )}
@@ -1091,7 +1109,7 @@ const LinksView = ({ auth, userRole, currentUsername }) => {
 };
 
 // ==================== ANALYTICS ====================
-const AnalyticsView = () => {
+const AnalyticsView = ({ activeDomain }) => {
   const [logs,setLogs]=useState({
     clickLogs:[],
     actionLogs:[],
@@ -1105,12 +1123,12 @@ const AnalyticsView = () => {
   const fetchLogs = useCallback(async()=>{
     setLoading(true);
     try {
-      const res=await fetch(`${WORKER_URL}/logs`);
+      const res=await fetch(`${WORKER_URL}/logs?domain=${activeDomain}`);
       setLogs(await res.json());  // Sẽ bao gồm todayStats từ API
     }
     catch {toast('Lỗi tải logs','error');}
     finally {setLoading(false);}
-  },[]);
+  },[activeDomain]);
 
   useEffect(()=>{fetchLogs();},[fetchLogs]);
   
@@ -1202,7 +1220,7 @@ const AnalyticsView = () => {
                 <td style={{fontSize:12,fontFamily:'DM Mono,monospace',whiteSpace:'nowrap'}}>{l.time}</td>
                 <td style={{fontSize:12,fontFamily:'DM Mono,monospace'}}>{l.ip}</td>
                 <td style={{fontSize:13}}>{l.user&&l.user!=='unknown'?l.user:<span style={{color:'var(--gray-400)',fontSize:12}}>—</span>}</td>
-                <td><a href={`https://${YOUR_DOMAIN}/${l.code}`} target="_blank" className="code-chip" style={{textDecoration:'none'}}>/{l.code}</a></td>
+                <td><a href={`https://${domainHost(l.domain)}/${l.code}`} target="_blank" className="code-chip" style={{textDecoration:'none'}}>/{l.code}</a></td>
                 <td><span className="badge badge-yellow">{l.utm||'Direct'}</span></td>
                 <td style={{fontSize:12}}>{l.country&&l.country!=='Unknown'?l.country:<span style={{color:'var(--gray-400)'}}>—</span>}</td>
                 <td style={{fontSize:12,color:'var(--gray-500)',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.target}</td>
@@ -1244,7 +1262,8 @@ const AdminView = ({ auth, currentUser }) => {
   const [editingUser,setEditingUser]=useState(null);
   const [publicMode,setPublicMode]=useState(false);
   const [selLogs,setSelLogs]=useState(null);
-  const [form,setForm]=useState({fullname:'',department:'',username:'',email:'',role:'Member'});
+  const [form,setForm]=useState({fullname:'',department:'',username:'',email:'',role:'Member',allowed_domains:['enactus']});
+  const [selectedUsers,setSelectedUsers]=useState([]);
 
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailForm, setEmailForm] = useState({
@@ -1314,6 +1333,7 @@ const handleTemplateChange = (template) => {
   const [bulkInputText, setBulkInputText] = useState("");
   const [parsedUsers, setParsedUsers] = useState([]);
   const [bulkErrors, setBulkErrors] = useState([]);
+  const [bulkAllowedDomains, setBulkAllowedDomains] = useState(['enactus']);
 
   // Hàm phân tích dữ liệu dán vào (Tab-separated)
   const handleParseBulkData = () => {
@@ -1398,7 +1418,7 @@ const handleTemplateChange = (template) => {
       const res = await fetch(`${WORKER_URL}/admin/users/bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: auth },
-        body: JSON.stringify({ users: parsedUsers })
+        body: JSON.stringify({ users: parsedUsers, defaultAllowedDomains: bulkAllowedDomains })
       });
       const data = await res.json();
 
@@ -1436,7 +1456,7 @@ const handleTemplateChange = (template) => {
       const method=editingUser?'PUT':'POST';
       const url=editingUser?`${WORKER_URL}/admin/users/${editingUser.username}`:`${WORKER_URL}/admin/users`;
       const res=await fetch(url,{method,headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify(form)});
-      if(res.ok){toast(editingUser?'Cập nhật thành công':`Tạo user "${form.username}" thành công! Mật khẩu = username, phải đổi khi đăng nhập lần đầu.`,'success',4000);fetchUsers();setShowModal(false);setEditingUser(null);setForm({fullname:'',department:'',username:'',email:'',role:'Member'});}
+      if(res.ok){toast(editingUser?'Cập nhật thành công':`Tạo user "${form.username}" thành công! Mật khẩu = username, phải đổi khi đăng nhập lần đầu.`,'success',4000);fetchUsers();setShowModal(false);setEditingUser(null);setForm({fullname:'',department:'',username:'',email:'',role:'Member',allowed_domains:['enactus']});}
       else{const e=await res.json();toast(e.error||'Lỗi','error');}
     }catch{toast('Lỗi kết nối','error');}
   };
@@ -1471,6 +1491,103 @@ const handleTemplateChange = (template) => {
   };
 
   const roleColor={SuperAdmin:'badge-purple',Admin:'badge-blue',Member:'badge-gray'};
+
+  // ==================== BULK ACTIONS (chọn nhiều user) ====================
+  const selectableUsers = users.filter(u=>u.username!=='superadmin');
+  const isAllSelected = selectableUsers.length>0 && selectableUsers.every(u=>selectedUsers.includes(u.username));
+  const toggleSelectAll = () => {
+    if(isAllSelected) setSelectedUsers([]);
+    else setSelectedUsers(selectableUsers.map(u=>u.username));
+  };
+  const toggleSelectOne = (username) => {
+    setSelectedUsers(prev=>prev.includes(username)?prev.filter(u=>u!==username):[...prev,username]);
+  };
+  const clearSelection = ()=>setSelectedUsers([]);
+
+  const bulkChangeRole = async () => {
+    const { value: role } = await Swal.fire({
+      title:`Đổi vai trò cho ${selectedUsers.length} tài khoản`,
+      input:'select',
+      inputOptions:{Member:'Member',Admin:'Admin',SuperAdmin:'SuperAdmin'},
+      inputPlaceholder:'Chọn vai trò',
+      showCancelButton:true, cancelButtonText:'Hủy', confirmButtonText:'Áp dụng', confirmButtonColor:'#FFC107'
+    });
+    if(!role) return;
+    const errors=[];
+    for(const username of selectedUsers){
+      try{
+        const res=await fetch(`${WORKER_URL}/admin/users/${username}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({role})});
+        if(!res.ok){const e=await res.json().catch(()=>({}));errors.push(`${username}: ${e.error||res.status}`);}
+      }catch{errors.push(`${username}: Lỗi kết nối`);}
+    }
+    if(errors.length){Swal.fire({title:`Đổi vai trò xong, ${errors.length} lỗi`,html:errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
+    else{toast('Đã đổi vai trò thành công','success');}
+    fetchUsers(); clearSelection();
+  };
+
+  const bulkSetDomains = async () => {
+    const domainKeys = Object.keys(DOMAINS);
+    const { value: checkedDomains } = await Swal.fire({
+      title:`Cấp quyền domain cho ${selectedUsers.length} tài khoản`,
+      html:`<div style="text-align:left;display:flex;flex-direction:column;gap:8px;margin-top:8px">${
+        domainKeys.map(k=>`<label style="display:flex;align-items:center;gap:8px;font-size:14px"><input type="checkbox" id="bulk-domain-${k}" value="${k}"> ${DOMAINS[k].hostname}</label>`).join('')
+      }</div>`,
+      focusConfirm:false,
+      showCancelButton:true, cancelButtonText:'Hủy', confirmButtonText:'Áp dụng', confirmButtonColor:'#FFC107',
+      preConfirm:()=>{
+        const chosen = domainKeys.filter(k=>document.getElementById(`bulk-domain-${k}`)?.checked);
+        if(!chosen.length){ Swal.showValidationMessage('Chọn ít nhất 1 domain'); return false; }
+        return chosen;
+      }
+    });
+    if(!checkedDomains) return;
+    const errors=[];
+    for(const username of selectedUsers){
+      try{
+        const res=await fetch(`${WORKER_URL}/admin/users/${username}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({allowed_domains:checkedDomains})});
+        if(!res.ok){const e=await res.json().catch(()=>({}));errors.push(`${username}: ${e.error||res.status}`);}
+      }catch{errors.push(`${username}: Lỗi kết nối`);}
+    }
+    if(errors.length){Swal.fire({title:`Cấp quyền xong, ${errors.length} lỗi`,html:errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
+    else{toast('Đã cấp quyền domain thành công','success');}
+    fetchUsers(); clearSelection();
+  };
+
+  const bulkResetPassword = async () => {
+    const r=await Swal.fire({title:`Reset mật khẩu cho ${selectedUsers.length} tài khoản?`,text:'Mật khẩu mới = username. User phải đổi khi đăng nhập lại.',icon:'warning',showCancelButton:true,confirmButtonColor:'#FFC107',cancelButtonText:'Hủy',confirmButtonText:'Reset'});
+    if(!r.isConfirmed) return;
+    const errors=[];
+    for(const username of selectedUsers){
+      try{
+        const res=await fetch(`${WORKER_URL}/admin/users/${username}/reset-password`,{method:'POST',headers:{Authorization:auth}});
+        if(!res.ok){const e=await res.json().catch(()=>({}));errors.push(`${username}: ${e.error||res.status}`);}
+      }catch{errors.push(`${username}: Lỗi kết nối`);}
+    }
+    if(errors.length){Swal.fire({title:`Reset xong, ${errors.length} lỗi`,html:errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
+    else{toast('Đã reset mật khẩu thành công','success');}
+    clearSelection();
+  };
+
+  const bulkToggleStatus = async (targetStatus) => {
+    const label = targetStatus==='active'?'kích hoạt':'vô hiệu hóa';
+    const r=await Swal.fire({title:`Xác nhận ${label} ${selectedUsers.length} tài khoản?`,icon:'warning',showCancelButton:true,confirmButtonColor:'#FFC107',cancelButtonText:'Hủy',confirmButtonText:'Xác nhận'});
+    if(!r.isConfirmed) return;
+    const errors=[];
+    for(const username of selectedUsers){
+      try{
+        const res=await fetch(`${WORKER_URL}/admin/users/${username}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({status:targetStatus})});
+        if(!res.ok){const e=await res.json().catch(()=>({}));errors.push(`${username}: ${e.error||res.status}`);}
+      }catch{errors.push(`${username}: Lỗi kết nối`);}
+    }
+    if(errors.length){Swal.fire({title:`${label.charAt(0).toUpperCase()+label.slice(1)} xong, ${errors.length} lỗi`,html:errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
+    else{toast(`Đã ${label} thành công`,'success');}
+    fetchUsers(); clearSelection();
+  };
+
+  const bulkOpenEmail = () => {
+    setEmailForm(prev=>({...prev, recipient_type:'specific', selected_users:[...selectedUsers]}));
+    setShowEmailModal(true);
+  };
 
   return (
     <div className="view-section fade-in">
@@ -1515,11 +1632,24 @@ const handleTemplateChange = (template) => {
             <button className="btn btn-secondary btn-sm" style={{ background: 'var(--yellow-mid)', color: '#92400E', border: '1px solid #FDE68A' }} onClick={() => setShowBulkModal(true)}>
               <Icon name="logs" size={13} style={{ marginRight: '4px', verticalAlign: '-1px' }}/> Import hàng loạt
             </button>
-            <button className="btn btn-primary btn-sm" onClick={() => { setEditingUser(null); setForm({ fullname: '', department: '', username: '', email: '', role: 'Member' }); setShowModal(true); }}>
+            <button className="btn btn-primary btn-sm" onClick={() => { setEditingUser(null); setForm({ fullname: '', department: '', username: '', email: '', role: 'Member', allowed_domains: ['enactus'] }); setShowModal(true); }}>
               <Icon name="user" size={14}/> Add user
             </button>
           </div>
         </div>
+
+        {selectedUsers.length>0 && (
+          <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:8,padding:'10px 20px',background:'var(--yellow-light)',borderTop:'1px solid var(--gray-100)',borderBottom:'1px solid var(--gray-100)'}}>
+            <span style={{fontSize:13,fontWeight:600,color:'var(--gray-700)'}}>Đã chọn {selectedUsers.length} tài khoản</span>
+            <button className="btn btn-secondary btn-sm" onClick={bulkChangeRole}><Icon name="user" size={13}/> Đổi vai trò</button>
+            <button className="btn btn-secondary btn-sm" onClick={bulkSetDomains}><Icon name="globe" size={13}/> Cấp quyền domain</button>
+            <button className="btn btn-secondary btn-sm" onClick={bulkOpenEmail}><Icon name="mail" size={13}/> Gửi mail</button>
+            <button className="btn btn-secondary btn-sm" onClick={bulkResetPassword}><Icon name="key" size={13}/> Reset mật khẩu</button>
+            <button className="btn btn-secondary btn-sm" onClick={()=>bulkToggleStatus('disabled')}><Icon name="close" size={13}/> Vô hiệu hóa</button>
+            <button className="btn btn-secondary btn-sm" onClick={()=>bulkToggleStatus('active')}><Icon name="check" size={13}/> Kích hoạt</button>
+            <button className="btn btn-sm" style={{marginLeft:'auto',color:'var(--gray-500)'}} onClick={clearSelection}><Icon name="close" size={13}/> Bỏ chọn</button>
+          </div>
+        )}
 
         {/* Viết ngắn gọn hiệu ứng Loading bằng toán tử tam phân chuẩn */}
         {loading ? (
@@ -1529,6 +1659,7 @@ const handleTemplateChange = (template) => {
             <table>
               <thead>
                 <tr>
+                  <th style={{width:36}}><input type="checkbox" checked={isAllSelected} onChange={toggleSelectAll}/></th>
                   <th>Full Name</th>
                   <th>Department</th>
                   <th>Username</th>
@@ -1543,6 +1674,7 @@ const handleTemplateChange = (template) => {
               <tbody>
                 {users.map(u => (
                   <tr key={u.username} style={{ opacity: u.status === 'disabled' ? 0.5 : 1 }}>
+                    <td>{u.username!=='superadmin' && <input type="checkbox" checked={selectedUsers.includes(u.username)} onChange={()=>toggleSelectOne(u.username)}/>}</td>
                     <td style={{ fontWeight: 500 }}>{u.fullname || '-'}</td>
                     <td style={{ fontSize: 12.5, color: 'var(--gray-500)' }}>{u.department || '-'}</td>
                     <td><span className="code-chip">{u.username}</span></td>
@@ -1553,7 +1685,7 @@ const handleTemplateChange = (template) => {
                     <td style={{ fontSize: 12 }}>{formatDate(u.created_at)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 5 }}>
-                        <button className="btn-icon" title="Sửa" onClick={() => { setEditingUser(u); setForm({ fullname: u.fullname || '', department: u.department || '', username: u.username, email: u.email || '', role: u.role }); setShowModal(true); }}><Icon name="edit" size={14}/></button>
+                        <button className="btn-icon" title="Sửa" onClick={() => { setEditingUser(u); setForm({ fullname: u.fullname || '', department: u.department || '', username: u.username, email: u.email || '', role: u.role, allowed_domains: (u.allowed_domains && u.allowed_domains.length ? u.allowed_domains : ['enactus']) }); setShowModal(true); }}><Icon name="edit" size={14}/></button>
                         <button className="btn-icon" title="Reset mật khẩu" onClick={() => resetPw(u.username)}><Icon name="key" size={14}/></button>
                         <button className="btn-icon" title={u.status === 'active' ? 'Disable' : 'Enable'} onClick={() => toggleStatus(u.username)}><Icon name={u.status === 'active' ? 'close' : 'check'} size={14}/></button>
                         <button className="btn-icon" title="Logs" onClick={() => viewLogs(u.username)}><Icon name="logs" size={14}/></button>
@@ -1606,6 +1738,22 @@ const handleTemplateChange = (template) => {
                 )}
               </div>
 
+              <div className="form-group">
+                <label className="form-label">Domain mặc định cho cả lô (áp dụng cho user không phải SuperAdmin)</label>
+                <div style={{display:'flex',gap:16,padding:'10px 12px',border:'1px solid var(--gray-200)',borderRadius:8,background:'var(--gray-50)'}}>
+                  {DOMAIN_KEYS.map(key=>(
+                    <label key={key} style={{display:'flex',alignItems:'center',gap:8,fontSize:13,cursor:'pointer'}}>
+                      <input type="checkbox" checked={bulkAllowedDomains.includes(key)} onChange={e=>{
+                        const next=e.target.checked?[...new Set([...bulkAllowedDomains,key])]:bulkAllowedDomains.filter(d=>d!==key);
+                        setBulkAllowedDomains(next.length?next:['enactus']);
+                      }}/>
+                      {DOMAINS[key].hostname}
+                    </label>
+                  ))}
+                </div>
+                <div className="form-hint">Muốn phân quyền domain khác nhau cho từng user, hãy tạo/sửa riêng lẻ trong bảng Users sau khi import.</div>
+              </div>
+
               {/* Box log cảnh báo lỗi logic phát hiện khi phân tích */}
               {bulkErrors.length > 0 && (
                 <div style={{ background: '#FEE2E2', border: '1.5px solid #FCA5A5', padding: '12px', borderRadius: 'var(--radius)', marginBottom: '16px', maxHeight: '140px', overflowY: 'auto' }}>
@@ -1647,6 +1795,9 @@ const handleTemplateChange = (template) => {
                               <input type="text" className="form-input" style={{ padding: '6px 10px', fontSize: '13px', marginBottom: 0 }} value={u.username} onChange={e => handleUpdateParsedCell(index, 'username', e.target.value)} />
                             </td>
                             <td style={{ padding: '4px 8px' }}>
+                              <input type="email" className="form-input" style={{ padding: '6px 10px', fontSize: '13px', marginBottom: 0 }} value={u.email||''} onChange={e => handleUpdateParsedCell(index, 'email', e.target.value)} />
+                            </td>
+                            <td style={{ padding: '4px 8px' }}>
                               <select className="form-input" style={{ padding: '6px 10px', fontSize: '13px', marginBottom: 0 }} value={u.role} onChange={e => handleUpdateParsedCell(index, 'role', e.target.value)}>
                                 <option value="Member">Member</option>
                                 <option value="Admin">Admin</option>
@@ -1686,6 +1837,29 @@ const handleTemplateChange = (template) => {
               <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></div>
               <div className="form-group"><label className="form-label">Username</label><input className="form-input" value={form.username} onChange={e=>setForm({...form,username:e.target.value})} disabled={!!editingUser}/></div>
               <div className="form-group"><label className="form-label">Role</label><select className="form-input" value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option value="Member">Member</option><option value="Admin">Admin</option>{currentUser?.role==='SuperAdmin'&&<option value="SuperAdmin">SuperAdmin</option>}</select></div>
+              {form.role==='SuperAdmin' ? (
+                <div className="form-group">
+                  <label className="form-label">Domain được phép dùng</label>
+                  <div style={{fontSize:12.5,color:'var(--gray-500)'}}>SuperAdmin mặc định được dùng tất cả domain.</div>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label className="form-label">Domain được phép dùng</label>
+                  <div style={{display:'flex',flexDirection:'column',gap:8,padding:'10px 12px',border:'1px solid var(--gray-200)',borderRadius:8,background:'var(--gray-50)'}}>
+                    {DOMAIN_KEYS.map(key=>(
+                      <label key={key} style={{display:'flex',alignItems:'center',gap:8,fontSize:13,cursor:'pointer'}}>
+                        <input type="checkbox" checked={form.allowed_domains?.includes(key)||false} onChange={e=>{
+                          const cur=form.allowed_domains||[];
+                          const next=e.target.checked?[...new Set([...cur,key])]:cur.filter(d=>d!==key);
+                          setForm({...form,allowed_domains:next.length?next:['enactus']});
+                        }}/>
+                        {DOMAINS[key].hostname} — {DOMAINS[key].label}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="form-hint">User chỉ tạo được short link trên (các) domain đã tick ở trên.</div>
+                </div>
+              )}
               {!editingUser&&<div style={{background:'var(--yellow-light)',border:'1px solid var(--yellow-mid)',borderRadius:8,padding:'10px 14px',fontSize:12.5,color:'#92400E'}}>🔐 Mật khẩu mặc định = username. User phải đổi khi đăng nhập lần đầu.</div>}
             </div>
             <div className="modal-footer"><button className="btn btn-secondary" onClick={()=>setShowModal(false)}>Hủy</button><button className="btn btn-primary" onClick={saveUser}>Lưu</button></div>
@@ -2115,7 +2289,6 @@ const ProfileView = ({ auth, username }) => {
         <div className="card-body" style={{ padding: 0 }}>
           {sortedLinks.length === 0 ? (
             <div className="empty-state" style={{ padding: '60px 20px' }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
               <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Chưa có links nào</p>
               <p style={{ fontSize: 13, color: 'var(--gray-400)' }}>Hãy tạo link đầu tiên của bạn để bắt đầu!</p>
             </div>
@@ -2291,6 +2464,29 @@ const App = () => {
   const [mustChangePw,setMustChangePw]=useState(false);
   const [tab,setTab]=useState('dashboard');
   const [userFullname,setUserFullname]=useState(()=>localStorage.getItem('userFullname')||'');
+  const [activeDomain,setActiveDomain]=useState(()=>{
+    const saved=localStorage.getItem('activeDomain');
+    return saved && DOMAINS[saved] ? saved : DEFAULT_DOMAIN_KEY;
+  });
+
+  const userAllowedDomains = useMemo(()=>{
+    if(!currentUserInfo) return [DEFAULT_DOMAIN_KEY];
+    const list=(currentUserInfo.allowed_domains&&currentUserInfo.allowed_domains.length?currentUserInfo.allowed_domains:[DEFAULT_DOMAIN_KEY]).filter(d=>DOMAINS[d]);
+    return list.length?list:[DEFAULT_DOMAIN_KEY];
+  },[currentUserInfo]);
+
+  // Đảm bảo domain đang chọn luôn nằm trong danh sách domain user được phép dùng
+  useEffect(()=>{
+    if(currentUserInfo && !userAllowedDomains.includes(activeDomain)){
+      changeActiveDomain(userAllowedDomains[0]);
+    }
+  },[currentUserInfo]);
+
+  const changeActiveDomain=(key)=>{
+    if(!DOMAINS[key])return;
+    setActiveDomain(key);
+    localStorage.setItem('activeDomain',key);
+  };
 
   const handleLogin=(a,u,ud)=>{
     setAuth(a);setAdminUser(u);setCurrentUserInfo(ud);
@@ -2371,15 +2567,24 @@ const App = () => {
         <header className="topbar">
           <div className="topbar-title">{titles[tab]}</div>
           <div className="topbar-meta">
-            <div className="topbar-badge"><span className="dot"/><span style={{fontFamily:'DM Mono,monospace',fontSize:12}}>{YOUR_DOMAIN}</span></div>
+            <div className="topbar-badge" title="Domain đang thao tác">
+              <span className="dot"/>
+              {userAllowedDomains.length>1 ? (
+                <select value={activeDomain} onChange={e=>changeActiveDomain(e.target.value)} style={{fontFamily:'DM Mono,monospace',fontSize:12,border:'none',background:'transparent',outline:'none',cursor:'pointer',color:'inherit',padding:0}}>
+                  {userAllowedDomains.map(d=><option key={d} value={d}>{DOMAINS[d].hostname}</option>)}
+                </select>
+              ) : (
+                <span style={{fontFamily:'DM Mono,monospace',fontSize:12}}>{DOMAINS[activeDomain]?.hostname||YOUR_DOMAIN}</span>
+              )}
+            </div>
             <div style={{fontSize:13,color:'var(--gray-500)'}}>{new Date().toLocaleDateString('vi-VN',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'})}</div>
           </div>
         </header>
         <div className="content" style={{position:'relative'}}>
-          {tab==='dashboard'&&<DashboardView auth={auth} username={adminUser}/>}
-          {tab==='create'&&<CreateLinkView auth={auth}/>}
-          {tab==='links'&&<LinksView auth={auth} userRole={userRole} currentUsername={adminUser}/>}
-          {tab==='analytics'&&<AnalyticsView/>}
+          {tab==='dashboard'&&<DashboardView auth={auth} username={adminUser} activeDomain={activeDomain}/>}
+          {tab==='create'&&<CreateLinkView auth={auth} currentUser={currentUserInfo} activeDomain={activeDomain}/>}
+          {tab==='links'&&<LinksView auth={auth} userRole={userRole} currentUsername={adminUser} activeDomain={activeDomain}/>}
+          {tab==='analytics'&&<AnalyticsView activeDomain={activeDomain}/>}
           {tab==='admin'&&<AdminView auth={auth} currentUser={currentUserInfo}/>}
           {tab === 'profile' && <ProfileView auth={auth} username={adminUser} />}
           {tab === 'settings' && <SettingsView auth={auth} username={adminUser} />}
