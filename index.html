@@ -1120,6 +1120,12 @@ const AnalyticsView = ({ activeDomain }) => {
   const [loading,setLoading]=useState(true);
   const [tab,setTab]=useState('overview');
 
+  // ==================== BỘ LỌC LOG ====================
+  const emptyClickFilters = { search:'', country:'all', utm:'all', dateFrom:'', dateTo:'' };
+  const emptyActionFilters = { search:'', user:'all', action:'all', dateFrom:'', dateTo:'' };
+  const [clickFilters,setClickFilters] = useState(emptyClickFilters);
+  const [actionFilters,setActionFilters] = useState(emptyActionFilters);
+
   const fetchLogs = useCallback(async()=>{
     setLoading(true);
     try {
@@ -1135,6 +1141,85 @@ const AnalyticsView = ({ activeDomain }) => {
   const todayClicks = logs.todayStats?.clicks || 0;
   const todayActions = logs.todayStats?.actions || 0;
   const todayNewLinks = logs.todayStats?.newLinks || 0;
+
+  // So khớp timestamp log với khoảng ngày người dùng chọn (input type=date, theo giờ trình duyệt)
+  const inDateRange = (timestamp, dateFrom, dateTo) => {
+    if (!timestamp) return true;
+    if (dateFrom) { const from = new Date(dateFrom + 'T00:00:00'); if (timestamp < from.getTime()) return false; }
+    if (dateTo) { const to = new Date(dateTo + 'T23:59:59'); if (timestamp > to.getTime()) return false; }
+    return true;
+  };
+
+  const clickCountryOptions = useMemo(()=>{
+    const set = new Set((logs.clickLogs||[]).map(l=>l.country||'Unknown'));
+    return Array.from(set).sort();
+  },[logs]);
+
+  const clickUtmOptions = useMemo(()=>{
+    const set = new Set((logs.clickLogs||[]).map(l=>l.utm||'Trực tiếp'));
+    return Array.from(set).sort();
+  },[logs]);
+
+  const actionUserOptions = useMemo(()=>{
+    const set = new Set((logs.actionLogs||[]).map(l=>l.user||'unknown'));
+    return Array.from(set).sort();
+  },[logs]);
+
+  const actionTypeOptions = useMemo(()=>{
+    const set = new Set((logs.actionLogs||[]).map(l=>l.action));
+    return Array.from(set).sort();
+  },[logs]);
+
+  const filteredClickLogs = useMemo(()=>{
+    const s = clickFilters.search.trim().toLowerCase();
+    return (logs.clickLogs||[]).filter(l=>{
+      if (s && !`${l.ip||''} ${l.user||''} ${l.code||''} ${l.target||''}`.toLowerCase().includes(s)) return false;
+      if (clickFilters.country!=='all' && (l.country||'Unknown')!==clickFilters.country) return false;
+      if (clickFilters.utm!=='all' && (l.utm||'Trực tiếp')!==clickFilters.utm) return false;
+      if (!inDateRange(l.timestamp, clickFilters.dateFrom, clickFilters.dateTo)) return false;
+      return true;
+    });
+  },[logs,clickFilters]);
+
+  const filteredActionLogs = useMemo(()=>{
+    const s = actionFilters.search.trim().toLowerCase();
+    return (logs.actionLogs||[]).filter(l=>{
+      if (s && !`${l.ip||''} ${l.user||''} ${JSON.stringify(l.details||{})}`.toLowerCase().includes(s)) return false;
+      if (actionFilters.user!=='all' && (l.user||'unknown')!==actionFilters.user) return false;
+      if (actionFilters.action!=='all' && l.action!==actionFilters.action) return false;
+      if (!inDateRange(l.timestamp, actionFilters.dateFrom, actionFilters.dateTo)) return false;
+      return true;
+    });
+  },[logs,actionFilters]);
+
+  const hasActiveClickFilters = clickFilters.search||clickFilters.country!=='all'||clickFilters.utm!=='all'||clickFilters.dateFrom||clickFilters.dateTo;
+  const hasActiveActionFilters = actionFilters.search||actionFilters.user!=='all'||actionFilters.action!=='all'||actionFilters.dateFrom||actionFilters.dateTo;
+
+  const exportClickLogsExcel = () => {
+    if (!window.XLSX) { toast('Chưa tải thư viện Excel','error'); return; }
+    if (!filteredClickLogs.length) { toast('Không có dữ liệu để xuất','error'); return; }
+    const ws = window.XLSX.utils.json_to_sheet(filteredClickLogs.map(l=>({
+      'Thời gian':l.time, 'IP':l.ip, 'Người dùng':l.user&&l.user!=='unknown'?l.user:'', 'Link':`/${l.code}`,
+      'UTM':l.utm||'Trực tiếp', 'Quốc gia':l.country||'', 'Đích đến':l.target, 'User Agent':l.ua||''
+    })));
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Click logs');
+    window.XLSX.writeFile(wb, `click-logs-${activeDomain}-${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast('Đã xuất Excel!');
+  };
+
+  const exportActionLogsExcel = () => {
+    if (!window.XLSX) { toast('Chưa tải thư viện Excel','error'); return; }
+    if (!filteredActionLogs.length) { toast('Không có dữ liệu để xuất','error'); return; }
+    const ws = window.XLSX.utils.json_to_sheet(filteredActionLogs.map(l=>({
+      'Thời gian':l.time, 'IP':l.ip, 'Người dùng':l.user||'', 'Hành động':aLabelRef[l.action]||l.action,
+      'Chi tiết':JSON.stringify(l.details||{})
+    })));
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Action logs');
+    window.XLSX.writeFile(wb, `action-logs-${activeDomain}-${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast('Đã xuất Excel!');
+  };
 
   const deviceStats=useMemo(()=>{
     const d={};
@@ -1211,11 +1296,34 @@ const AnalyticsView = ({ activeDomain }) => {
         </div>
       ):tab==='clicks'?(
         <div className="card">
-          <div className="card-header"><div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)"/>Click logs ({(logs.clickLogs||[]).length})</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13}/>Làm mới</button></div>
+          <div className="card-header"><div className="card-title"><Icon name="chart" size={15} color="var(--yellow-dark)"/>Click logs ({filteredClickLogs.length}{filteredClickLogs.length!==(logs.clickLogs||[]).length?` / ${(logs.clickLogs||[]).length}`:''})</div>
+            <div style={{display:'flex',gap:8}}>
+              <button className="btn btn-ghost btn-sm" onClick={exportClickLogsExcel}><Icon name="download" size={14}/>Excel</button>
+              <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13}/>Làm mới</button>
+            </div>
+          </div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:10,padding:'14px 20px',borderBottom:'1px solid var(--gray-100)',alignItems:'center'}}>
+            <div style={{position:'relative',width:220}}>
+              <Icon name="search" size={14} color="var(--gray-400)" style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)'}}/>
+              <input className="form-input" style={{paddingLeft:32,marginBottom:0}} placeholder="IP, tên, link, đích đến..." value={clickFilters.search} onChange={e=>setClickFilters(f=>({...f,search:e.target.value}))}/>
+            </div>
+            <select className="form-input" style={{width:150,marginBottom:0}} value={clickFilters.country} onChange={e=>setClickFilters(f=>({...f,country:e.target.value}))}>
+              <option value="all">Tất cả quốc gia</option>
+              {clickCountryOptions.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+            <select className="form-input" style={{width:150,marginBottom:0}} value={clickFilters.utm} onChange={e=>setClickFilters(f=>({...f,utm:e.target.value}))}>
+              <option value="all">Tất cả UTM</option>
+              {clickUtmOptions.map(u=><option key={u} value={u}>{u}</option>)}
+            </select>
+            <input type="date" className="form-input" style={{width:150,marginBottom:0}} value={clickFilters.dateFrom} onChange={e=>setClickFilters(f=>({...f,dateFrom:e.target.value}))}/>
+            <span style={{color:'var(--gray-400)',fontSize:13}}>đến</span>
+            <input type="date" className="form-input" style={{width:150,marginBottom:0}} value={clickFilters.dateTo} onChange={e=>setClickFilters(f=>({...f,dateTo:e.target.value}))}/>
+            {hasActiveClickFilters&&<button className="btn btn-ghost btn-sm" onClick={()=>setClickFilters(emptyClickFilters)}><Icon name="close" size={13}/>Xóa lọc</button>}
+          </div>
           <div className="table-wrap"><table>
             <thead><tr><th>Thời gian</th><th>IP</th><th>Tên</th><th>Link</th><th>UTM</th><th>Country</th><th>Đích đến</th></tr></thead>
-            <tbody>{(logs.clickLogs||[]).length===0?<tr><td colSpan={7} style={{textAlign:'center',padding:32,color:'var(--gray-400)'}}>Chưa có log</td></tr>
-            :(logs.clickLogs||[]).map((l,i)=>(
+            <tbody>{filteredClickLogs.length===0?<tr><td colSpan={7} style={{textAlign:'center',padding:32,color:'var(--gray-400)'}}>Chưa có log{hasActiveClickFilters?' khớp bộ lọc':''}</td></tr>
+            :filteredClickLogs.map((l,i)=>(
               <tr key={i}>
                 <td style={{fontSize:12,fontFamily:'DM Mono,monospace',whiteSpace:'nowrap'}}>{l.time}</td>
                 <td style={{fontSize:12,fontFamily:'DM Mono,monospace'}}>{l.ip}</td>
@@ -1230,11 +1338,34 @@ const AnalyticsView = ({ activeDomain }) => {
         </div>
       ):(
         <div className="card">
-          <div className="card-header"><div className="card-title"><Icon name="logs" size={15} color="var(--purple)"/>Action logs ({(logs.actionLogs||[]).length})</div><button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13}/>Làm mới</button></div>
+          <div className="card-header"><div className="card-title"><Icon name="logs" size={15} color="var(--purple)"/>Action logs ({filteredActionLogs.length}{filteredActionLogs.length!==(logs.actionLogs||[]).length?` / ${(logs.actionLogs||[]).length}`:''})</div>
+            <div style={{display:'flex',gap:8}}>
+              <button className="btn btn-ghost btn-sm" onClick={exportActionLogsExcel}><Icon name="download" size={14}/>Excel</button>
+              <button className="refresh-btn" onClick={fetchLogs}><Icon name="refresh" size={13}/>Làm mới</button>
+            </div>
+          </div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:10,padding:'14px 20px',borderBottom:'1px solid var(--gray-100)',alignItems:'center'}}>
+            <div style={{position:'relative',width:220}}>
+              <Icon name="search" size={14} color="var(--gray-400)" style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)'}}/>
+              <input className="form-input" style={{paddingLeft:32,marginBottom:0}} placeholder="IP, người dùng, chi tiết..." value={actionFilters.search} onChange={e=>setActionFilters(f=>({...f,search:e.target.value}))}/>
+            </div>
+            <select className="form-input" style={{width:150,marginBottom:0}} value={actionFilters.user} onChange={e=>setActionFilters(f=>({...f,user:e.target.value}))}>
+              <option value="all">Tất cả người dùng</option>
+              {actionUserOptions.map(u=><option key={u} value={u}>{u}</option>)}
+            </select>
+            <select className="form-input" style={{width:170,marginBottom:0}} value={actionFilters.action} onChange={e=>setActionFilters(f=>({...f,action:e.target.value}))}>
+              <option value="all">Tất cả hành động</option>
+              {actionTypeOptions.map(a=><option key={a} value={a}>{aLabel[a]||a}</option>)}
+            </select>
+            <input type="date" className="form-input" style={{width:150,marginBottom:0}} value={actionFilters.dateFrom} onChange={e=>setActionFilters(f=>({...f,dateFrom:e.target.value}))}/>
+            <span style={{color:'var(--gray-400)',fontSize:13}}>đến</span>
+            <input type="date" className="form-input" style={{width:150,marginBottom:0}} value={actionFilters.dateTo} onChange={e=>setActionFilters(f=>({...f,dateTo:e.target.value}))}/>
+            {hasActiveActionFilters&&<button className="btn btn-ghost btn-sm" onClick={()=>setActionFilters(emptyActionFilters)}><Icon name="close" size={13}/>Xóa lọc</button>}
+          </div>
           <div className="table-wrap"><table>
             <thead><tr><th>Thời gian</th><th>IP</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
-            <tbody>{(logs.actionLogs||[]).length===0?<tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'var(--gray-400)'}}>Chưa có log</td></tr>
-            :(logs.actionLogs||[]).map((l,i)=>{
+            <tbody>{filteredActionLogs.length===0?<tr><td colSpan={5} style={{textAlign:'center',padding:32,color:'var(--gray-400)'}}>Chưa có log{hasActiveActionFilters?' khớp bộ lọc':''}</td></tr>
+            :filteredActionLogs.map((l,i)=>{
               let detail='';
               if(l.details?.code)detail=`/${l.details.code}`;
               if(l.details?.url)detail+=` → ${l.details.url.substring(0,40)}...`;
@@ -2624,5 +2755,5 @@ const App = () => {
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
-</body> 
+</body>
 </html>
