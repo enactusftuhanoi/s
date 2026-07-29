@@ -1513,15 +1513,13 @@ const handleTemplateChange = (template) => {
       showCancelButton:true, cancelButtonText:'Hủy', confirmButtonText:'Áp dụng', confirmButtonColor:'#FFC107'
     });
     if(!role) return;
-    const errors=[];
-    for(const username of selectedUsers){
-      try{
-        const res=await fetch(`${WORKER_URL}/admin/users/${username}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({role})});
-        if(!res.ok){const e=await res.json().catch(()=>({}));errors.push(`${username}: ${e.error||res.status}`);}
-      }catch{errors.push(`${username}: Lỗi kết nối`);}
-    }
-    if(errors.length){Swal.fire({title:`Đổi vai trò xong, ${errors.length} lỗi`,html:errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
-    else{toast('Đã đổi vai trò thành công','success');}
+    try{
+      const res=await fetch(`${WORKER_URL}/admin/users/bulk-update`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({usernames:selectedUsers,updates:{role}})});
+      const d=await res.json().catch(()=>({}));
+      if(!res.ok){toast(d.error||'Lỗi đổi vai trò','error');}
+      else if(d.errors&&d.errors.length){Swal.fire({title:`Đổi vai trò xong, ${d.errors.length} lỗi`,html:d.errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
+      else{toast('Đã đổi vai trò thành công','success');}
+    }catch{toast('Lỗi kết nối','error');}
     fetchUsers(); clearSelection();
   };
 
@@ -1541,30 +1539,26 @@ const handleTemplateChange = (template) => {
       }
     });
     if(!checkedDomains) return;
-    const errors=[];
-    for(const username of selectedUsers){
-      try{
-        const res=await fetch(`${WORKER_URL}/admin/users/${username}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({allowed_domains:checkedDomains})});
-        if(!res.ok){const e=await res.json().catch(()=>({}));errors.push(`${username}: ${e.error||res.status}`);}
-      }catch{errors.push(`${username}: Lỗi kết nối`);}
-    }
-    if(errors.length){Swal.fire({title:`Cấp quyền xong, ${errors.length} lỗi`,html:errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
-    else{toast('Đã cấp quyền domain thành công','success');}
+    try{
+      const res=await fetch(`${WORKER_URL}/admin/users/bulk-update`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({usernames:selectedUsers,updates:{allowed_domains:checkedDomains}})});
+      const d=await res.json().catch(()=>({}));
+      if(!res.ok){toast(d.error||'Lỗi cấp quyền domain','error');}
+      else if(d.errors&&d.errors.length){Swal.fire({title:`Cấp quyền xong, ${d.errors.length} lỗi`,html:d.errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
+      else{toast('Đã cấp quyền domain thành công','success');}
+    }catch{toast('Lỗi kết nối','error');}
     fetchUsers(); clearSelection();
   };
 
   const bulkResetPassword = async () => {
     const r=await Swal.fire({title:`Reset mật khẩu cho ${selectedUsers.length} tài khoản?`,text:'Mật khẩu mới = username. User phải đổi khi đăng nhập lại.',icon:'warning',showCancelButton:true,confirmButtonColor:'#FFC107',cancelButtonText:'Hủy',confirmButtonText:'Reset'});
     if(!r.isConfirmed) return;
-    const errors=[];
-    for(const username of selectedUsers){
-      try{
-        const res=await fetch(`${WORKER_URL}/admin/users/${username}/reset-password`,{method:'POST',headers:{Authorization:auth}});
-        if(!res.ok){const e=await res.json().catch(()=>({}));errors.push(`${username}: ${e.error||res.status}`);}
-      }catch{errors.push(`${username}: Lỗi kết nối`);}
-    }
-    if(errors.length){Swal.fire({title:`Reset xong, ${errors.length} lỗi`,html:errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
-    else{toast('Đã reset mật khẩu thành công','success');}
+    try{
+      const res=await fetch(`${WORKER_URL}/admin/users/bulk-reset-password`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({usernames:selectedUsers})});
+      const d=await res.json().catch(()=>({}));
+      if(!res.ok){toast(d.error||'Lỗi reset mật khẩu','error');}
+      else if(d.errors&&d.errors.length){Swal.fire({title:`Reset xong, ${d.errors.length} lỗi`,html:d.errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
+      else{toast('Đã reset mật khẩu thành công','success');}
+    }catch{toast('Lỗi kết nối','error');}
     clearSelection();
   };
 
@@ -1572,15 +1566,13 @@ const handleTemplateChange = (template) => {
     const label = targetStatus==='active'?'kích hoạt':'vô hiệu hóa';
     const r=await Swal.fire({title:`Xác nhận ${label} ${selectedUsers.length} tài khoản?`,icon:'warning',showCancelButton:true,confirmButtonColor:'#FFC107',cancelButtonText:'Hủy',confirmButtonText:'Xác nhận'});
     if(!r.isConfirmed) return;
-    const errors=[];
-    for(const username of selectedUsers){
-      try{
-        const res=await fetch(`${WORKER_URL}/admin/users/${username}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({status:targetStatus})});
-        if(!res.ok){const e=await res.json().catch(()=>({}));errors.push(`${username}: ${e.error||res.status}`);}
-      }catch{errors.push(`${username}: Lỗi kết nối`);}
-    }
-    if(errors.length){Swal.fire({title:`${label.charAt(0).toUpperCase()+label.slice(1)} xong, ${errors.length} lỗi`,html:errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
-    else{toast(`Đã ${label} thành công`,'success');}
+    try{
+      const res=await fetch(`${WORKER_URL}/admin/users/bulk-update`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:auth},body:JSON.stringify({usernames:selectedUsers,updates:{status:targetStatus}})});
+      const d=await res.json().catch(()=>({}));
+      if(!res.ok){toast(d.error||`Lỗi ${label}`,'error');}
+      else if(d.errors&&d.errors.length){Swal.fire({title:`${label.charAt(0).toUpperCase()+label.slice(1)} xong, ${d.errors.length} lỗi`,html:d.errors.map(e=>`<div style="text-align:left;font-size:13px">${e}</div>`).join(''),icon:'warning',confirmButtonColor:'#FFC107'});}
+      else{toast(`Đã ${label} thành công`,'success');}
+    }catch{toast('Lỗi kết nối','error');}
     fetchUsers(); clearSelection();
   };
 
